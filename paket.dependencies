@@ -1,0 +1,38 @@
+framework: net8.0
+storage: none
+source https://api.nuget.org/v3/index.json
+
+nuget CSharp.Data.Adaptive      
+nuget FSharp.Core               >= 8.0.0 lowest_matching: true
+nuget Aardvark.Base             ~> 5.3.4
+nuget Aardvark.Base.FSharp      ~> 5.3.4
+nuget Aardvark.Build            ~> 2.0.3
+
+
+nuget Microsoft.AspNetCore.Components.Forms ~> 8.0.10
+nuget Microsoft.AspNetCore.Components ~> 8.0.10
+nuget Microsoft.AspNetCore.Components.Web ~> 8.0.10
+nuget Microsoft.AspNetCore.Authorization ~> 8.0.10
+nuget Microsoft.AspNetCore.Connections.Abstractions ~> 8.0.10
+nuget Microsoft.AspNetCore.Metadata ~> 8.0.10
+nuget Microsoft.AspNetCore.Components.Analyzers ~> 8.0.10
+nuget Microsoft.AspNetCore.SignalR.Client ~> 8.0.0
+nuget Microsoft.Extensions.Configuration ~> 8.0.0
+nuget Microsoft.Extensions.Configuration.Abstractions ~> 8.0.0
+nuget Microsoft.Extensions.Configuration.Binder ~> 8.0.0
+nuget Microsoft.Extensions.DependencyInjection ~> 8.0.0
+nuget Microsoft.Extensions.DependencyInjection.Abstractions ~> 8.0.0
+nuget Microsoft.Extensions.Features ~> 8.0.10
+nuget Microsoft.Extensions.FileProviders.Abstractions ~> 8.0.0
+nuget Microsoft.Extensions.FileProviders.Physical ~> 8.0.0
+nuget Microsoft.Extensions.FileSystemGlobbing ~> 8.0.0
+nuget Microsoft.Extensions.Logging.Abstractions ~> 8.0.0
+nuget Microsoft.Extensions.Options ~> 8.0.0
+nuget Microsoft.Extensions.Primitives ~> 8.0.0
+nuget Microsoft.NETCore.Platforms ~> 7.0.4
+nuget Microsoft.JSInterop ~> 8.0.10
+nuget Microsoft.JSInterop.WebAssembly ~> 8.0.10
+nuget Microsoft.AspNetCore.Components.WebAssembly ~> 8.0.10
+nuget Microsoft.AspNetCore.Components.WebAssembly.DevServer ~> 8.0.10
+
+nuget Silk.NET.WebGPU ~> 2.22.0

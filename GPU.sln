@@ -1,0 +1,27 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{E90DA2D0-2327-479F-8F98-46C69E4AACBE}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "GPU", "src\GPU\GPU.fsproj", "{679CFBF7-E4BF-4A4F-A74C-8893CD74B045}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{679CFBF7-E4BF-4A4F-A74C-8893CD74B045}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{679CFBF7-E4BF-4A4F-A74C-8893CD74B045}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{679CFBF7-E4BF-4A4F-A74C-8893CD74B045}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{679CFBF7-E4BF-4A4F-A74C-8893CD74B045}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{679CFBF7-E4BF-4A4F-A74C-8893CD74B045} = {E90DA2D0-2327-479F-8F98-46C69E4AACBE}
+	EndGlobalSection
+EndGlobal

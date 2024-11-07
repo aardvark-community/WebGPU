@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
+    <PublishTrimmed>false</PublishTrimmed>
+    <IsTrimmable>false</IsTrimmable>
+    <PackAsTool>true</PackAsTool>
+    <BlazorEnableCompression>false</BlazorEnableCompression>
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <WasmBuildNative>true</WasmBuildNative>
+    <ScanForPInvokes>true</ScanForPInvokes>
+    <EmccExtraCFlags>-s EXPORT_ALL=1</EmccExtraCFlags>
+    <EmccExtraLDFlags>--js-library $(MSBuildThisFileDirectory)/lib_wgpu.js -s INCLUDE_FULL_LIBRARY=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s EXPORT_ALL=1</EmccExtraLDFlags>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Descriptors.fs" />
+    <Compile Include="WebGPURaw.fs" />
+    <Compile Include="Queue.fs" />
+    <Compile Include="Device.fs" />
+    <Compile Include="Adapter.fs" />
+    <Compile Include="Program.fs" />
+    <NativeFileReference Include="WebGPU.c" />
+  </ItemGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
+</Project>
