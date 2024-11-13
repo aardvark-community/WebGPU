@@ -163,6 +163,29 @@ type Features =
     | ClipDistances = 0x1000
     | DualSourceBlending = 0x2000
     | FirstUnusedBit = 0x4000
+    
+[<Flags>]
+type BufferUsage =
+    | MapRead = 0x0001
+    | MapWrite = 0x0002
+    | CopySrc = 0x0004
+    | CopyDst = 0x0008
+    | Index = 0x0010
+    | Vertex = 0x0020
+    | Uniform = 0x0040
+    | Storage = 0x0080
+    | Indirect = 0x0100
+    | QueryResolve = 0x0200
+
+type DeviceLostReason =
+    | Unknown = 0
+    | Destroyed = 1
+    
+type ErrorType =
+    | NoError = 0
+    | OutOfMemory = 1
+    | Validation = 2
+    | UnknownError = 3
  
 type QueueDescriptor =
     {
@@ -176,4 +199,39 @@ type DeviceDescriptor =
         RequiredFeatures    : Features
     }
 
+type TextureAspect =
+    | Invalid = 0
+    | All = 1
+    | StencilOnly = 2
+    | DepthOnly = 3
+    
+// typedef int HTML_PREDEFINED_COLOR_SPACE;
+// #define HTML_PREDEFINED_COLOR_SPACE_INVALID 0
+// #define HTML_PREDEFINED_COLOR_SPACE_SRGB 1
+// #define HTML_PREDEFINED_COLOR_SPACE_DISPLAY_P3 2
+type ColorSpace =
+    | Invalid = 0
+    | SRGB = 1
+    | DisplayP3 = 2
+    
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type Origin2d(x : int, y : int) =
+    member _.X = x
+    member _.Y = y
 
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type Origin3d(x : int, y : int, z : int) =
+    member _.X = x
+    member _.Y = y
+    member _.Z = z
+    
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type Size2d(x : int, y : int) =
+    member _.X = x
+    member _.Y = y
+
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type Size3d(x : int, y : int, z : int) =
+    member _.X = x
+    member _.Y = y
+    member _.Z = z

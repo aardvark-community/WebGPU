@@ -8,9 +8,7 @@ open System.Runtime.InteropServices
 #nowarn "9"
     
 type Adapter private(handle : int) =
-    static let del = Delegate.CreateDelegate(typeof<WebGPURaw.WGPUDelegate>, typeof<WebGPURaw.WGPUCallbacks>.GetMethod "Callback")
-    static let delegatePtr = Marshal.GetFunctionPointerForDelegate(del)
-
+    
     let vendor, architecture, device, description =
         let data = Array.zeroCreate<byte> (4 * 512)
         use ptr = fixed data
@@ -47,7 +45,7 @@ type Adapter private(handle : int) =
                 WebGPURaw.WGPUCallbacks.RegisterCallback(fun handle ->
                     tcs.SetResult(new Adapter(handle))    
                 )
-            if WebGPURaw.my_navigator_gpu_request_adapter_async(&options, delegatePtr, cbid) = 0 then
+            if WebGPURaw.my_navigator_gpu_request_adapter_async(&options, WebGPURaw.delegatePtr, cbid) = 0 then
                 tcs.SetException(WebGPUException "Failed to request adapter")
         else
             tcs.SetException(WebGPUException "WebGPU is not supported")
@@ -80,7 +78,7 @@ type Adapter private(handle : int) =
                         WebGPURaw.WGPUCallbacks.RegisterCallback(fun a ->
                             tcs.SetResult(new Device(descriptor, a))    
                         )
-                    WebGPURaw.my_wgpu_adapter_request_device_async32(handle, &desc, delegatePtr, cbid)
+                    WebGPURaw.my_wgpu_adapter_request_device_async32(handle, &desc, WebGPURaw.delegatePtr, cbid)
             
                 else
                     tcs.SetException(WebGPUException "unsupported limits")
@@ -102,7 +100,7 @@ type Adapter private(handle : int) =
                         WebGPURaw.WGPUCallbacks.RegisterCallback(fun a ->
                             tcs.SetResult(new Device(descriptor, a))    
                         )
-                    WebGPURaw.my_wgpu_adapter_request_device_async64(handle, &desc, delegatePtr, cbid)
+                    WebGPURaw.my_wgpu_adapter_request_device_async64(handle, &desc, WebGPURaw.delegatePtr, cbid)
             
                 else
                     tcs.SetException(WebGPUException "unsupported limits")

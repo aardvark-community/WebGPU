@@ -1,13 +1,54 @@
 ﻿
+open System.Buffers
 open Microsoft.FSharp.NativeInterop
 open System
 open WebGPU
+
+
+type IPinnable<'a when 'a : unmanaged> =
+    abstract member Pin<'r> : action : (nativeptr<'a> -> 'r) -> 'r
+
+let pinArray (arr : #IPinnable<'a>[]) (action : nativeptr<'a>[] -> 'r) =
+    let rec pin (acc : nativeptr<'a>[]) (i : int) =
+        if i >= arr.Length then
+            action acc
+        else
+            (arr.[i] :> IPinnable<'a>).Pin<'r>(fun ptr ->
+                acc.[i] <- ptr
+                pin acc (i + 1)
+            )
+    let ptrs = Array.zeroCreate arr.Length
+    pin ptrs 0
+
+type Hans() =
+    interface IPinnable<int> with
+        member this.Pin<'r> action =
+            let ptr = NativePtr.ofNativeInt<int> 0n
+            action ptr
+
+let test =
+    pinArray [|Hans(); Hans()|] (fun ptr ->
+        ptr
+    )
+
 
 [<EntryPoint>]
 let main args =
     
     let run =
         task {
+            let mutable options =
+                {
+                    WebGPURaw.RequestAdapterOptions.CompatibleSurface = 0n
+                    WebGPURaw.RequestAdapterOptions.PowerPreference = PowerPreference.High
+                    WebGPURaw.RequestAdapterOptions.ForceFallbackAdapter = 0
+                    WebGPURaw.RequestAdapterOptions.NextInChain = 0n 
+                }
+            let cbid = WebGPURaw.WGPUCallbacks.RegisterCallback(fun a b c -> printfn "%A %A %A" a b c)
+            let ptr = WebGPURaw.gpuInstanceRequestAdapter(0n, &options, WebGPURaw.delegatePtr2, cbid)
+            printfn "%A" ptr
+            
+            
             let! adapter =
                 Adapter.Request {
                     PowerPreference = PowerPreference.High
@@ -59,8 +100,31 @@ let main args =
             
             
             let! dev = adapter.RequestDevice()
+            dev.Lost.Add(fun (reason, message) ->
+                printfn "device lost %A: %s" reason message
+            )
+            
+            dev.UncapturedError.Add(fun (code, message) ->
+                printfn "ERROR: %A: %s" code message  
+            )
+            
             printfn "Device: %A" dev.Handle
             printfn "Queue: %A" dev.Queue.Handle
+            let buffer = 
+                dev.CreateBuffer {
+                    Size = 16UL
+                    Usage = BufferUsage.Vertex ||| BufferUsage.CopyDst
+                    MappedAtCreation = false 
+                }
+            printfn "Buffer: %A" buffer.Handle
+            dev.Queue.WriteBuffer([|1;2;3;4|], buffer, 0)
+            printfn "write submitted"
+            do! dev.Queue.Wait()
+            printfn "write done"
+            dev.Dispose()
+            
+            // dev.Queue.WriteBuffer(ReadOnlyMemory([|1;2;3|], 1, 2), Buffer(0), 10)
+            
         }
     //
     // let del = Delegate.CreateDelegate(typeof<WebGPURaw.WGPUDelegate>, typeof<WebGPURaw.WGPUCallbacks>.GetMethod "Callback")

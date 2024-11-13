@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
+
 #define __EMSCRIPTEN__
 
 #ifdef __EMSCRIPTEN__

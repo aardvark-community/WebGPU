@@ -1,5 +1,6 @@
 #include "lib_wgpu.h"
 
+#include <webgpu/webgpu.h>
 
 // EMSCRIPTEN_KEEPALIVE int my_navigator_gpu_request_adapter_async(WGpuRequestAdapterCallback adapterCallback, void *userData) {
 //     WGpuRequestAdapterOptions options;
@@ -7,6 +8,17 @@
 //     options.forceFallbackAdapter = WGPU_FALSE;
 //     return navigator_gpu_request_adapter_async(&options, adapterCallback, userData);
 // }
+
+EMSCRIPTEN_KEEPALIVE void* gpuCreateInstance() {
+    WGPUInstanceDescriptor descriptor;
+    descriptor.nextInChain = NULL;
+    
+    return wgpuCreateInstance(&descriptor);
+}
+
+EMSCRIPTEN_KEEPALIVE void gpuInstanceRequestAdapter(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallback callback, void * userdata) {
+    wgpuInstanceRequestAdapter(instance, options, callback, userdata);
+}
 
 EMSCRIPTEN_KEEPALIVE int wgpuSupported()
 {
@@ -495,8 +507,8 @@ EMSCRIPTEN_KEEPALIVE void my_wgpu_queue_set_on_submitted_work_done_callback(WGpu
     wgpu_queue_set_on_submitted_work_done_callback(queue, callback, userData);
 }
 
-EMSCRIPTEN_KEEPALIVE void my_wgpu_queue_write_buffer(WGpuQueue queue, WGpuBuffer buffer, double_int53_t bufferOffset, const void *data, double_int53_t size) {
-    wgpu_queue_write_buffer(queue, buffer, bufferOffset, data, size);
+EMSCRIPTEN_KEEPALIVE void my_wgpu_queue_write_buffer(WGpuQueue queue, WGpuBuffer buffer, int64_t* bufferOffset, const void *data, int64_t* size) {
+    wgpu_queue_write_buffer(queue, buffer, (double)*bufferOffset, data, (double)*size);
 }
 
 EMSCRIPTEN_KEEPALIVE void my_wgpu_queue_write_texture(WGpuQueue queue, const WGpuImageCopyTexture *destination, const void *data, uint32_t bytesPerBlockRow, uint32_t blockRowsPerImage, uint32_t writeWidth, uint32_t writeHeight, uint32_t writeDepthOrArrayLayers) {

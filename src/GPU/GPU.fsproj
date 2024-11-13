@@ -11,17 +11,27 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <WasmBuildNative>true</WasmBuildNative>
     <ScanForPInvokes>true</ScanForPInvokes>
-    <EmccExtraCFlags>-s EXPORT_ALL=1</EmccExtraCFlags>
-    <EmccExtraLDFlags>--js-library $(MSBuildThisFileDirectory)/lib_wgpu.js -s INCLUDE_FULL_LIBRARY=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s EXPORT_ALL=1</EmccExtraLDFlags>
+    <EmccExtraCFlags>-s EXPORT_ALL=1 -s USE_WEBGPU=1</EmccExtraCFlags>
+    <EmccExtraLDFlags>-s USE_WEBGPU=1 --js-library $(MSBuildThisFileDirectory)/lib_wgpu.js -s INCLUDE_FULL_LIBRARY=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s EXPORT_ALL=1</EmccExtraLDFlags>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="Generator.fsx" />
+    <None Include="lib_wgpu.js" />
+    <Compile Include="Pinnable.fs" />
+    <Compile Include="Enums.fs" />
+    <Compile Include="Wrapper.fs" />
+    <Compile Include="Frontend.fs" />
+    <Compile Include="FrontendExtensions.fs" />
+    <NativeFileReference Include="WebGPU.c" />
     <Compile Include="Descriptors.fs" />
     <Compile Include="WebGPURaw.fs" />
+    <Compile Include="Buffer.fs" />
+    <Compile Include="Texture.fs" />
+    <Compile Include="CommandBuffer.fs" />
     <Compile Include="Queue.fs" />
     <Compile Include="Device.fs" />
     <Compile Include="Adapter.fs" />
     <Compile Include="Program.fs" />
-    <NativeFileReference Include="WebGPU.c" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>
