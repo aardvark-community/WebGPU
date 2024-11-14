@@ -458,10 +458,6 @@
                 "returns": "uint64_t"
             },
             {
-                "name": "get map state",
-                "returns": "buffer map state"
-            },
-            {
                 "name": "unmap"
             },
             {

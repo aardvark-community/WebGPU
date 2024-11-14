@@ -22,15 +22,7 @@
     <Compile Include="Wrapper.fs" />
     <Compile Include="Frontend.fs" />
     <Compile Include="FrontendExtensions.fs" />
-    <NativeFileReference Include="WebGPU.c" />
-    <Compile Include="Descriptors.fs" />
-    <Compile Include="WebGPURaw.fs" />
-    <Compile Include="Buffer.fs" />
-    <Compile Include="Texture.fs" />
-    <Compile Include="CommandBuffer.fs" />
-    <Compile Include="Queue.fs" />
-    <Compile Include="Device.fs" />
-    <Compile Include="Adapter.fs" />
+    <NativeFileReference Include="Native.c" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />

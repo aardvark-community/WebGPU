@@ -1,12 +1,13 @@
 namespace WebGPU
 
+open Microsoft.FSharp.NativeInterop
 open System
 open System.Runtime.InteropServices
 open System.Runtime.CompilerServices
 open System.Threading.Tasks
 
 #nowarn "9"
-[<AbstractClass; Sealed>]
+[<AbstractClass; Sealed; Extension>]
 type WebGPU private() =
     
     static member CreateInstance() =
@@ -28,3 +29,24 @@ type WebGPU private() =
             | _ -> tcs.SetException(Exception $"could not create device: {message}")
         ))
         tcs.Task
+
+    [<Extension>]
+    static member RequestAdapterAsync(this : Instance, options : RequestAdapterOptions) =
+        let tcs = TaskCompletionSource<Adapter>()
+        this.RequestAdapter(options, RequestAdapterCallback(fun status adapter message _ ->
+            match status with
+            | RequestAdapterStatus.Success -> tcs.SetResult adapter
+            | _ -> tcs.SetException(Exception $"could not create adapter: {message}")
+        ))
+        tcs.Task
+        
+    [<Extension>]
+    static member GetFeatures(this : Adapter) =
+        let cnt = this.EnumerateFeatures(NativePtr.ofNativeInt 0n)
+        printfn "features: %A" cnt 
+        let arr = Array.zeroCreate<FeatureName>(int cnt)
+        use ptr = fixed arr
+        this.EnumerateFeatures(ptr) |> ignore
+        
+        printfn "features: %A" arr 
+        arr

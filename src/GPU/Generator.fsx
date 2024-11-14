@@ -57,17 +57,24 @@ module FieldDef =
         | _ ->
             None
 
+[<RequireQualifiedAccess>]
+type Direction =
+    | In
+    | Out
 
 type StructDef =
     {
         Name : string
-        Extensible : bool
+        Extensible : option<Direction>
+        ChainRoots : list<string>
+        Chained : option<Direction>
         Fields : list<FieldDef>
     }
 
 type FunctionDef =
     {
         Name : string
+        Tags : list<string>
         Return : TypeRef
         Args : list<FieldDef>
     }
@@ -97,11 +104,18 @@ module FunctionDef =
                 r.GetString()
             | _ ->
                 "void"
+        
+        let tags =
+            match obj.TryGetProperty "tags" with
+            | (true, r) when r.ValueKind = JsonValueKind.Array ->
+                List.init (r.GetArrayLength()) (fun i -> r[i].GetString())
+            | _ ->
+                []
                
         match args with
         | Some args ->
             // TODO annotation??
-            Some { Name = name; Return = { TypeName = returns; Annotation = None }; Args = args }
+            Some { Name = name; Tags = tags; Return = { TypeName = returns; Annotation = None }; Args = args }
         | None ->
             None
 
@@ -131,6 +145,7 @@ type Native =
 type Object =
     {
         Name : string
+        Tags : list<string>
         Methods : list<FunctionDef>
     }
 
@@ -177,6 +192,62 @@ type Definition =
 
 let allList = ResizeArray()
 
+module StructDef =
+    let parse (name : string) (obj : JsonElement) =
+        let extensible =
+            match obj.TryGetProperty "extensible" with
+            | (true, e) when e.ValueKind = JsonValueKind.String ->
+                match e.GetString() with
+                | "in" -> Some Direction.In
+                | "out" -> Some Direction.Out
+                | e -> failwithf "bad direction: %A" e
+            | _ ->
+                None
+            
+        let fields =
+            match obj.TryGetProperty("members") with
+            | (true, mems) ->
+                let len = mems.GetArrayLength()
+                List.init len (fun i ->
+                    let mem = mems[i]
+                    let typName = mem.GetProperty("type").GetString()
+                    let name = mem.GetProperty("name").GetString()
+                    let def = mem.TryGetProperty("default") |> toOption
+                    let annotation = mem.TryGetProperty("annotation") |> toOptionString
+                    let optional = mem.TryGetProperty("optional") |> toOption |> Option.map (fun v -> v.GetBoolean()) |> Option.defaultValue false
+                    let length = mem.TryGetProperty("length") |> toOptionString
+                    
+                    let typRef = { TypeName = typName; Annotation = annotation }
+                    { Type = typRef; Name = name; Default = def; Optional = optional; Length = length }
+                )
+            | _ ->
+                []
+        
+        let chainRoots =
+            match obj.TryGetProperty "chain roots" with
+            | (true, roots) when roots.ValueKind = JsonValueKind.Array ->
+                List.init (roots.GetArrayLength()) (fun i -> roots[i].GetString())
+            | _ ->
+                []
+                
+        let chained =
+            match obj.TryGetProperty "chained" with
+            | (true, c) when c.ValueKind = JsonValueKind.String ->
+                match c.GetString() with
+                | "in" -> Some Direction.In
+                | "out" -> Some Direction.Out
+                | e -> failwithf "bad direction: %A" e
+            | _ ->
+                None
+                
+        {
+            Extensible = extensible
+            Chained = chained
+            Name = name
+            ChainRoots = chainRoots 
+            Fields = fields
+        }
+
 for kv in doc.RootElement.EnumerateObject() do
     let obj = kv.Value
     if obj.ValueKind = JsonValueKind.Object then
@@ -185,41 +256,17 @@ for kv in doc.RootElement.EnumerateObject() do
             match cat.GetString() with
             | "callback info" ->
                 let name = kv.Name
-                
-                let extensible =
-                    match obj.TryGetProperty "extensible" with
-                    | (true, e) when e.ValueKind = JsonValueKind.String ->
-                        match e.GetString() with
-                        | "in" | "out" -> true
-                        | _ -> false
-                    | _ -> false
-                let fields =
-                    match obj.TryGetProperty("members") with
-                    | (true, mems) ->
-                        let len = mems.GetArrayLength()
-                        List.init len (fun i ->
-                            let mem = mems[i]
-                            let typName = mem.GetProperty("type").GetString()
-                            let name = mem.GetProperty("name").GetString()
-                            let def = mem.TryGetProperty("default") |> toOption
-                            let annotation = mem.TryGetProperty("annotation") |> toOptionString
-                            let optional = mem.TryGetProperty("optional") |> toOption |> Option.map (fun v -> v.GetBoolean()) |> Option.defaultValue false
-                            let length = mem.TryGetProperty("length") |> toOptionString
-                            
-                            let typRef = { TypeName = typName; Annotation = annotation }
-                            { Type = typRef; Name = name; Default = def; Optional = optional; Length = length }
-                        )
-                    | _ ->
-                        []
-                
-                let s = {
-                    Extensible = extensible
-                    Name = name
-                    Fields = fields
-                }
+                let s = StructDef.parse name obj
                 allList.Add (CallbackInfo s)
                 
             | "object" ->
+                
+                let tags =
+                    match obj.TryGetProperty "tags" with
+                    | (true, t) when t.ValueKind = JsonValueKind.Array ->
+                        List.init (t.GetArrayLength()) (fun i -> t[i].GetString())
+                    | _ ->
+                        []
                 match obj.TryGetProperty "methods" with
                 | (true, ms) when ms.ValueKind = JsonValueKind.Array ->
                     let meths = 
@@ -232,13 +279,14 @@ for kv in doc.RootElement.EnumerateObject() do
                             | _ ->
                                 None
                         )
+                        
                     match meths |> List.mapOption id with
                     | Some meths ->
-                        allList.Add (Object { Name = kv.Name; Methods = meths })
+                        allList.Add (Object { Name = kv.Name; Tags = tags; Methods = meths })
                     | None ->
                         ()
                 | _ ->
-                    allList.Add (Object { Name = kv.Name; Methods = [] })
+                    allList.Add (Object { Name = kv.Name; Tags = tags; Methods = [] })
                     
                 () // TODO
                 
@@ -293,37 +341,7 @@ for kv in doc.RootElement.EnumerateObject() do
                     ()
             | "structure" ->
                 let name = kv.Name
-                
-                let extensible =
-                    match obj.TryGetProperty "extensible" with
-                    | (true, e) when e.ValueKind = JsonValueKind.String ->
-                        match e.GetString() with
-                        | "in" | "out" -> true
-                        | _ -> false
-                    | _ -> false
-                let fields =
-                    match obj.TryGetProperty("members") with
-                    | (true, mems) ->
-                        let len = mems.GetArrayLength()
-                        List.init len (fun i ->
-                            let mem = mems[i]
-                            let typName = mem.GetProperty("type").GetString()
-                            let name = mem.GetProperty("name").GetString()
-                            let def = mem.TryGetProperty("default") |> toOption
-                            let annotation = mem.TryGetProperty("annotation") |> toOptionString
-                            let optional = mem.TryGetProperty("optional") |> toOption |> Option.map (fun v -> v.GetBoolean()) |> Option.defaultValue false
-                            let length = mem.TryGetProperty("length") |> toOptionString
-                            let typRef = { TypeName = typName; Annotation = annotation }
-                            { Type = typRef; Name = name; Default = def; Optional = optional; Length = length }
-                        )
-                    | _ ->
-                        []
-                
-                let s = {
-                    Extensible = extensible
-                    Name = name
-                    Fields = fields
-                }
+                let s = StructDef.parse name obj
                 allList.Add (Struct s)
             
             | cat ->
@@ -343,12 +361,18 @@ let all =
         match a with
         
         | Object o ->
+            
             let meths = 
                 o.Methods |> List.filter (fun m ->
+                    let deprecated = m.Tags |> List.exists (fun t -> t = "deprecated")
+                    let dawnOnly =
+                        m.Tags |> List.exists (fun t -> t = "dawn") &&
+                        not (m.Tags |> List.exists (fun t -> t = "emscripten"))
+                    
                     let bad =
                         Set.contains m.Return.TypeName nonExistentTypes ||
                         m.Args |> Seq.exists (fun a -> Set.contains a.Type.TypeName nonExistentTypes)
-                    not bad
+                    not dawnOnly && not deprecated && not bad
                 )
             Some (Object { o with Methods = meths })
         | _ ->
@@ -402,7 +426,7 @@ module Native =
             match def with
             | Object o -> "WGPU" + pascalCase o.Name
             | Enum e -> "int"
-            | Delegate d -> "nativeint" //"WGPU" + pascalCase d.Name
+            | Delegate d -> "void*" //"WGPU" + pascalCase d.Name
             | Alias a -> nativeTypeName a.Type
             | Struct a -> "WGPU" + pascalCase a.Name
             | Function _ -> failwith "not a type"
@@ -442,40 +466,41 @@ module Native =
             | Function f ->
                 ()
             | Object o ->
-                for m in o.Methods do
-                    let name = o.Name + " " + m.Name
-                    
-                    let args = { Name = "self"; Type = { TypeName = o.Name; Annotation = None }; Default = None; Optional = false; Length = None } :: m.Args
-                    let m = { m with Args = args }
-                    
-                    
-                    if FunctionDef.isBadWasmFunction m then
+                if o.Tags <> ["dawn"] then
+                    for m in o.Methods do
+                        let name = o.Name + " " + m.Name
+                        
+                        let args = { Name = "self"; Type = { TypeName = o.Name; Annotation = None }; Default = None; Optional = false; Length = None } :: m.Args
+                        let m = { m with Args = args }
                         
                         
-                        printfn "typedef struct { "
-                        for a in args do
-                            printfn "   %s %s;" (nativeTypeName a.Type) (pascalCase a.Name)
-                        printfn "} WGPU%sArgs;" (pascalCase name)
+                        if FunctionDef.isBadWasmFunction m then
+                            
+                            
+                            printfn "typedef struct { "
+                            for a in args do
+                                printfn "   %s %s;" (nativeTypeName a.Type) (pascalCase a.Name)
+                            printfn "} WGPU%sArgs;" (pascalCase name)
+                            
+                            
+                            let argdef = sprintf "const WGPU%sArgs* args" (pascalCase name)
+                            let argref = args |> List.map (fun a -> sprintf "args->%s" (pascalCase a.Name)) |> String.concat ", "
+                            
+                            printfn $"EMSCRIPTEN_KEEPALIVE {nativeTypeName m.Return} gpu{pascalCase name}({argdef}) {{"
+                            printfn $"    return wgpu{pascalCase name}({argref});"
+                            printfn $"}}"
+                        else
+                                    
+                            let argdef = args |> List.map (fun a -> nativeTypeName a.Type + " " + camelCase a.Name) |> String.concat ", "
+                            let argref = args |> List.map (fun a -> camelCase a.Name) |> String.concat ", "
+                            
+                            printfn $"EMSCRIPTEN_KEEPALIVE {nativeTypeName m.Return} gpu{pascalCase name}({argdef}) {{"
+                            printfn $"    return wgpu{pascalCase name}({argref});"
+                            printfn $"}}"
+                            
+                            ()
                         
-                        
-                        let argdef = sprintf "const WGPU%sArgs* args" (pascalCase name)
-                        let argref = args |> List.map (fun a -> sprintf "args->%s" (pascalCase a.Name)) |> String.concat ", "
-                        
-                        printfn $"EMSCRIPTEN_KEEPALIVE {nativeTypeName m.Return} gpu{pascalCase name}({argdef}) {{"
-                        printfn $"    return wgpu{pascalCase name}({argref});"
-                        printfn $"}}"
-                    else
-                                
-                        let argdef = args |> List.map (fun a -> nativeTypeName a.Type + " " + camelCase a.Name) |> String.concat ", "
-                        let argref = args |> List.map (fun a -> camelCase a.Name) |> String.concat ", "
-                        
-                        printfn $"EMSCRIPTEN_KEEPALIVE {nativeTypeName m.Return} gpu{pascalCase name}({argdef}) {{"
-                        printfn $"    return wgpu{pascalCase name}({argref});"
-                        printfn $"}}"
-                        
-                        ()
-                    
-                ()
+                    ()
         File.WriteAllText(Path.Combine(__SOURCE_DIRECTORY__, "Native.c"), b.ToString())
 
 module Enums =
@@ -603,6 +628,8 @@ module RawWrapper =
         printfn "open WebGPU"
         printfn "#nowarn \"9\""
         
+        
+        
         for a in all do
             match a with
             | Enum e ->
@@ -630,9 +657,18 @@ module RawWrapper =
                     printfn "[<StructLayout(LayoutKind.Explicit, Size = 4)>]"
                     printfn "type %s = struct end" (pascalCase s.Name)
                 else
+                    
+                    
+                    let fields = s.Fields
+                    
                     let fields =
-                        if s.Extensible then { Name = "next in chain"; Type = { TypeName = "void"; Annotation = Some "const*" }; Optional = true; Default = None; Length = None } :: s.Fields
-                        else s.Fields
+                        if Option.isSome s.Chained then { Name = "s type"; Type = { TypeName = "s type"; Annotation = None }; Default = None; Optional = false; Length = None } :: fields
+                        else fields
+                    
+                    let fields =
+                        if Option.isSome s.Extensible || Option.isSome s.Chained then { Name = "next in chain"; Type = { TypeName = "void"; Annotation = Some "const*" }; Optional = true; Default = None; Length = None } :: fields
+                        else fields
+                        
                     let args = 
                         fields |> List.map (fun f ->
                             let typ = fsharpName f.Type
@@ -661,7 +697,7 @@ module RawWrapper =
                     let ass = fields |> List.map (fun f -> $"{pascalCase f.Name} = {camelCase f.Name}") |> String.concat "; "
                     printfn $"        new({ctorArgs}) = {{ {ass} }}"
                         
-                    if s.Extensible then
+                    if Option.isSome s.Extensible || Option.isSome s.Chained then
                         let ctorArgs = 
                             s.Fields |> List.map (fun f ->
                                 let typ = fsharpName f.Type
@@ -671,8 +707,15 @@ module RawWrapper =
                             |> String.concat ", "
                             
                         let ctoruse =
-                            "0n" :: (s.Fields |> List.map (fun f -> camelCase f.Name))
-                            |> String.concat ", "
+                            let u = s.Fields |> List.map (fun f -> camelCase f.Name)
+                            let args = 
+                                if Option.isSome s.Chained then
+                                    "0n" :: "SType.Invalid" :: u
+                                elif Option.isSome s.Extensible then
+                                    "0n" :: u
+                                else
+                                    u
+                            String.concat ", " args
                         printfn $"        new({ctorArgs}) = {pascalCase s.Name}({ctoruse})"
                         
                     printfn "    end"
@@ -705,7 +748,7 @@ module RawWrapper =
                     printfn "            %s : %s" (pascalCase a.Name) (fsharpName a.Type)
                 printfn "        }"
                 printfn ""
-                printfn $"    [<DllImport(\"WebGPU\", EntryPoint=\"gpu{pascalCase m.Name}\")>]"
+                printfn $"    [<DllImport(\"Native\", EntryPoint=\"gpu{pascalCase m.Name}\")>]"
                 printfn $"    extern {externName m.Return} _{pascalCase m.Name}({(pascalCase m.Name)}Args& args)"
             
                 let argdef = m.Args |> Seq.map (fun a -> $"{camelCase a.Name} : {fsharpName a.Type}") |> String.concat ", "
@@ -718,7 +761,7 @@ module RawWrapper =
                 printfn $"        _{pascalCase m.Name}(&args)"
             else
                 let args = m.Args |> Seq.map (fun a -> $"{externName a.Type} {camelCase a.Name}") |> String.concat ", "
-                printfn $"    [<DllImport(\"WebGPU\", EntryPoint=\"gpu{pascalCase m.Name}\")>]"
+                printfn $"    [<DllImport(\"Native\", EntryPoint=\"gpu{pascalCase m.Name}\")>]"
                 printfn $"    extern {externName m.Return} {pascalCase m.Name}({args})"
         
         let delegates =
@@ -1056,42 +1099,7 @@ module Frontend =
                     simple()
         | [] ->
             []
-                 
-                    
-    // let rec getArgumentTransformations (camelCase : string -> string) (access : string -> string) (a : list<FieldDef>) =
-    //     match a with
-    //     | [] -> []
-    //     | h :: rest ->
-    //         let t = frontendName h.Type
-    //         if t = "nativeptr<byte>" && h.Type.TypeName = "char" then
-    //             // string
-    //             let self = camelCase h.Name, "string", (fun str -> $"use {camelCase h.Name}Ptr = fixed (Encoding.UTF8.GetBytes({access (camelCase h.Name)}))" :: str), [$"{camelCase h.Name}Ptr"]
-    //             self :: getArgumentTransformations camelCase access rest
-    //         elif h.Type.TypeName = "bool" then
-    //             let self = camelCase h.Name, "bool", (fun str -> str), [$"(if {access (camelCase h.Name)} then 1 else 0)"]
-    //             self :: getArgumentTransformations camelCase access rest
-    //         else
-    //             match tryResolveType h.Type with
-    //             | Some (Object _) when Option.isNone h.Type.Annotation->
-    //                 let self = camelCase h.Name, t, (fun str -> str), [$"{access (camelCase h.Name)}.Handle"]
-    //                 self :: getArgumentTransformations camelCase access rest
-    //             | Some (Struct _) when Option.isNone h.Type.Annotation ->
-    //                 
-    //                 let wrap (str : list<string>) =
-    //                     [
-    //                         $"{access (camelCase h.Name)}.Pin(fun {camelCase h.Name}Ptr ->"
-    //                         for s in str do
-    //                             $"    {s}"
-    //                         $")"
-    //                     ]
-    //                 
-    //                 let self = camelCase h.Name, t, wrap, [$"{camelCase h.Name}Ptr"]
-    //                 self :: getArgumentTransformations camelCase access rest
-    //                 
-    //             | _ ->
-    //                 let self = camelCase h.Name, t, (fun str -> str), [access (camelCase h.Name)]
-    //                 self :: getArgumentTransformations camelCase access rest
-    //
+      
     let print() =
         
         let b = System.Text.StringBuilder()
@@ -1104,6 +1112,26 @@ module Frontend =
         printfn "open System.Runtime.InteropServices"
         printfn "open Microsoft.FSharp.NativeInterop"
         printfn "#nowarn \"9\""
+        
+        let chainRootTypes =
+            all |> Seq.collect (fun a ->
+                match a with
+                | Struct def -> def.ChainRoots
+                | _ -> []
+            ) |> Set.ofSeq
+            
+        for c in chainRootTypes do
+            printfn "[<AllowNullLiteral>]"
+            printfn $"type I{pascalCase c}Extension ="
+            printfn "    abstract member Pin<'r> : action : (nativeint -> 'r) -> 'r"
+            
+        printfn "[<AbstractClass; Sealed>]"
+        printfn "type private PinHelper() ="
+        for c in chainRootTypes do
+            printfn $"    static member inline PinNullable<'r>(x : I{pascalCase c}Extension, action : nativeint -> 'r) = "
+            printfn $"        if isNull x then action 0n"
+            printfn $"        else x.Pin action"
+        
         
         for a in all do
             match a with
@@ -1126,13 +1154,18 @@ module Frontend =
                 
                 let marshal = marshal s.Fields
                 
+                let extensible =
+                    Option.isSome s.Extensible && Set.contains s.Name chainRootTypes
+                    
+                let chained =
+                    Option.isSome s.Chained 
+                    
                 match marshal with
                 | [] ->
                     printfn $"type {pascalCase s.Name}() ="
-                    printfn $"    member inline this.Pin<'r>([<InlineIfLambda>] action : nativeptr<WebGPU.Raw.{pascalCase s.Name}> -> 'r) : 'r = "
+                    printfn $"    member this.Pin<'r>(action : nativeptr<WebGPU.Raw.{pascalCase s.Name}> -> 'r) : 'r = "
                     printfn $"        action (NativePtr.ofNativeInt 0n)"
                 | _ ->
-                    
                     let fielddef =
                         marshal |> List.map (fun m ->
                             let f = m.FrontendField
@@ -1140,26 +1173,67 @@ module Frontend =
                             $"{name} : {frontendName false f.Type}"
                         )
                         
-                    
-                    //
-                    // let transforms = getArgumentTransformations pascalCase (sprintf "this.%s") s.Fields
-                    // let fielddef, fielduse =
-                    //     transforms
-                    //     |> List.map (fun (name, typ, bindings, real) -> $"{name} : {typ}", real)
-                    //     |> List.unzip
-                    //     
                     printfn $"type {pascalCase s.Name} = "
                     printfn "    {"
+                    if extensible || chained then
+                        let rootName = 
+                            if chained then
+                                match s.ChainRoots with
+                                | [a] -> a
+                                | roots -> List.head roots //failwithf "bad roots: %A" roots
+                            else s.Name
+                            
+                        
+                        printfn $"        Next : I{pascalCase rootName}Extension"
+                    
                     for d in fielddef do
                         printfn $"        {d}"
                     printfn "    }"
-                    printfn $"    member inline this.Pin<'r>([<InlineIfLambda>] action : nativeptr<WebGPU.Raw.{pascalCase s.Name}> -> 'r) : 'r = "
+                    
+                    printfn $"    member this.Pin<'r>(action : nativeptr<WebGPU.Raw.{pascalCase s.Name}> -> 'r) : 'r = "
                     //
                     // let realAndFields =
                     //     transforms
                     //     |> List.collect (fun (_,_,_,real) -> real)
                     //     |> List.zip s.Fields
-                    //     
+                    //
+                    
+                    let marshal =
+                        if chained then
+                            {
+                                BackendFields = fun _ ->
+                                    [
+                                        "nextInChain", { Name = "next in chain"; Type = { TypeName = "void*"; Annotation = None }; Default = None; Optional = false; Length = None }
+                                        "sType", { Name = "s type"; Type = { TypeName = "s type"; Annotation = None }; Default = None; Optional = false; Length = None }
+                                    ]
+                                FrontendField = { Name = "Next"; Type = { TypeName = ""; Annotation = None }; Default = None; Optional = false; Length = None }
+                                ReadBackend = fun a -> List.head a
+                                PinFrontend = fun a b ->
+                                    [
+                                        yield $"PinHelper.PinNullable({a}, fun nextInChain ->"
+                                        yield $"    let sType = SType.{pascalCase s.Name}"
+                                        for b in b do yield $"    {b}"
+                                        yield ")"
+                                    ]
+                            } :: marshal
+                        elif extensible then
+                            {
+                                BackendFields = fun _ ->
+                                    [
+                                        "nextInChain", { Name = "next in chain"; Type = { TypeName = "void*"; Annotation = None }; Default = None; Optional = false; Length = None }
+                                    ]
+                                FrontendField = { Name = "Next"; Type = { TypeName = ""; Annotation = None }; Default = None; Optional = false; Length = None }
+                                ReadBackend = fun a -> List.head a
+                                PinFrontend = fun a b ->
+                                    [
+                                        yield $"PinHelper.PinNullable({a}, fun nextInChain ->"
+                                        for b in b do yield $"    {b}"
+                                        yield ")"
+                                    ]
+                            } :: marshal
+                        else
+                            marshal
+                    
                     let body = 
                         pinStruct "this" marshal (fun pinned ->
                             let backendName = $"WebGPU.Raw.{pascalCase s.Name}"
@@ -1180,6 +1254,13 @@ module Frontend =
                         
                     for b in body do
                         printfn "        %s" b
+                        
+                    
+                    for r in s.ChainRoots do
+                        printfn $"    interface I{pascalCase r}Extension with"
+                        printfn $"        member x.Pin<'r>(action : nativeint -> 'r) = x.Pin(fun ptr -> action(NativePtr.toNativeInt ptr))"
+                    
+                        
                     // printfn $"        use ptr ="
                     // printfn "            fixed [| {"
                     // for (f, real) in realAndFields do
@@ -1206,6 +1287,8 @@ module Frontend =
                         )
                     
                     printfn "        {"
+                    if extensible || chained then
+                        printfn "            Next = null"
                     for (name, value) in values do
                         
                         printfn $"            {name} = {value}"
@@ -1214,6 +1297,8 @@ module Frontend =
             | Object o ->
                 printfn $"type {pascalCase o.Name} internal(handle : nativeint) ="
                 printfn "    member x.Handle = handle"
+                
+                printfn $"    static member Null = {pascalCase o.Name}(0n)"
                 
                 let (|Getter|_|) (m : FunctionDef) =
                     match m.Args with
