@@ -8,6 +8,7 @@ nuget Aardvark.Base             ~> 5.3.4
 nuget Aardvark.Base.FSharp      ~> 5.3.4
 nuget Aardvark.Build            ~> 2.0.3
 
+nuget Silk.NET.GLFW             ~> 2.22.0
 
 nuget Microsoft.AspNetCore.Components.Forms ~> 8.0.10
 nuget Microsoft.AspNetCore.Components ~> 8.0.10

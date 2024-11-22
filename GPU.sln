@@ -5,7 +5,21 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{E90DA2D0-2327-479F-8F98-46C69E4AACBE}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "GPU", "src\GPU\GPU.fsproj", "{679CFBF7-E4BF-4A4F-A74C-8893CD74B045}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "WebGPU", "src\WebGPU\WebGPU.fsproj", "{AFB9F2EC-4164-4D6D-A801-4D8799E6FF64}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Demo", "src\Demo\Demo.fsproj", "{59187546-4E13-407E-8CA7-E5DEACEA8EF9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D7CB8530-152C-4C1A-91E5-B93B09311B33}"
+	ProjectSection(SolutionItems) = preProject
+		dawn.json = dawn.json
+		Generator.fsx = Generator.fsx
+		global.json = global.json
+		paket.dependencies = paket.dependencies
+		paket.lock = paket.lock
+		RELEASE_NOTES.md = RELEASE_NOTES.md
+		.gitignore = .gitignore
+		dotnet-tools.json = .config/dotnet-tools.json
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -16,12 +30,17 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{679CFBF7-E4BF-4A4F-A74C-8893CD74B045}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{679CFBF7-E4BF-4A4F-A74C-8893CD74B045}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{679CFBF7-E4BF-4A4F-A74C-8893CD74B045}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{679CFBF7-E4BF-4A4F-A74C-8893CD74B045}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AFB9F2EC-4164-4D6D-A801-4D8799E6FF64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFB9F2EC-4164-4D6D-A801-4D8799E6FF64}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AFB9F2EC-4164-4D6D-A801-4D8799E6FF64}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AFB9F2EC-4164-4D6D-A801-4D8799E6FF64}.Release|Any CPU.Build.0 = Release|Any CPU
+		{59187546-4E13-407E-8CA7-E5DEACEA8EF9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59187546-4E13-407E-8CA7-E5DEACEA8EF9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{59187546-4E13-407E-8CA7-E5DEACEA8EF9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59187546-4E13-407E-8CA7-E5DEACEA8EF9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{679CFBF7-E4BF-4A4F-A74C-8893CD74B045} = {E90DA2D0-2327-479F-8F98-46C69E4AACBE}
+		{AFB9F2EC-4164-4D6D-A801-4D8799E6FF64} = {E90DA2D0-2327-479F-8F98-46C69E4AACBE}
+		{59187546-4E13-407E-8CA7-E5DEACEA8EF9} = {E90DA2D0-2327-479F-8F98-46C69E4AACBE}
 	EndGlobalSection
 EndGlobal

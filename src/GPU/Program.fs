@@ -13,17 +13,20 @@ let main args =
             
             let surf = 
                 instance.CreateSurface {
-                    Next = { SurfaceDescriptorFromCanvasHTMLSelector.Selector = "#canvas"; Next = null }
-                    Label = "MainView"
+                    Next = { SurfaceDescriptorFromCanvasHTMLSelector.Selector = str "#canvas"; Next = null }
+                    Label = str "MainView"
                 }
                 
             printfn "%A" surf.Handle
                 
             let! adapter = 
                 instance.RequestAdapterAsync {
+                    Next = null
                     CompatibleSurface = surf
                     PowerPreference = PowerPreference.HighPerformance
-                    ForceFallbackAdapter = false 
+                    ForceFallbackAdapter = false
+                    BackendType = BackendType.Undefined
+                    CompatibilityMode = false
                 }
                 
             printfn "%A" adapter.Handle
@@ -33,20 +36,29 @@ let main args =
             // let fmt = surf.GetPreferredFormat adapter
             // printfn "%A" fmt
                 
-            let features = adapter.GetFeatures()
-            let limits = adapter.Limits
+            let features = adapter.Features
+            let limits =
+                let mutable l = Unchecked.defaultof<SupportedLimits>
+                adapter.GetLimits(&l) |> ignore
+                l
+                
             printfn "%A" features
             printfn "%A" limits
             
             let! device = 
                 adapter.RequestDeviceAsync {
                     Next = null //{ DawnCacheDeviceDescriptor.IsolationKey = "Hansi" }
-                    Label = "Device"
-                    RequiredFeatures = features
+                    Label = str "Device"
+                    RequiredFeatures = features.Features
                     RequiredLimits = { Limits = limits.Limits }
-                    DefaultQueue = { Label = "Queue" } 
+                    DefaultQueue = { Label = str "Queue" }
+                    DeviceLostCallbackInfo = { Mode = CallbackMode.AllowSpontaneous; Callback = DeviceLostCallbackNew (fun a b c d -> ()) }
+                    DeviceLostCallbackInfo2 = { Mode = CallbackMode.AllowSpontaneous; Callback = DeviceLostCallback2 (fun a b c -> ()) }
+                    UncapturedErrorCallbackInfo = { Callback = ErrorCallback (fun a b c -> ()) }
+                    UncapturedErrorCallbackInfo2 = { Callback = UncapturedErrorCallback (fun a b c -> ()) }
                 }
                 
+            printfn "%A" device.Handle
             ()
         with e ->
             printfn "%A" e

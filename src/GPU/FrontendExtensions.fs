@@ -6,6 +6,15 @@ open System.Runtime.InteropServices
 open System.Runtime.CompilerServices
 open System.Threading.Tasks
 
+[<AutoOpen>]
+module Extensions =
+    let str (str : string) =
+        {
+            Data = str
+            Length = unativeint str.Length
+        }
+
+
 #nowarn "9"
 [<AbstractClass; Sealed; Extension>]
 type WebGPU private() =
@@ -40,13 +49,4 @@ type WebGPU private() =
         ))
         tcs.Task
         
-    [<Extension>]
-    static member GetFeatures(this : Adapter) =
-        let cnt = this.EnumerateFeatures(NativePtr.ofNativeInt 0n)
-        printfn "features: %A" cnt 
-        let arr = Array.zeroCreate<FeatureName>(int cnt)
-        use ptr = fixed arr
-        this.EnumerateFeatures(ptr) |> ignore
-        
-        printfn "features: %A" arr 
-        arr
+ 

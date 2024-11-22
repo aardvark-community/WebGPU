@@ -11,19 +11,26 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <WasmBuildNative>true</WasmBuildNative>
     <ScanForPInvokes>true</ScanForPInvokes>
-    <EmccExtraCFlags>-s EXPORT_ALL=1 -s USE_WEBGPU=1</EmccExtraCFlags>
-    <EmccExtraLDFlags>-s USE_WEBGPU=1 --js-library $(MSBuildThisFileDirectory)/lib_wgpu.js -s INCLUDE_FULL_LIBRARY=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s EXPORT_ALL=1</EmccExtraLDFlags>
+    <EmccExtraCFlags>-s EXPORT_ALL=1 </EmccExtraCFlags>
+    <EmccExtraLDFlags>--js-library $(MSBuildThisFileDirectory)library_webgpu_enum_tables.js --js-library $(MSBuildThisFileDirectory)library_webgpu_generated_struct_info.js --js-library $(MSBuildThisFileDirectory)library_webgpu_generated_sig_info.js --js-library $(MSBuildThisFileDirectory)library_webgpu.js --closure-args=--externs=/usr/local/share/dotnet/packs/Microsoft.NET.Runtime.Emscripten.3.1.34.Sdk.osx-arm64/8.0.10/tools/emscripten/src/closure-externs/webgpu-externs.js  </EmccExtraLDFlags>
   </PropertyGroup>
   <ItemGroup>
     <None Include="Generator.fsx" />
-    <None Include="lib_wgpu.js" />
+    <None Include="library_webgpu_enum_tables.js" />
+    <None Include="library_webgpu_generated_sig_info.js" />
+    <None Include="library_webgpu.js" />
     <Compile Include="Pinnable.fs" />
     <Compile Include="Enums.fs" />
     <Compile Include="Wrapper.fs" />
     <Compile Include="Frontend.fs" />
     <Compile Include="FrontendExtensions.fs" />
-    <NativeFileReference Include="Native.c" />
+    <NativeFileReference Include="webgpu.cpp" />
+    <NativeFileReference Include="WebGPU.c" />
     <Compile Include="Program.fs" />
+    <Content Include="webgpu.h">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

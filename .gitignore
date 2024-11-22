@@ -37,3 +37,4 @@ bin/
 **/wwwroot/data3/
 **/Aardvark.log
 **/pub/
+src/WebGPUNative/build
