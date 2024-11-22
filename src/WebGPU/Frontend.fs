@@ -498,7 +498,7 @@ type RequestAdapterCallbackInfo2 =
         }
 type Adapter internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"Adapter(%08X{handle})"
+    override x.ToString() = $"Adapter(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -869,7 +869,7 @@ type DawnWGSLBlocklist =
         }
 type BindGroup internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"BindGroup(%08X{handle})"
+    override x.ToString() = $"BindGroup(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -976,7 +976,7 @@ type BindGroupDescriptor =
         }
 type BindGroupLayout internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"BindGroupLayout(%08X{handle})"
+    override x.ToString() = $"BindGroupLayout(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -1460,7 +1460,7 @@ type StringView =
         }
 type Buffer internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"Buffer(%08X{handle})"
+    override x.ToString() = $"Buffer(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -1756,7 +1756,7 @@ type ConstantEntry =
         }
 type CommandBuffer internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"CommandBuffer(%08X{handle})"
+    override x.ToString() = $"CommandBuffer(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -1811,7 +1811,7 @@ type CommandBufferDescriptor =
         }
 type CommandEncoder internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"CommandEncoder(%08X{handle})"
+    override x.ToString() = $"CommandEncoder(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -2149,7 +2149,7 @@ type ComputePassDescriptor =
         }
 type ComputePassEncoder internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"ComputePassEncoder(%08X{handle})"
+    override x.ToString() = $"ComputePassEncoder(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -2237,7 +2237,7 @@ type ComputePassTimestampWrites =
         }
 type ComputePipeline internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"ComputePipeline(%08X{handle})"
+    override x.ToString() = $"ComputePipeline(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -2583,7 +2583,7 @@ type AHardwareBufferProperties =
         }
 type Device internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"Device(%08X{handle})"
+    override x.ToString() = $"Device(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -3468,7 +3468,7 @@ type Extent3D =
         }
 type ExternalTexture internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"ExternalTexture(%08X{handle})"
+    override x.ToString() = $"ExternalTexture(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -3592,7 +3592,7 @@ type ExternalTextureDescriptor =
         }
 type SharedBufferMemory internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"SharedBufferMemory(%08X{handle})"
+    override x.ToString() = $"SharedBufferMemory(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -3716,7 +3716,7 @@ type SharedBufferMemoryDescriptor =
         }
 type SharedTextureMemory internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"SharedTextureMemory(%08X{handle})"
+    override x.ToString() = $"SharedTextureMemory(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -4460,7 +4460,7 @@ type SharedTextureMemoryD3DSwapchainBeginState =
         }
 type SharedFence internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"SharedFence(%08X{handle})"
+    override x.ToString() = $"SharedFence(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -5058,7 +5058,7 @@ type ImageCopyExternalTexture =
         }
 type Instance internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"Instance(%08X{handle})"
+    override x.ToString() = $"Instance(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -5387,7 +5387,7 @@ type Origin2D =
         }
 type PipelineLayout internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"PipelineLayout(%08X{handle})"
+    override x.ToString() = $"PipelineLayout(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -5561,7 +5561,7 @@ type ProgrammableStageDescriptor =
         }
 type QuerySet internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"QuerySet(%08X{handle})"
+    override x.ToString() = $"QuerySet(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -5631,7 +5631,7 @@ type QuerySetDescriptor =
         }
 type Queue internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"Queue(%08X{handle})"
+    override x.ToString() = $"Queue(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -5828,7 +5828,7 @@ type QueueWorkDoneCallbackInfo2 =
         }
 type RenderBundle internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"RenderBundle(%08X{handle})"
+    override x.ToString() = $"RenderBundle(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -5853,7 +5853,7 @@ type RenderBundle internal(handle : nativeint) =
         member x.Dispose() = x.Dispose(true)
 type RenderBundleEncoder internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"RenderBundleEncoder(%08X{handle})"
+    override x.ToString() = $"RenderBundleEncoder(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -6328,7 +6328,7 @@ type RenderPassStorageAttachment =
         }
 type RenderPassEncoder internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"RenderPassEncoder(%08X{handle})"
+    override x.ToString() = $"RenderPassEncoder(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -6463,7 +6463,7 @@ type RenderPassTimestampWrites =
         }
 type RenderPipeline internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"RenderPipeline(%08X{handle})"
+    override x.ToString() = $"RenderPipeline(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -6954,7 +6954,7 @@ type RenderPipelineDescriptor =
         }
 type Sampler internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"Sampler(%08X{handle})"
+    override x.ToString() = $"Sampler(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -7039,7 +7039,7 @@ type SamplerDescriptor =
         }
 type ShaderModule internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"ShaderModule(%08X{handle})"
+    override x.ToString() = $"ShaderModule(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -7283,7 +7283,7 @@ type StencilFaceState =
         }
 type Surface internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"Surface(%08X{handle})"
+    override x.ToString() = $"Surface(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -7712,7 +7712,7 @@ type SurfaceTexture =
         }
 type Texture internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"Texture(%08X{handle})"
+    override x.ToString() = $"Texture(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
@@ -7949,7 +7949,7 @@ type TextureViewDescriptor =
         }
 type TextureView internal(handle : nativeint) =
     member x.Handle = handle
-    override x.ToString() = $"TextureView(%08X{handle})"
+    override x.ToString() = $"TextureView(0x%08X{handle})"
     override x.GetHashCode() = hash handle
     override x.Equals(obj) =
         match obj with
