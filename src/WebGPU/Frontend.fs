@@ -4,6 +4,8 @@ open System.Text
 open System.Runtime.InteropServices
 open Microsoft.FSharp.NativeInterop
 #nowarn "9"
+#nowarn "26"
+#nowarn "1182"
 [<AllowNullLiteral>]
 type IExtension =
     abstract member Pin<'r> : action : (nativeint -> 'r) -> 'r
@@ -496,9 +498,15 @@ type RequestAdapterCallbackInfo2 =
         }
 type Adapter internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"Adapter(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? Adapter as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new Adapter(0n)
-    member _.GetInstance() : Instance =
-        let res = WebGPU.Raw.WebGPU.AdapterGetInstance(handle)
+    member this.Instance : Instance =
+        let mutable res = WebGPU.Raw.WebGPU.AdapterGetInstance(handle)
         new Instance(res)
     member _.Limits : SupportedLimits =
         let mutable res = Unchecked.defaultof<_>
@@ -555,16 +563,35 @@ type Adapter internal(handle : nativeint) =
             new Device(res)
         )
     member _.GetFormatCapabilities(format : TextureFormat, capabilities : byref<FormatCapabilities>) : Status =
-        capabilities.Pin(fun _capabilitiesPtr ->
-            let res = WebGPU.Raw.WebGPU.AdapterGetFormatCapabilities(handle, format, _capabilitiesPtr)
-            res
-        )
+        let mutable capabilitiesCopy = capabilities
+        try
+            capabilities.Pin(fun _capabilitiesPtr ->
+                if NativePtr.toNativeInt _capabilitiesPtr = 0n then
+                    let mutable capabilitiesNative = Unchecked.defaultof<WebGPU.Raw.FormatCapabilities>
+                    use _capabilitiesPtr = fixed &capabilitiesNative
+                    let res = WebGPU.Raw.WebGPU.AdapterGetFormatCapabilities(handle, format, _capabilitiesPtr)
+                    let _ret = res
+                    capabilitiesCopy <- FormatCapabilities.Read(&capabilitiesNative)
+                    _ret
+                else
+                    let res = WebGPU.Raw.WebGPU.AdapterGetFormatCapabilities(handle, format, _capabilitiesPtr)
+                    let _ret = res
+                    let capabilitiesResult = NativePtr.toByRef _capabilitiesPtr
+                    capabilitiesCopy <- FormatCapabilities.Read(&capabilitiesResult)
+                    _ret
+            )
+        finally
+            capabilities <- capabilitiesCopy
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.AdapterRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type AdapterInfo = 
     {
         Next : IAdapterInfoExtension
@@ -699,9 +726,9 @@ type DeviceDescriptor =
 type DawnTogglesDescriptor = 
     {
         Next : IInstanceDescriptorExtension
-        EnabledToggleCount : unativeint
+        EnabledToggleCount : int64
         EnabledToggles : nativeptr<nativeptr<byte>>
-        DisabledToggleCount : unativeint
+        DisabledToggleCount : int64
         DisabledToggles : nativeptr<nativeptr<byte>>
     }
     static member Null = Unchecked.defaultof<DawnTogglesDescriptor>
@@ -716,9 +743,9 @@ type DawnTogglesDescriptor =
                     new WebGPU.Raw.DawnTogglesDescriptor(
                         nextInChain,
                         sType,
-                        this.EnabledToggleCount,
+                        unativeint(this.EnabledToggleCount),
                         this.EnabledToggles,
-                        this.DisabledToggleCount,
+                        unativeint(this.DisabledToggleCount),
                         this.DisabledToggles
                     )
                 use ptr = fixed &value
@@ -734,13 +761,13 @@ type DawnTogglesDescriptor =
     static member Read(backend : inref<WebGPU.Raw.DawnTogglesDescriptor>) = 
         {
             Next = ExtensionDecoder.decode<IInstanceDescriptorExtension> backend.NextInChain
-            EnabledToggleCount = backend.EnabledToggleCount
+            EnabledToggleCount = int64(backend.EnabledToggleCount)
             EnabledToggles = backend.EnabledToggles
-            DisabledToggleCount = backend.DisabledToggleCount
+            DisabledToggleCount = int64(backend.DisabledToggleCount)
             DisabledToggles = backend.DisabledToggles
         }
-type DawnLoadCacheDataFunction = delegate of IDisposable * key : nativeint * keySize : unativeint * value : nativeint * valueSize : unativeint -> unativeint
-type DawnStoreCacheDataFunction = delegate of IDisposable * key : nativeint * keySize : unativeint * value : nativeint * valueSize : unativeint -> unit
+type DawnLoadCacheDataFunction = delegate of IDisposable * key : nativeint * keySize : int64 * value : nativeint * valueSize : int64 -> unativeint
+type DawnStoreCacheDataFunction = delegate of IDisposable * key : nativeint * keySize : int64 * value : nativeint * valueSize : int64 -> unit
 type DawnCacheDeviceDescriptor = 
     {
         Next : IDeviceDescriptorExtension
@@ -763,9 +790,9 @@ type DawnCacheDeviceDescriptor =
                 let mutable _loadDataFunctionDel = Unchecked.defaultof<WebGPU.Raw.DawnLoadCacheDataFunction>
                 _loadDataFunctionDel <- WebGPU.Raw.DawnLoadCacheDataFunction(fun key keySize value valueSize userdata ->
                     let _key = key
-                    let _keySize = keySize
+                    let _keySize = int64(keySize)
                     let _value = value
-                    let _valueSize = valueSize
+                    let _valueSize = int64(valueSize)
                     this.LoadDataFunction.Invoke({ new IDisposable with member __.Dispose() = _loadDataFunctionGC.Free() }, _key, _keySize, _value, _valueSize)
                 )
                 _loadDataFunctionGC <- GCHandle.Alloc(_loadDataFunctionDel)
@@ -774,9 +801,9 @@ type DawnCacheDeviceDescriptor =
                 let mutable _storeDataFunctionDel = Unchecked.defaultof<WebGPU.Raw.DawnStoreCacheDataFunction>
                 _storeDataFunctionDel <- WebGPU.Raw.DawnStoreCacheDataFunction(fun key keySize value valueSize userdata ->
                     let _key = key
-                    let _keySize = keySize
+                    let _keySize = int64(keySize)
                     let _value = value
-                    let _valueSize = valueSize
+                    let _valueSize = int64(valueSize)
                     this.StoreDataFunction.Invoke({ new IDisposable with member __.Dispose() = _storeDataFunctionGC.Free() }, _key, _keySize, _value, _valueSize)
                 )
                 _storeDataFunctionGC <- GCHandle.Alloc(_storeDataFunctionDel)
@@ -808,7 +835,7 @@ type DawnCacheDeviceDescriptor =
 type DawnWGSLBlocklist = 
     {
         Next : IInstanceDescriptorExtension
-        BlocklistedFeatureCount : unativeint
+        BlocklistedFeatureCount : int64
         BlocklistedFeatures : nativeptr<nativeptr<byte>>
     }
     static member Null = Unchecked.defaultof<DawnWGSLBlocklist>
@@ -823,7 +850,7 @@ type DawnWGSLBlocklist =
                     new WebGPU.Raw.DawnWGSLBlocklist(
                         nextInChain,
                         sType,
-                        this.BlocklistedFeatureCount,
+                        unativeint(this.BlocklistedFeatureCount),
                         this.BlocklistedFeatures
                     )
                 use ptr = fixed &value
@@ -837,11 +864,17 @@ type DawnWGSLBlocklist =
     static member Read(backend : inref<WebGPU.Raw.DawnWGSLBlocklist>) = 
         {
             Next = ExtensionDecoder.decode<IInstanceDescriptorExtension> backend.NextInChain
-            BlocklistedFeatureCount = backend.BlocklistedFeatureCount
+            BlocklistedFeatureCount = int64(backend.BlocklistedFeatureCount)
             BlocklistedFeatures = backend.BlocklistedFeatures
         }
 type BindGroup internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"BindGroup(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? BindGroup as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new BindGroup(0n)
     member _.SetLabel(label : string) : unit =
         let _labelArr = Encoding.UTF8.GetBytes(label)
@@ -852,16 +885,20 @@ type BindGroup internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.BindGroupRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type BindGroupEntry = 
     {
         Next : IBindGroupEntryExtension
         Binding : int
         Buffer : Buffer
-        Offset : uint64
-        Size : uint64
+        Offset : int64
+        Size : int64
         Sampler : Sampler
         TextureView : TextureView
     }
@@ -877,8 +914,8 @@ type BindGroupEntry =
                         nextInChain,
                         uint32(this.Binding),
                         this.Buffer.Handle,
-                        this.Offset,
-                        this.Size,
+                        uint64(this.Offset),
+                        uint64(this.Size),
                         this.Sampler.Handle,
                         this.TextureView.Handle
                     )
@@ -892,8 +929,8 @@ type BindGroupEntry =
             Next = ExtensionDecoder.decode<IBindGroupEntryExtension> backend.NextInChain
             Binding = int(backend.Binding)
             Buffer = new Buffer(backend.Buffer)
-            Offset = backend.Offset
-            Size = backend.Size
+            Offset = int64(backend.Offset)
+            Size = int64(backend.Size)
             Sampler = new Sampler(backend.Sampler)
             TextureView = new TextureView(backend.TextureView)
         }
@@ -939,6 +976,12 @@ type BindGroupDescriptor =
         }
 type BindGroupLayout internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"BindGroupLayout(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? BindGroupLayout as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new BindGroupLayout(0n)
     member _.SetLabel(label : string) : unit =
         let _labelArr = Encoding.UTF8.GetBytes(label)
@@ -949,15 +992,19 @@ type BindGroupLayout internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.BindGroupLayoutRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type BufferBindingLayout = 
     {
         Next : IExtension
         Type : BufferBindingType
         HasDynamicOffset : bool
-        MinBindingSize : uint64
+        MinBindingSize : int64
     }
     static member Null = Unchecked.defaultof<BufferBindingLayout>
     [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
@@ -971,7 +1018,7 @@ type BufferBindingLayout =
                         nextInChain,
                         this.Type,
                         (if this.HasDynamicOffset then 1 else 0),
-                        this.MinBindingSize
+                        uint64(this.MinBindingSize)
                     )
                 use ptr = fixed &value
                 action ptr
@@ -983,7 +1030,7 @@ type BufferBindingLayout =
             Next = ExtensionDecoder.decode<IExtension> backend.NextInChain
             Type = backend.Type
             HasDynamicOffset = (backend.HasDynamicOffset <> 0)
-            MinBindingSize = backend.MinBindingSize
+            MinBindingSize = int64(backend.MinBindingSize)
         }
 type SamplerBindingLayout = 
     {
@@ -1388,7 +1435,7 @@ type BlendComponent =
 type StringView = 
     {
         Data : string
-        Length : unativeint
+        Length : int64
     }
     static member Null = Unchecked.defaultof<StringView>
     [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
@@ -1400,7 +1447,7 @@ type StringView =
             let mutable value =
                 new WebGPU.Raw.StringView(
                     _dataPtr,
-                    this.Length
+                    unativeint(this.Length)
                 )
             use ptr = fixed &value
             action ptr
@@ -1409,12 +1456,18 @@ type StringView =
     static member Read(backend : inref<WebGPU.Raw.StringView>) = 
         {
             Data = Marshal.PtrToStringAnsi(NativePtr.toNativeInt backend.Data)
-            Length = backend.Length
+            Length = int64(backend.Length)
         }
 type Buffer internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"Buffer(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? Buffer as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new Buffer(0n)
-    member _.MapAsync(mode : MapMode, offset : unativeint, size : unativeint, callback : BufferMapCallback) : unit =
+    member _.MapAsync(mode : MapMode, offset : int64, size : int64, callback : BufferMapCallback) : unit =
         let mutable _callbackGC = Unchecked.defaultof<GCHandle>
         let mutable _callbackDel = Unchecked.defaultof<WebGPU.Raw.BufferMapCallback>
         _callbackDel <- WebGPU.Raw.BufferMapCallback(fun status userdata ->
@@ -1423,23 +1476,23 @@ type Buffer internal(handle : nativeint) =
         )
         _callbackGC <- GCHandle.Alloc(_callbackDel)
         let _callbackPtr = Marshal.GetFunctionPointerForDelegate(_callbackDel)
-        let res = WebGPU.Raw.WebGPU.BufferMapAsync(handle, mode, offset, size, _callbackPtr, Unchecked.defaultof<_>)
+        let res = WebGPU.Raw.WebGPU.BufferMapAsync(handle, mode, unativeint(offset), unativeint(size), _callbackPtr, Unchecked.defaultof<_>)
         res
-    member _.MapAsyncF(mode : MapMode, offset : unativeint, size : unativeint, callbackInfo : BufferMapCallbackInfo) : Future =
+    member _.MapAsyncF(mode : MapMode, offset : int64, size : int64, callbackInfo : BufferMapCallbackInfo) : Future =
         callbackInfo.Pin(fun _callbackInfoPtr ->
-            let res = WebGPU.Raw.WebGPU.BufferMapAsyncF(handle, mode, offset, size, (if NativePtr.toNativeInt _callbackInfoPtr = 0n then Unchecked.defaultof<_> else NativePtr.read _callbackInfoPtr))
+            let res = WebGPU.Raw.WebGPU.BufferMapAsyncF(handle, mode, unativeint(offset), unativeint(size), (if NativePtr.toNativeInt _callbackInfoPtr = 0n then Unchecked.defaultof<_> else NativePtr.read _callbackInfoPtr))
             Future.Read(&res)
         )
-    member _.MapAsync2(mode : MapMode, offset : unativeint, size : unativeint, callbackInfo : BufferMapCallbackInfo2) : Future =
+    member _.MapAsync2(mode : MapMode, offset : int64, size : int64, callbackInfo : BufferMapCallbackInfo2) : Future =
         callbackInfo.Pin(fun _callbackInfoPtr ->
-            let res = WebGPU.Raw.WebGPU.BufferMapAsync2(handle, mode, offset, size, (if NativePtr.toNativeInt _callbackInfoPtr = 0n then Unchecked.defaultof<_> else NativePtr.read _callbackInfoPtr))
+            let res = WebGPU.Raw.WebGPU.BufferMapAsync2(handle, mode, unativeint(offset), unativeint(size), (if NativePtr.toNativeInt _callbackInfoPtr = 0n then Unchecked.defaultof<_> else NativePtr.read _callbackInfoPtr))
             Future.Read(&res)
         )
-    member _.GetMappedRange(offset : unativeint, size : unativeint) : nativeint =
-        let res = WebGPU.Raw.WebGPU.BufferGetMappedRange(handle, offset, size)
+    member _.GetMappedRange(offset : int64, size : int64) : nativeint =
+        let res = WebGPU.Raw.WebGPU.BufferGetMappedRange(handle, unativeint(offset), unativeint(size))
         res
-    member _.GetConstMappedRange(offset : unativeint, size : unativeint) : nativeint =
-        let res = WebGPU.Raw.WebGPU.BufferGetConstMappedRange(handle, offset, size)
+    member _.GetConstMappedRange(offset : int64, size : int64) : nativeint =
+        let res = WebGPU.Raw.WebGPU.BufferGetConstMappedRange(handle, unativeint(offset), unativeint(size))
         res
     member _.SetLabel(label : string) : unit =
         let _labelArr = Encoding.UTF8.GetBytes(label)
@@ -1447,14 +1500,14 @@ type Buffer internal(handle : nativeint) =
         let _labelLen = WebGPU.Raw.StringView(_labelPtr, unativeint _labelArr.Length)
         let res = WebGPU.Raw.WebGPU.BufferSetLabel(handle, _labelLen)
         res
-    member _.GetUsage() : BufferUsage =
-        let res = WebGPU.Raw.WebGPU.BufferGetUsage(handle)
+    member this.Usage : BufferUsage =
+        let mutable res = WebGPU.Raw.WebGPU.BufferGetUsage(handle)
         res
-    member _.GetSize() : uint64 =
-        let res = WebGPU.Raw.WebGPU.BufferGetSize(handle)
-        res
-    member _.GetMapState() : BufferMapState =
-        let res = WebGPU.Raw.WebGPU.BufferGetMapState(handle)
+    member this.Size : int64 =
+        let mutable res = WebGPU.Raw.WebGPU.BufferGetSize(handle)
+        int64(res)
+    member this.MapState : BufferMapState =
+        let mutable res = WebGPU.Raw.WebGPU.BufferGetMapState(handle)
         res
     member _.Unmap() : unit =
         let res = WebGPU.Raw.WebGPU.BufferUnmap(handle)
@@ -1465,15 +1518,19 @@ type Buffer internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.BufferRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type BufferDescriptor = 
     {
         Next : IBufferDescriptorExtension
         Label : string
         Usage : BufferUsage
-        Size : uint64
+        Size : int64
         MappedAtCreation : bool
     }
     static member Null = Unchecked.defaultof<BufferDescriptor>
@@ -1491,7 +1548,7 @@ type BufferDescriptor =
                         nextInChain,
                         _labelLen,
                         this.Usage,
-                        this.Size,
+                        uint64(this.Size),
                         (if this.MappedAtCreation then 1 else 0)
                     )
                 use ptr = fixed &value
@@ -1504,7 +1561,7 @@ type BufferDescriptor =
             Next = ExtensionDecoder.decode<IBufferDescriptorExtension> backend.NextInChain
             Label = let _labelPtr = NativePtr.toNativeInt(backend.Label.Data) in if _labelPtr = 0n then null else Marshal.PtrToStringUTF8(_labelPtr, int(backend.Label.Length))
             Usage = backend.Usage
-            Size = backend.Size
+            Size = int64(backend.Size)
             MappedAtCreation = (backend.MappedAtCreation <> 0)
         }
 type BufferHostMappedPointer = 
@@ -1699,6 +1756,12 @@ type ConstantEntry =
         }
 type CommandBuffer internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"CommandBuffer(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? CommandBuffer as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new CommandBuffer(0n)
     member _.SetLabel(label : string) : unit =
         let _labelArr = Encoding.UTF8.GetBytes(label)
@@ -1709,9 +1772,13 @@ type CommandBuffer internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.CommandBufferRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type CommandBufferDescriptor = 
     {
         Next : IExtension
@@ -1744,6 +1811,12 @@ type CommandBufferDescriptor =
         }
 type CommandEncoder internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"CommandEncoder(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? CommandEncoder as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new CommandEncoder(0n)
     member _.Finish(descriptor : CommandBufferDescriptor) : CommandBuffer =
         descriptor.Pin(fun _descriptorPtr ->
@@ -1760,8 +1833,8 @@ type CommandEncoder internal(handle : nativeint) =
             let res = WebGPU.Raw.WebGPU.CommandEncoderBeginRenderPass(handle, _descriptorPtr)
             new RenderPassEncoder(res)
         )
-    member _.CopyBufferToBuffer(source : Buffer, sourceOffset : uint64, destination : Buffer, destinationOffset : uint64, size : uint64) : unit =
-        let res = WebGPU.Raw.WebGPU.CommandEncoderCopyBufferToBuffer(handle, source.Handle, sourceOffset, destination.Handle, destinationOffset, size)
+    member _.CopyBufferToBuffer(source : Buffer, sourceOffset : int64, destination : Buffer, destinationOffset : int64, size : int64) : unit =
+        let res = WebGPU.Raw.WebGPU.CommandEncoderCopyBufferToBuffer(handle, source.Handle, uint64(sourceOffset), destination.Handle, uint64(destinationOffset), uint64(size))
         res
     member _.CopyBufferToTexture(source : ImageCopyBuffer, destination : ImageCopyTexture, copySize : Extent3D) : unit =
         source.Pin(fun _sourcePtr ->
@@ -1790,8 +1863,8 @@ type CommandEncoder internal(handle : nativeint) =
                 )
             )
         )
-    member _.ClearBuffer(buffer : Buffer, offset : uint64, size : uint64) : unit =
-        let res = WebGPU.Raw.WebGPU.CommandEncoderClearBuffer(handle, buffer.Handle, offset, size)
+    member _.ClearBuffer(buffer : Buffer, offset : int64, size : int64) : unit =
+        let res = WebGPU.Raw.WebGPU.CommandEncoderClearBuffer(handle, buffer.Handle, uint64(offset), uint64(size))
         res
     member _.InjectValidationError(message : string) : unit =
         let _messageArr = Encoding.UTF8.GetBytes(message)
@@ -1814,13 +1887,13 @@ type CommandEncoder internal(handle : nativeint) =
         let _groupLabelLen = WebGPU.Raw.StringView(_groupLabelPtr, unativeint _groupLabelArr.Length)
         let res = WebGPU.Raw.WebGPU.CommandEncoderPushDebugGroup(handle, _groupLabelLen)
         res
-    member _.ResolveQuerySet(querySet : QuerySet, firstQuery : int, queryCount : int, destination : Buffer, destinationOffset : uint64) : unit =
-        let res = WebGPU.Raw.WebGPU.CommandEncoderResolveQuerySet(handle, querySet.Handle, uint32(firstQuery), uint32(queryCount), destination.Handle, destinationOffset)
+    member _.ResolveQuerySet(querySet : QuerySet, firstQuery : int, queryCount : int, destination : Buffer, destinationOffset : int64) : unit =
+        let res = WebGPU.Raw.WebGPU.CommandEncoderResolveQuerySet(handle, querySet.Handle, uint32(firstQuery), uint32(queryCount), destination.Handle, uint64(destinationOffset))
         res
-    member _.WriteBuffer(buffer : Buffer, bufferOffset : uint64, data : array<uint8>, size : uint64) : unit =
+    member _.WriteBuffer(buffer : Buffer, bufferOffset : int64, data : array<uint8>, size : int64) : unit =
         use dataPtr = fixed (data)
         let dataLen = uint64 data.Length
-        let res = WebGPU.Raw.WebGPU.CommandEncoderWriteBuffer(handle, buffer.Handle, bufferOffset, dataPtr, size)
+        let res = WebGPU.Raw.WebGPU.CommandEncoderWriteBuffer(handle, buffer.Handle, uint64(bufferOffset), dataPtr, uint64(size))
         res
     member _.WriteTimestamp(querySet : QuerySet, queryIndex : int) : unit =
         let res = WebGPU.Raw.WebGPU.CommandEncoderWriteTimestamp(handle, querySet.Handle, uint32(queryIndex))
@@ -1834,9 +1907,13 @@ type CommandEncoder internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.CommandEncoderRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type CommandEncoderDescriptor = 
     {
         Next : ICommandEncoderDescriptorExtension
@@ -1986,13 +2063,13 @@ type CompilationMessage =
         Next : IExtension
         Message : string
         Type : CompilationMessageType
-        LineNum : uint64
-        LinePos : uint64
-        Offset : uint64
-        Length : uint64
-        Utf16LinePos : uint64
-        Utf16Offset : uint64
-        Utf16Length : uint64
+        LineNum : int64
+        LinePos : int64
+        Offset : int64
+        Length : int64
+        Utf16LinePos : int64
+        Utf16Offset : int64
+        Utf16Length : int64
     }
     static member Null = Unchecked.defaultof<CompilationMessage>
     [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
@@ -2009,13 +2086,13 @@ type CompilationMessage =
                         nextInChain,
                         _messageLen,
                         this.Type,
-                        this.LineNum,
-                        this.LinePos,
-                        this.Offset,
-                        this.Length,
-                        this.Utf16LinePos,
-                        this.Utf16Offset,
-                        this.Utf16Length
+                        uint64(this.LineNum),
+                        uint64(this.LinePos),
+                        uint64(this.Offset),
+                        uint64(this.Length),
+                        uint64(this.Utf16LinePos),
+                        uint64(this.Utf16Offset),
+                        uint64(this.Utf16Length)
                     )
                 use ptr = fixed &value
                 action ptr
@@ -2027,13 +2104,13 @@ type CompilationMessage =
             Next = ExtensionDecoder.decode<IExtension> backend.NextInChain
             Message = let _messagePtr = NativePtr.toNativeInt(backend.Message.Data) in if _messagePtr = 0n then null else Marshal.PtrToStringUTF8(_messagePtr, int(backend.Message.Length))
             Type = backend.Type
-            LineNum = backend.LineNum
-            LinePos = backend.LinePos
-            Offset = backend.Offset
-            Length = backend.Length
-            Utf16LinePos = backend.Utf16LinePos
-            Utf16Offset = backend.Utf16Offset
-            Utf16Length = backend.Utf16Length
+            LineNum = int64(backend.LineNum)
+            LinePos = int64(backend.LinePos)
+            Offset = int64(backend.Offset)
+            Length = int64(backend.Length)
+            Utf16LinePos = int64(backend.Utf16LinePos)
+            Utf16Offset = int64(backend.Utf16Offset)
+            Utf16Length = int64(backend.Utf16Length)
         }
 type ComputePassDescriptor = 
     {
@@ -2072,6 +2149,12 @@ type ComputePassDescriptor =
         }
 type ComputePassEncoder internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"ComputePassEncoder(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? ComputePassEncoder as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new ComputePassEncoder(0n)
     member _.InsertDebugMarker(markerLabel : string) : unit =
         let _markerLabelArr = Encoding.UTF8.GetBytes(markerLabel)
@@ -2102,8 +2185,8 @@ type ComputePassEncoder internal(handle : nativeint) =
     member _.DispatchWorkgroups(workgroupCountX : int, workgroupCountY : int, workgroupCountZ : int) : unit =
         let res = WebGPU.Raw.WebGPU.ComputePassEncoderDispatchWorkgroups(handle, uint32(workgroupCountX), uint32(workgroupCountY), uint32(workgroupCountZ))
         res
-    member _.DispatchWorkgroupsIndirect(indirectBuffer : Buffer, indirectOffset : uint64) : unit =
-        let res = WebGPU.Raw.WebGPU.ComputePassEncoderDispatchWorkgroupsIndirect(handle, indirectBuffer.Handle, indirectOffset)
+    member _.DispatchWorkgroupsIndirect(indirectBuffer : Buffer, indirectOffset : int64) : unit =
+        let res = WebGPU.Raw.WebGPU.ComputePassEncoderDispatchWorkgroupsIndirect(handle, indirectBuffer.Handle, uint64(indirectOffset))
         res
     member _.End() : unit =
         let res = WebGPU.Raw.WebGPU.ComputePassEncoderEnd(handle)
@@ -2117,9 +2200,13 @@ type ComputePassEncoder internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.ComputePassEncoderRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type ComputePassTimestampWrites = 
     {
         QuerySet : QuerySet
@@ -2150,6 +2237,12 @@ type ComputePassTimestampWrites =
         }
 type ComputePipeline internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"ComputePipeline(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? ComputePipeline as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new ComputePipeline(0n)
     member _.GetBindGroupLayout(groupIndex : int) : BindGroupLayout =
         let res = WebGPU.Raw.WebGPU.ComputePipelineGetBindGroupLayout(handle, uint32(groupIndex))
@@ -2163,9 +2256,13 @@ type ComputePipeline internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.ComputePipelineRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type ComputePipelineDescriptor = 
     {
         Next : IComputePipelineDescriptorExtension
@@ -2486,6 +2583,12 @@ type AHardwareBufferProperties =
         }
 type Device internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"Device(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? Device as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new Device(0n)
     member _.CreateBindGroup(descriptor : BindGroupDescriptor) : BindGroup =
         descriptor.Pin(fun _descriptorPtr ->
@@ -2650,18 +2753,33 @@ type Device internal(handle : nativeint) =
         let res = WebGPU.Raw.WebGPU.DeviceDestroy(handle)
         res
     member _.GetAHardwareBufferProperties(handle : nativeint, properties : byref<AHardwareBufferProperties>) : Status =
-        properties.Pin(fun _propertiesPtr ->
-            let res = WebGPU.Raw.WebGPU.DeviceGetAHardwareBufferProperties(handle, handle, _propertiesPtr)
-            res
-        )
+        let mutable propertiesCopy = properties
+        try
+            properties.Pin(fun _propertiesPtr ->
+                if NativePtr.toNativeInt _propertiesPtr = 0n then
+                    let mutable propertiesNative = Unchecked.defaultof<WebGPU.Raw.AHardwareBufferProperties>
+                    use _propertiesPtr = fixed &propertiesNative
+                    let res = WebGPU.Raw.WebGPU.DeviceGetAHardwareBufferProperties(handle, handle, _propertiesPtr)
+                    let _ret = res
+                    propertiesCopy <- AHardwareBufferProperties.Read(&propertiesNative)
+                    _ret
+                else
+                    let res = WebGPU.Raw.WebGPU.DeviceGetAHardwareBufferProperties(handle, handle, _propertiesPtr)
+                    let _ret = res
+                    let propertiesResult = NativePtr.toByRef _propertiesPtr
+                    propertiesCopy <- AHardwareBufferProperties.Read(&propertiesResult)
+                    _ret
+            )
+        finally
+            properties <- propertiesCopy
     member _.Limits : SupportedLimits =
         let mutable res = Unchecked.defaultof<_>
         let ptr = fixed &res
         let status = WebGPU.Raw.WebGPU.DeviceGetLimits(handle, ptr)
         if status <> Status.Success then failwith "GetLimits failed"
         SupportedLimits.Read(&res)
-    member _.GetLostFuture() : Future =
-        let res = WebGPU.Raw.WebGPU.DeviceGetLostFuture(handle)
+    member this.LostFuture : Future =
+        let mutable res = WebGPU.Raw.WebGPU.DeviceGetLostFuture(handle)
         Future.Read(&res)
     member _.HasFeature(feature : FeatureName) : bool =
         let res = WebGPU.Raw.WebGPU.DeviceHasFeature(handle, feature)
@@ -2677,11 +2795,11 @@ type Device internal(handle : nativeint) =
         let status = WebGPU.Raw.WebGPU.DeviceGetAdapterInfo(handle, ptr)
         if status <> Status.Success then failwith "GetAdapterInfo failed"
         AdapterInfo.Read(&res)
-    member _.GetAdapter() : Adapter =
-        let res = WebGPU.Raw.WebGPU.DeviceGetAdapter(handle)
+    member this.Adapter : Adapter =
+        let mutable res = WebGPU.Raw.WebGPU.DeviceGetAdapter(handle)
         new Adapter(res)
-    member _.GetQueue() : Queue =
-        let res = WebGPU.Raw.WebGPU.DeviceGetQueue(handle)
+    member this.Queue : Queue =
+        let mutable res = WebGPU.Raw.WebGPU.DeviceGetQueue(handle)
         new Queue(res)
     member _.InjectError(typ : ErrorType, message : string) : unit =
         let _messageArr = Encoding.UTF8.GetBytes(message)
@@ -2761,9 +2879,13 @@ type Device internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.DeviceRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type DeviceLostCallback = delegate of IDisposable * reason : DeviceLostReason * message : string -> unit
 type DeviceLostCallbackNew = delegate of IDisposable * device : Device * reason : DeviceLostReason * message : string -> unit
 type DeviceLostCallback2 = delegate of IDisposable * device : Device * reason : DeviceLostReason * message : string -> unit
@@ -3041,12 +3163,12 @@ type Limits =
         MaxStorageBuffersPerShaderStage : int
         MaxStorageTexturesPerShaderStage : int
         MaxUniformBuffersPerShaderStage : int
-        MaxUniformBufferBindingSize : uint64
-        MaxStorageBufferBindingSize : uint64
+        MaxUniformBufferBindingSize : int64
+        MaxStorageBufferBindingSize : int64
         MinUniformBufferOffsetAlignment : int
         MinStorageBufferOffsetAlignment : int
         MaxVertexBuffers : int
-        MaxBufferSize : uint64
+        MaxBufferSize : int64
         MaxVertexAttributes : int
         MaxVertexBufferArrayStride : int
         MaxInterStageShaderComponents : int
@@ -3082,12 +3204,12 @@ type Limits =
                     uint32(this.MaxStorageBuffersPerShaderStage),
                     uint32(this.MaxStorageTexturesPerShaderStage),
                     uint32(this.MaxUniformBuffersPerShaderStage),
-                    this.MaxUniformBufferBindingSize,
-                    this.MaxStorageBufferBindingSize,
+                    uint64(this.MaxUniformBufferBindingSize),
+                    uint64(this.MaxStorageBufferBindingSize),
                     uint32(this.MinUniformBufferOffsetAlignment),
                     uint32(this.MinStorageBufferOffsetAlignment),
                     uint32(this.MaxVertexBuffers),
-                    this.MaxBufferSize,
+                    uint64(this.MaxBufferSize),
                     uint32(this.MaxVertexAttributes),
                     uint32(this.MaxVertexBufferArrayStride),
                     uint32(this.MaxInterStageShaderComponents),
@@ -3121,12 +3243,12 @@ type Limits =
             MaxStorageBuffersPerShaderStage = int(backend.MaxStorageBuffersPerShaderStage)
             MaxStorageTexturesPerShaderStage = int(backend.MaxStorageTexturesPerShaderStage)
             MaxUniformBuffersPerShaderStage = int(backend.MaxUniformBuffersPerShaderStage)
-            MaxUniformBufferBindingSize = backend.MaxUniformBufferBindingSize
-            MaxStorageBufferBindingSize = backend.MaxStorageBufferBindingSize
+            MaxUniformBufferBindingSize = int64(backend.MaxUniformBufferBindingSize)
+            MaxStorageBufferBindingSize = int64(backend.MaxStorageBufferBindingSize)
             MinUniformBufferOffsetAlignment = int(backend.MinUniformBufferOffsetAlignment)
             MinStorageBufferOffsetAlignment = int(backend.MinStorageBufferOffsetAlignment)
             MaxVertexBuffers = int(backend.MaxVertexBuffers)
-            MaxBufferSize = backend.MaxBufferSize
+            MaxBufferSize = int64(backend.MaxBufferSize)
             MaxVertexAttributes = int(backend.MaxVertexAttributes)
             MaxVertexBufferArrayStride = int(backend.MaxVertexBufferArrayStride)
             MaxInterStageShaderComponents = int(backend.MaxInterStageShaderComponents)
@@ -3346,6 +3468,12 @@ type Extent3D =
         }
 type ExternalTexture internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"ExternalTexture(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? ExternalTexture as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new ExternalTexture(0n)
     member _.SetLabel(label : string) : unit =
         let _labelArr = Encoding.UTF8.GetBytes(label)
@@ -3365,9 +3493,13 @@ type ExternalTexture internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.ExternalTextureRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type ExternalTextureDescriptor = 
     {
         Next : IExtension
@@ -3460,6 +3592,12 @@ type ExternalTextureDescriptor =
         }
 type SharedBufferMemory internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"SharedBufferMemory(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? SharedBufferMemory as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new SharedBufferMemory(0n)
     member _.SetLabel(label : string) : unit =
         let _labelArr = Encoding.UTF8.GetBytes(label)
@@ -3484,24 +3622,43 @@ type SharedBufferMemory internal(handle : nativeint) =
             res
         )
     member _.EndAccess(buffer : Buffer, descriptor : byref<SharedBufferMemoryEndAccessState>) : Status =
-        descriptor.Pin(fun _descriptorPtr ->
-            let res = WebGPU.Raw.WebGPU.SharedBufferMemoryEndAccess(handle, buffer.Handle, _descriptorPtr)
-            res
-        )
+        let mutable descriptorCopy = descriptor
+        try
+            descriptor.Pin(fun _descriptorPtr ->
+                if NativePtr.toNativeInt _descriptorPtr = 0n then
+                    let mutable descriptorNative = Unchecked.defaultof<WebGPU.Raw.SharedBufferMemoryEndAccessState>
+                    use _descriptorPtr = fixed &descriptorNative
+                    let res = WebGPU.Raw.WebGPU.SharedBufferMemoryEndAccess(handle, buffer.Handle, _descriptorPtr)
+                    let _ret = res
+                    descriptorCopy <- SharedBufferMemoryEndAccessState.Read(&descriptorNative)
+                    _ret
+                else
+                    let res = WebGPU.Raw.WebGPU.SharedBufferMemoryEndAccess(handle, buffer.Handle, _descriptorPtr)
+                    let _ret = res
+                    let descriptorResult = NativePtr.toByRef _descriptorPtr
+                    descriptorCopy <- SharedBufferMemoryEndAccessState.Read(&descriptorResult)
+                    _ret
+            )
+        finally
+            descriptor <- descriptorCopy
     member _.IsDeviceLost() : bool =
         let res = WebGPU.Raw.WebGPU.SharedBufferMemoryIsDeviceLost(handle)
         (res <> 0)
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.SharedBufferMemoryRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type SharedBufferMemoryProperties = 
     {
         Next : IExtension
         Usage : BufferUsage
-        Size : uint64
+        Size : int64
     }
     static member Null = Unchecked.defaultof<SharedBufferMemoryProperties>
     [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
@@ -3514,7 +3671,7 @@ type SharedBufferMemoryProperties =
                     new WebGPU.Raw.SharedBufferMemoryProperties(
                         nextInChain,
                         this.Usage,
-                        this.Size
+                        uint64(this.Size)
                     )
                 use ptr = fixed &value
                 action ptr
@@ -3525,7 +3682,7 @@ type SharedBufferMemoryProperties =
         {
             Next = ExtensionDecoder.decode<IExtension> backend.NextInChain
             Usage = backend.Usage
-            Size = backend.Size
+            Size = int64(backend.Size)
         }
 type SharedBufferMemoryDescriptor = 
     {
@@ -3559,6 +3716,12 @@ type SharedBufferMemoryDescriptor =
         }
 type SharedTextureMemory internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"SharedTextureMemory(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? SharedTextureMemory as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new SharedTextureMemory(0n)
     member _.SetLabel(label : string) : unit =
         let _labelArr = Encoding.UTF8.GetBytes(label)
@@ -3583,19 +3746,38 @@ type SharedTextureMemory internal(handle : nativeint) =
             res
         )
     member _.EndAccess(texture : Texture, descriptor : byref<SharedTextureMemoryEndAccessState>) : Status =
-        descriptor.Pin(fun _descriptorPtr ->
-            let res = WebGPU.Raw.WebGPU.SharedTextureMemoryEndAccess(handle, texture.Handle, _descriptorPtr)
-            res
-        )
+        let mutable descriptorCopy = descriptor
+        try
+            descriptor.Pin(fun _descriptorPtr ->
+                if NativePtr.toNativeInt _descriptorPtr = 0n then
+                    let mutable descriptorNative = Unchecked.defaultof<WebGPU.Raw.SharedTextureMemoryEndAccessState>
+                    use _descriptorPtr = fixed &descriptorNative
+                    let res = WebGPU.Raw.WebGPU.SharedTextureMemoryEndAccess(handle, texture.Handle, _descriptorPtr)
+                    let _ret = res
+                    descriptorCopy <- SharedTextureMemoryEndAccessState.Read(&descriptorNative)
+                    _ret
+                else
+                    let res = WebGPU.Raw.WebGPU.SharedTextureMemoryEndAccess(handle, texture.Handle, _descriptorPtr)
+                    let _ret = res
+                    let descriptorResult = NativePtr.toByRef _descriptorPtr
+                    descriptorCopy <- SharedTextureMemoryEndAccessState.Read(&descriptorResult)
+                    _ret
+            )
+        finally
+            descriptor <- descriptorCopy
     member _.IsDeviceLost() : bool =
         let res = WebGPU.Raw.WebGPU.SharedTextureMemoryIsDeviceLost(handle)
         (res <> 0)
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.SharedTextureMemoryRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type SharedTextureMemoryProperties = 
     {
         Next : ISharedTextureMemoryPropertiesExtension
@@ -3843,7 +4025,7 @@ type SharedTextureMemoryAHardwareBufferDescriptor =
 type SharedTextureMemoryDmaBufPlane = 
     {
         Fd : int
-        Offset : uint64
+        Offset : int64
         Stride : int
     }
     static member Null = Unchecked.defaultof<SharedTextureMemoryDmaBufPlane>
@@ -3855,7 +4037,7 @@ type SharedTextureMemoryDmaBufPlane =
             let mutable value =
                 new WebGPU.Raw.SharedTextureMemoryDmaBufPlane(
                     this.Fd,
-                    this.Offset,
+                    uint64(this.Offset),
                     uint32(this.Stride)
                 )
             use ptr = fixed &value
@@ -3865,7 +4047,7 @@ type SharedTextureMemoryDmaBufPlane =
     static member Read(backend : inref<WebGPU.Raw.SharedTextureMemoryDmaBufPlane>) = 
         {
             Fd = backend.Fd
-            Offset = backend.Offset
+            Offset = int64(backend.Offset)
             Stride = int(backend.Stride)
         }
 type SharedTextureMemoryDmaBufDescriptor = 
@@ -3873,7 +4055,7 @@ type SharedTextureMemoryDmaBufDescriptor =
         Next : ISharedTextureMemoryDescriptorExtension
         Size : Extent3D
         DrmFormat : int
-        DrmModifier : uint64
+        DrmModifier : int64
         Planes : array<SharedTextureMemoryDmaBufPlane>
     }
     static member Null = Unchecked.defaultof<SharedTextureMemoryDmaBufDescriptor>
@@ -3893,7 +4075,7 @@ type SharedTextureMemoryDmaBufDescriptor =
                                 sType,
                                 (if NativePtr.toNativeInt _sizePtr = 0n then Unchecked.defaultof<_> else NativePtr.read _sizePtr),
                                 uint32(this.DrmFormat),
-                                this.DrmModifier,
+                                uint64(this.DrmModifier),
                                 planesLen,
                                 planesPtr
                             )
@@ -3912,7 +4094,7 @@ type SharedTextureMemoryDmaBufDescriptor =
             Next = ExtensionDecoder.decode<ISharedTextureMemoryDescriptorExtension> backend.NextInChain
             Size = Extent3D.Read(&backend.Size)
             DrmFormat = int(backend.DrmFormat)
-            DrmModifier = backend.DrmModifier
+            DrmModifier = int64(backend.DrmModifier)
             Planes = let ptr = backend.Planes in Array.init (int backend.PlaneCount) (fun i -> let r = NativePtr.toByRef (NativePtr.add ptr i) in SharedTextureMemoryDmaBufPlane.Read(&r))
         }
 type SharedTextureMemoryOpaqueFDDescriptor = 
@@ -3921,7 +4103,7 @@ type SharedTextureMemoryOpaqueFDDescriptor =
         VkImageCreateInfo : nativeint
         MemoryFD : int
         MemoryTypeIndex : int
-        AllocationSize : uint64
+        AllocationSize : int64
         DedicatedAllocation : bool
     }
     static member Null = Unchecked.defaultof<SharedTextureMemoryOpaqueFDDescriptor>
@@ -3939,7 +4121,7 @@ type SharedTextureMemoryOpaqueFDDescriptor =
                         this.VkImageCreateInfo,
                         this.MemoryFD,
                         uint32(this.MemoryTypeIndex),
-                        this.AllocationSize,
+                        uint64(this.AllocationSize),
                         (if this.DedicatedAllocation then 1 else 0)
                     )
                 use ptr = fixed &value
@@ -3956,14 +4138,14 @@ type SharedTextureMemoryOpaqueFDDescriptor =
             VkImageCreateInfo = backend.VkImageCreateInfo
             MemoryFD = backend.MemoryFD
             MemoryTypeIndex = int(backend.MemoryTypeIndex)
-            AllocationSize = backend.AllocationSize
+            AllocationSize = int64(backend.AllocationSize)
             DedicatedAllocation = (backend.DedicatedAllocation <> 0)
         }
 type SharedTextureMemoryZirconHandleDescriptor = 
     {
         Next : ISharedTextureMemoryDescriptorExtension
         MemoryFD : int
-        AllocationSize : uint64
+        AllocationSize : int64
     }
     static member Null = Unchecked.defaultof<SharedTextureMemoryZirconHandleDescriptor>
     [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
@@ -3978,7 +4160,7 @@ type SharedTextureMemoryZirconHandleDescriptor =
                         nextInChain,
                         sType,
                         uint32(this.MemoryFD),
-                        this.AllocationSize
+                        uint64(this.AllocationSize)
                     )
                 use ptr = fixed &value
                 action ptr
@@ -3992,7 +4174,7 @@ type SharedTextureMemoryZirconHandleDescriptor =
         {
             Next = ExtensionDecoder.decode<ISharedTextureMemoryDescriptorExtension> backend.NextInChain
             MemoryFD = int(backend.MemoryFD)
-            AllocationSize = backend.AllocationSize
+            AllocationSize = int64(backend.AllocationSize)
         }
 type SharedTextureMemoryDXGISharedHandleDescriptor = 
     {
@@ -4278,18 +4460,43 @@ type SharedTextureMemoryD3DSwapchainBeginState =
         }
 type SharedFence internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"SharedFence(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? SharedFence as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new SharedFence(0n)
     member _.ExportInfo(info : byref<SharedFenceExportInfo>) : unit =
-        info.Pin(fun _infoPtr ->
-            let res = WebGPU.Raw.WebGPU.SharedFenceExportInfo(handle, _infoPtr)
-            res
-        )
+        let mutable infoCopy = info
+        try
+            info.Pin(fun _infoPtr ->
+                if NativePtr.toNativeInt _infoPtr = 0n then
+                    let mutable infoNative = Unchecked.defaultof<WebGPU.Raw.SharedFenceExportInfo>
+                    use _infoPtr = fixed &infoNative
+                    let res = WebGPU.Raw.WebGPU.SharedFenceExportInfo(handle, _infoPtr)
+                    let _ret = res
+                    infoCopy <- SharedFenceExportInfo.Read(&infoNative)
+                    _ret
+                else
+                    let res = WebGPU.Raw.WebGPU.SharedFenceExportInfo(handle, _infoPtr)
+                    let _ret = res
+                    let infoResult = NativePtr.toByRef _infoPtr
+                    infoCopy <- SharedFenceExportInfo.Read(&infoResult)
+                    _ret
+            )
+        finally
+            info <- infoCopy
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.SharedFenceRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type SharedFenceDescriptor = 
     {
         Next : ISharedFenceDescriptorExtension
@@ -4729,7 +4936,7 @@ type DrmFormatCapabilities =
         }
 type DrmFormatProperties = 
     {
-        Modifier : uint64
+        Modifier : int64
         ModifierPlaneCount : int
     }
     static member Null = Unchecked.defaultof<DrmFormatProperties>
@@ -4740,7 +4947,7 @@ type DrmFormatProperties =
         else
             let mutable value =
                 new WebGPU.Raw.DrmFormatProperties(
-                    this.Modifier,
+                    uint64(this.Modifier),
                     uint32(this.ModifierPlaneCount)
                 )
             use ptr = fixed &value
@@ -4749,7 +4956,7 @@ type DrmFormatProperties =
         member x.Pin(action) = x.Pin(action)
     static member Read(backend : inref<WebGPU.Raw.DrmFormatProperties>) = 
         {
-            Modifier = backend.Modifier
+            Modifier = int64(backend.Modifier)
             ModifierPlaneCount = int(backend.ModifierPlaneCount)
         }
 type ImageCopyBuffer = 
@@ -4851,6 +5058,12 @@ type ImageCopyExternalTexture =
         }
 type Instance internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"Instance(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? Instance as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new Instance(0n)
     member _.CreateSurface(descriptor : SurfaceDescriptor) : Surface =
         descriptor.Pin(fun _descriptorPtr ->
@@ -4860,10 +5073,10 @@ type Instance internal(handle : nativeint) =
     member _.ProcessEvents() : unit =
         let res = WebGPU.Raw.WebGPU.InstanceProcessEvents(handle)
         res
-    member _.WaitAny(futures : array<FutureWaitInfo>, timeoutNS : uint64) : WaitStatus =
+    member _.WaitAny(futures : array<FutureWaitInfo>, timeoutNS : int64) : WaitStatus =
         WebGPU.Raw.Pinnable.pinArray futures (fun futuresPtr ->
             let futuresLen = unativeint futures.Length
-            let res = WebGPU.Raw.WebGPU.InstanceWaitAny(handle, futuresLen, futuresPtr, timeoutNS)
+            let res = WebGPU.Raw.WebGPU.InstanceWaitAny(handle, futuresLen, futuresPtr, uint64(timeoutNS))
             res
         )
     member _.RequestAdapter(options : RequestAdapterOptions, callback : RequestAdapterCallback) : unit =
@@ -4898,20 +5111,24 @@ type Instance internal(handle : nativeint) =
     member _.HasWGSLLanguageFeature(feature : WGSLFeatureName) : bool =
         let res = WebGPU.Raw.WebGPU.InstanceHasWGSLLanguageFeature(handle, feature)
         (res <> 0)
-    member _.EnumerateWGSLLanguageFeatures(features : WGSLFeatureName) : unativeint =
+    member _.EnumerateWGSLLanguageFeatures(features : WGSLFeatureName) : int64 =
         let mutable featuresHandle = features
         use featuresPtr = fixed (&featuresHandle)
         let res = WebGPU.Raw.WebGPU.InstanceEnumerateWGSLLanguageFeatures(handle, featuresPtr)
-        res
+        int64(res)
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.InstanceRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type Future = 
     {
-        Id : uint64
+        Id : int64
     }
     static member Null = Unchecked.defaultof<Future>
     [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
@@ -4921,7 +5138,7 @@ type Future =
         else
             let mutable value =
                 new WebGPU.Raw.Future(
-                    this.Id
+                    uint64(this.Id)
                 )
             use ptr = fixed &value
             action ptr
@@ -4929,7 +5146,7 @@ type Future =
         member x.Pin(action) = x.Pin(action)
     static member Read(backend : inref<WebGPU.Raw.Future>) = 
         {
-            Id = backend.Id
+            Id = int64(backend.Id)
         }
 type FutureWaitInfo = 
     {
@@ -4962,7 +5179,7 @@ type InstanceFeatures =
     {
         Next : IExtension
         TimedWaitAnyEnable : bool
-        TimedWaitAnyMaxCount : unativeint
+        TimedWaitAnyMaxCount : int64
     }
     static member Null = Unchecked.defaultof<InstanceFeatures>
     [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
@@ -4975,7 +5192,7 @@ type InstanceFeatures =
                     new WebGPU.Raw.InstanceFeatures(
                         nextInChain,
                         (if this.TimedWaitAnyEnable then 1 else 0),
-                        this.TimedWaitAnyMaxCount
+                        unativeint(this.TimedWaitAnyMaxCount)
                     )
                 use ptr = fixed &value
                 action ptr
@@ -4986,7 +5203,7 @@ type InstanceFeatures =
         {
             Next = ExtensionDecoder.decode<IExtension> backend.NextInChain
             TimedWaitAnyEnable = (backend.TimedWaitAnyEnable <> 0)
-            TimedWaitAnyMaxCount = backend.TimedWaitAnyMaxCount
+            TimedWaitAnyMaxCount = int64(backend.TimedWaitAnyMaxCount)
         }
 type InstanceDescriptor = 
     {
@@ -5058,7 +5275,7 @@ type DawnWireWGSLControl =
 type VertexAttribute = 
     {
         Format : VertexFormat
-        Offset : uint64
+        Offset : int64
         ShaderLocation : int
     }
     static member Null = Unchecked.defaultof<VertexAttribute>
@@ -5070,7 +5287,7 @@ type VertexAttribute =
             let mutable value =
                 new WebGPU.Raw.VertexAttribute(
                     this.Format,
-                    this.Offset,
+                    uint64(this.Offset),
                     uint32(this.ShaderLocation)
                 )
             use ptr = fixed &value
@@ -5080,12 +5297,12 @@ type VertexAttribute =
     static member Read(backend : inref<WebGPU.Raw.VertexAttribute>) = 
         {
             Format = backend.Format
-            Offset = backend.Offset
+            Offset = int64(backend.Offset)
             ShaderLocation = int(backend.ShaderLocation)
         }
 type VertexBufferLayout = 
     {
-        ArrayStride : uint64
+        ArrayStride : int64
         StepMode : VertexStepMode
         Attributes : array<VertexAttribute>
     }
@@ -5099,7 +5316,7 @@ type VertexBufferLayout =
                 let attributesLen = unativeint this.Attributes.Length
                 let mutable value =
                     new WebGPU.Raw.VertexBufferLayout(
-                        this.ArrayStride,
+                        uint64(this.ArrayStride),
                         this.StepMode,
                         attributesLen,
                         attributesPtr
@@ -5111,7 +5328,7 @@ type VertexBufferLayout =
         member x.Pin(action) = x.Pin(action)
     static member Read(backend : inref<WebGPU.Raw.VertexBufferLayout>) = 
         {
-            ArrayStride = backend.ArrayStride
+            ArrayStride = int64(backend.ArrayStride)
             StepMode = backend.StepMode
             Attributes = let ptr = backend.Attributes in Array.init (int backend.AttributeCount) (fun i -> let r = NativePtr.toByRef (NativePtr.add ptr i) in VertexAttribute.Read(&r))
         }
@@ -5170,6 +5387,12 @@ type Origin2D =
         }
 type PipelineLayout internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"PipelineLayout(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? PipelineLayout as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new PipelineLayout(0n)
     member _.SetLabel(label : string) : unit =
         let _labelArr = Encoding.UTF8.GetBytes(label)
@@ -5180,9 +5403,13 @@ type PipelineLayout internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.PipelineLayoutRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type PipelineLayoutDescriptor = 
     {
         Next : IPipelineLayoutDescriptorExtension
@@ -5226,7 +5453,7 @@ type PipelineLayoutDescriptor =
 type PipelineLayoutPixelLocalStorage = 
     {
         Next : IPipelineLayoutDescriptorExtension
-        TotalPixelLocalStorageSize : uint64
+        TotalPixelLocalStorageSize : int64
         StorageAttachments : array<PipelineLayoutStorageAttachment>
     }
     static member Null = Unchecked.defaultof<PipelineLayoutPixelLocalStorage>
@@ -5243,7 +5470,7 @@ type PipelineLayoutPixelLocalStorage =
                         new WebGPU.Raw.PipelineLayoutPixelLocalStorage(
                             nextInChain,
                             sType,
-                            this.TotalPixelLocalStorageSize,
+                            uint64(this.TotalPixelLocalStorageSize),
                             storageAttachmentsLen,
                             storageAttachmentsPtr
                         )
@@ -5259,13 +5486,13 @@ type PipelineLayoutPixelLocalStorage =
     static member Read(backend : inref<WebGPU.Raw.PipelineLayoutPixelLocalStorage>) = 
         {
             Next = ExtensionDecoder.decode<IPipelineLayoutDescriptorExtension> backend.NextInChain
-            TotalPixelLocalStorageSize = backend.TotalPixelLocalStorageSize
+            TotalPixelLocalStorageSize = int64(backend.TotalPixelLocalStorageSize)
             StorageAttachments = let ptr = backend.StorageAttachments in Array.init (int backend.StorageAttachmentCount) (fun i -> let r = NativePtr.toByRef (NativePtr.add ptr i) in PipelineLayoutStorageAttachment.Read(&r))
         }
 type PipelineLayoutStorageAttachment = 
     {
         Next : IExtension
-        Offset : uint64
+        Offset : int64
         Format : TextureFormat
     }
     static member Null = Unchecked.defaultof<PipelineLayoutStorageAttachment>
@@ -5278,7 +5505,7 @@ type PipelineLayoutStorageAttachment =
                 let mutable value =
                     new WebGPU.Raw.PipelineLayoutStorageAttachment(
                         nextInChain,
-                        this.Offset,
+                        uint64(this.Offset),
                         this.Format
                     )
                 use ptr = fixed &value
@@ -5289,7 +5516,7 @@ type PipelineLayoutStorageAttachment =
     static member Read(backend : inref<WebGPU.Raw.PipelineLayoutStorageAttachment>) = 
         {
             Next = ExtensionDecoder.decode<IExtension> backend.NextInChain
-            Offset = backend.Offset
+            Offset = int64(backend.Offset)
             Format = backend.Format
         }
 type ProgrammableStageDescriptor = 
@@ -5334,6 +5561,12 @@ type ProgrammableStageDescriptor =
         }
 type QuerySet internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"QuerySet(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? QuerySet as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new QuerySet(0n)
     member _.SetLabel(label : string) : unit =
         let _labelArr = Encoding.UTF8.GetBytes(label)
@@ -5341,11 +5574,11 @@ type QuerySet internal(handle : nativeint) =
         let _labelLen = WebGPU.Raw.StringView(_labelPtr, unativeint _labelArr.Length)
         let res = WebGPU.Raw.WebGPU.QuerySetSetLabel(handle, _labelLen)
         res
-    member _.GetType() : QueryType =
-        let res = WebGPU.Raw.WebGPU.QuerySetGetType(handle)
+    member this.Type : QueryType =
+        let mutable res = WebGPU.Raw.WebGPU.QuerySetGetType(handle)
         res
-    member _.GetCount() : int =
-        let res = WebGPU.Raw.WebGPU.QuerySetGetCount(handle)
+    member this.Count : int =
+        let mutable res = WebGPU.Raw.WebGPU.QuerySetGetCount(handle)
         int(res)
     member _.Destroy() : unit =
         let res = WebGPU.Raw.WebGPU.QuerySetDestroy(handle)
@@ -5353,9 +5586,13 @@ type QuerySet internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.QuerySetRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type QuerySetDescriptor = 
     {
         Next : IExtension
@@ -5394,6 +5631,12 @@ type QuerySetDescriptor =
         }
 type Queue internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"Queue(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? Queue as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new Queue(0n)
     member _.Submit(commands : array<CommandBuffer>) : unit =
         let commandsHandles = commands |> Array.map (fun a -> a.Handle)
@@ -5422,14 +5665,14 @@ type Queue internal(handle : nativeint) =
             let res = WebGPU.Raw.WebGPU.QueueOnSubmittedWorkDone2(handle, (if NativePtr.toNativeInt _callbackInfoPtr = 0n then Unchecked.defaultof<_> else NativePtr.read _callbackInfoPtr))
             Future.Read(&res)
         )
-    member _.WriteBuffer(buffer : Buffer, bufferOffset : uint64, data : nativeint, size : unativeint) : unit =
-        let res = WebGPU.Raw.WebGPU.QueueWriteBuffer(handle, buffer.Handle, bufferOffset, data, size)
+    member _.WriteBuffer(buffer : Buffer, bufferOffset : int64, data : nativeint, size : int64) : unit =
+        let res = WebGPU.Raw.WebGPU.QueueWriteBuffer(handle, buffer.Handle, uint64(bufferOffset), data, unativeint(size))
         res
-    member _.WriteTexture(destination : ImageCopyTexture, data : nativeint, dataSize : unativeint, dataLayout : TextureDataLayout, writeSize : Extent3D) : unit =
+    member _.WriteTexture(destination : ImageCopyTexture, data : nativeint, dataSize : int64, dataLayout : TextureDataLayout, writeSize : Extent3D) : unit =
         destination.Pin(fun _destinationPtr ->
             dataLayout.Pin(fun _dataLayoutPtr ->
                 writeSize.Pin(fun _writeSizePtr ->
-                    let res = WebGPU.Raw.WebGPU.QueueWriteTexture(handle, _destinationPtr, data, dataSize, _dataLayoutPtr, _writeSizePtr)
+                    let res = WebGPU.Raw.WebGPU.QueueWriteTexture(handle, _destinationPtr, data, unativeint(dataSize), _dataLayoutPtr, _writeSizePtr)
                     res
                 )
             )
@@ -5465,9 +5708,13 @@ type Queue internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.QueueRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type QueueDescriptor = 
     {
         Next : IExtension
@@ -5581,6 +5828,12 @@ type QueueWorkDoneCallbackInfo2 =
         }
 type RenderBundle internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"RenderBundle(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? RenderBundle as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new RenderBundle(0n)
     member _.SetLabel(label : string) : unit =
         let _labelArr = Encoding.UTF8.GetBytes(label)
@@ -5591,11 +5844,21 @@ type RenderBundle internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.RenderBundleRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type RenderBundleEncoder internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"RenderBundleEncoder(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? RenderBundleEncoder as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new RenderBundleEncoder(0n)
     member _.SetPipeline(pipeline : RenderPipeline) : unit =
         let res = WebGPU.Raw.WebGPU.RenderBundleEncoderSetPipeline(handle, pipeline.Handle)
@@ -5611,11 +5874,11 @@ type RenderBundleEncoder internal(handle : nativeint) =
     member _.DrawIndexed(indexCount : int, instanceCount : int, firstIndex : int, baseVertex : int, firstInstance : int) : unit =
         let res = WebGPU.Raw.WebGPU.RenderBundleEncoderDrawIndexed(handle, uint32(indexCount), uint32(instanceCount), uint32(firstIndex), baseVertex, uint32(firstInstance))
         res
-    member _.DrawIndirect(indirectBuffer : Buffer, indirectOffset : uint64) : unit =
-        let res = WebGPU.Raw.WebGPU.RenderBundleEncoderDrawIndirect(handle, indirectBuffer.Handle, indirectOffset)
+    member _.DrawIndirect(indirectBuffer : Buffer, indirectOffset : int64) : unit =
+        let res = WebGPU.Raw.WebGPU.RenderBundleEncoderDrawIndirect(handle, indirectBuffer.Handle, uint64(indirectOffset))
         res
-    member _.DrawIndexedIndirect(indirectBuffer : Buffer, indirectOffset : uint64) : unit =
-        let res = WebGPU.Raw.WebGPU.RenderBundleEncoderDrawIndexedIndirect(handle, indirectBuffer.Handle, indirectOffset)
+    member _.DrawIndexedIndirect(indirectBuffer : Buffer, indirectOffset : int64) : unit =
+        let res = WebGPU.Raw.WebGPU.RenderBundleEncoderDrawIndexedIndirect(handle, indirectBuffer.Handle, uint64(indirectOffset))
         res
     member _.InsertDebugMarker(markerLabel : string) : unit =
         let _markerLabelArr = Encoding.UTF8.GetBytes(markerLabel)
@@ -5632,11 +5895,11 @@ type RenderBundleEncoder internal(handle : nativeint) =
         let _groupLabelLen = WebGPU.Raw.StringView(_groupLabelPtr, unativeint _groupLabelArr.Length)
         let res = WebGPU.Raw.WebGPU.RenderBundleEncoderPushDebugGroup(handle, _groupLabelLen)
         res
-    member _.SetVertexBuffer(slot : int, buffer : Buffer, offset : uint64, size : uint64) : unit =
-        let res = WebGPU.Raw.WebGPU.RenderBundleEncoderSetVertexBuffer(handle, uint32(slot), buffer.Handle, offset, size)
+    member _.SetVertexBuffer(slot : int, buffer : Buffer, offset : int64, size : int64) : unit =
+        let res = WebGPU.Raw.WebGPU.RenderBundleEncoderSetVertexBuffer(handle, uint32(slot), buffer.Handle, uint64(offset), uint64(size))
         res
-    member _.SetIndexBuffer(buffer : Buffer, format : IndexFormat, offset : uint64, size : uint64) : unit =
-        let res = WebGPU.Raw.WebGPU.RenderBundleEncoderSetIndexBuffer(handle, buffer.Handle, format, offset, size)
+    member _.SetIndexBuffer(buffer : Buffer, format : IndexFormat, offset : int64, size : int64) : unit =
+        let res = WebGPU.Raw.WebGPU.RenderBundleEncoderSetIndexBuffer(handle, buffer.Handle, format, uint64(offset), uint64(size))
         res
     member _.Finish(descriptor : RenderBundleDescriptor) : RenderBundle =
         descriptor.Pin(fun _descriptorPtr ->
@@ -5652,9 +5915,13 @@ type RenderBundleEncoder internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.RenderBundleEncoderRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type RenderBundleDescriptor = 
     {
         Next : IExtension
@@ -5909,7 +6176,7 @@ type RenderPassDescriptorMaxDrawCount = RenderPassMaxDrawCount
 type RenderPassMaxDrawCount = 
     {
         Next : IRenderPassDescriptorExtension
-        MaxDrawCount : uint64
+        MaxDrawCount : int64
     }
     static member Null = Unchecked.defaultof<RenderPassMaxDrawCount>
     [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
@@ -5923,7 +6190,7 @@ type RenderPassMaxDrawCount =
                     new WebGPU.Raw.RenderPassMaxDrawCount(
                         nextInChain,
                         sType,
-                        this.MaxDrawCount
+                        uint64(this.MaxDrawCount)
                     )
                 use ptr = fixed &value
                 action ptr
@@ -5936,7 +6203,7 @@ type RenderPassMaxDrawCount =
     static member Read(backend : inref<WebGPU.Raw.RenderPassMaxDrawCount>) = 
         {
             Next = ExtensionDecoder.decode<IRenderPassDescriptorExtension> backend.NextInChain
-            MaxDrawCount = backend.MaxDrawCount
+            MaxDrawCount = int64(backend.MaxDrawCount)
         }
 type RenderPassDescriptorExpandResolveRect = 
     {
@@ -5982,7 +6249,7 @@ type RenderPassDescriptorExpandResolveRect =
 type RenderPassPixelLocalStorage = 
     {
         Next : IRenderPassDescriptorExtension
-        TotalPixelLocalStorageSize : uint64
+        TotalPixelLocalStorageSize : int64
         StorageAttachments : array<RenderPassStorageAttachment>
     }
     static member Null = Unchecked.defaultof<RenderPassPixelLocalStorage>
@@ -5999,7 +6266,7 @@ type RenderPassPixelLocalStorage =
                         new WebGPU.Raw.RenderPassPixelLocalStorage(
                             nextInChain,
                             sType,
-                            this.TotalPixelLocalStorageSize,
+                            uint64(this.TotalPixelLocalStorageSize),
                             storageAttachmentsLen,
                             storageAttachmentsPtr
                         )
@@ -6015,13 +6282,13 @@ type RenderPassPixelLocalStorage =
     static member Read(backend : inref<WebGPU.Raw.RenderPassPixelLocalStorage>) = 
         {
             Next = ExtensionDecoder.decode<IRenderPassDescriptorExtension> backend.NextInChain
-            TotalPixelLocalStorageSize = backend.TotalPixelLocalStorageSize
+            TotalPixelLocalStorageSize = int64(backend.TotalPixelLocalStorageSize)
             StorageAttachments = let ptr = backend.StorageAttachments in Array.init (int backend.StorageAttachmentCount) (fun i -> let r = NativePtr.toByRef (NativePtr.add ptr i) in RenderPassStorageAttachment.Read(&r))
         }
 type RenderPassStorageAttachment = 
     {
         Next : IExtension
-        Offset : uint64
+        Offset : int64
         Storage : TextureView
         LoadOp : LoadOp
         StoreOp : StoreOp
@@ -6038,7 +6305,7 @@ type RenderPassStorageAttachment =
                     let mutable value =
                         new WebGPU.Raw.RenderPassStorageAttachment(
                             nextInChain,
-                            this.Offset,
+                            uint64(this.Offset),
                             this.Storage.Handle,
                             this.LoadOp,
                             this.StoreOp,
@@ -6053,7 +6320,7 @@ type RenderPassStorageAttachment =
     static member Read(backend : inref<WebGPU.Raw.RenderPassStorageAttachment>) = 
         {
             Next = ExtensionDecoder.decode<IExtension> backend.NextInChain
-            Offset = backend.Offset
+            Offset = int64(backend.Offset)
             Storage = new TextureView(backend.Storage)
             LoadOp = backend.LoadOp
             StoreOp = backend.StoreOp
@@ -6061,6 +6328,12 @@ type RenderPassStorageAttachment =
         }
 type RenderPassEncoder internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"RenderPassEncoder(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? RenderPassEncoder as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new RenderPassEncoder(0n)
     member _.SetPipeline(pipeline : RenderPipeline) : unit =
         let res = WebGPU.Raw.WebGPU.RenderPassEncoderSetPipeline(handle, pipeline.Handle)
@@ -6076,17 +6349,17 @@ type RenderPassEncoder internal(handle : nativeint) =
     member _.DrawIndexed(indexCount : int, instanceCount : int, firstIndex : int, baseVertex : int, firstInstance : int) : unit =
         let res = WebGPU.Raw.WebGPU.RenderPassEncoderDrawIndexed(handle, uint32(indexCount), uint32(instanceCount), uint32(firstIndex), baseVertex, uint32(firstInstance))
         res
-    member _.DrawIndirect(indirectBuffer : Buffer, indirectOffset : uint64) : unit =
-        let res = WebGPU.Raw.WebGPU.RenderPassEncoderDrawIndirect(handle, indirectBuffer.Handle, indirectOffset)
+    member _.DrawIndirect(indirectBuffer : Buffer, indirectOffset : int64) : unit =
+        let res = WebGPU.Raw.WebGPU.RenderPassEncoderDrawIndirect(handle, indirectBuffer.Handle, uint64(indirectOffset))
         res
-    member _.DrawIndexedIndirect(indirectBuffer : Buffer, indirectOffset : uint64) : unit =
-        let res = WebGPU.Raw.WebGPU.RenderPassEncoderDrawIndexedIndirect(handle, indirectBuffer.Handle, indirectOffset)
+    member _.DrawIndexedIndirect(indirectBuffer : Buffer, indirectOffset : int64) : unit =
+        let res = WebGPU.Raw.WebGPU.RenderPassEncoderDrawIndexedIndirect(handle, indirectBuffer.Handle, uint64(indirectOffset))
         res
-    member _.MultiDrawIndirect(indirectBuffer : Buffer, indirectOffset : uint64, maxDrawCount : int, drawCountBuffer : Buffer, drawCountBufferOffset : uint64) : unit =
-        let res = WebGPU.Raw.WebGPU.RenderPassEncoderMultiDrawIndirect(handle, indirectBuffer.Handle, indirectOffset, uint32(maxDrawCount), drawCountBuffer.Handle, drawCountBufferOffset)
+    member _.MultiDrawIndirect(indirectBuffer : Buffer, indirectOffset : int64, maxDrawCount : int, drawCountBuffer : Buffer, drawCountBufferOffset : int64) : unit =
+        let res = WebGPU.Raw.WebGPU.RenderPassEncoderMultiDrawIndirect(handle, indirectBuffer.Handle, uint64(indirectOffset), uint32(maxDrawCount), drawCountBuffer.Handle, uint64(drawCountBufferOffset))
         res
-    member _.MultiDrawIndexedIndirect(indirectBuffer : Buffer, indirectOffset : uint64, maxDrawCount : int, drawCountBuffer : Buffer, drawCountBufferOffset : uint64) : unit =
-        let res = WebGPU.Raw.WebGPU.RenderPassEncoderMultiDrawIndexedIndirect(handle, indirectBuffer.Handle, indirectOffset, uint32(maxDrawCount), drawCountBuffer.Handle, drawCountBufferOffset)
+    member _.MultiDrawIndexedIndirect(indirectBuffer : Buffer, indirectOffset : int64, maxDrawCount : int, drawCountBuffer : Buffer, drawCountBufferOffset : int64) : unit =
+        let res = WebGPU.Raw.WebGPU.RenderPassEncoderMultiDrawIndexedIndirect(handle, indirectBuffer.Handle, uint64(indirectOffset), uint32(maxDrawCount), drawCountBuffer.Handle, uint64(drawCountBufferOffset))
         res
     member _.ExecuteBundles(bundles : array<RenderBundle>) : unit =
         let bundlesHandles = bundles |> Array.map (fun a -> a.Handle)
@@ -6123,11 +6396,11 @@ type RenderPassEncoder internal(handle : nativeint) =
     member _.SetScissorRect(x : int, y : int, width : int, height : int) : unit =
         let res = WebGPU.Raw.WebGPU.RenderPassEncoderSetScissorRect(handle, uint32(x), uint32(y), uint32(width), uint32(height))
         res
-    member _.SetVertexBuffer(slot : int, buffer : Buffer, offset : uint64, size : uint64) : unit =
-        let res = WebGPU.Raw.WebGPU.RenderPassEncoderSetVertexBuffer(handle, uint32(slot), buffer.Handle, offset, size)
+    member _.SetVertexBuffer(slot : int, buffer : Buffer, offset : int64, size : int64) : unit =
+        let res = WebGPU.Raw.WebGPU.RenderPassEncoderSetVertexBuffer(handle, uint32(slot), buffer.Handle, uint64(offset), uint64(size))
         res
-    member _.SetIndexBuffer(buffer : Buffer, format : IndexFormat, offset : uint64, size : uint64) : unit =
-        let res = WebGPU.Raw.WebGPU.RenderPassEncoderSetIndexBuffer(handle, buffer.Handle, format, offset, size)
+    member _.SetIndexBuffer(buffer : Buffer, format : IndexFormat, offset : int64, size : int64) : unit =
+        let res = WebGPU.Raw.WebGPU.RenderPassEncoderSetIndexBuffer(handle, buffer.Handle, format, uint64(offset), uint64(size))
         res
     member _.BeginOcclusionQuery(queryIndex : int) : unit =
         let res = WebGPU.Raw.WebGPU.RenderPassEncoderBeginOcclusionQuery(handle, uint32(queryIndex))
@@ -6153,9 +6426,13 @@ type RenderPassEncoder internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.RenderPassEncoderRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type RenderPassTimestampWrites = 
     {
         QuerySet : QuerySet
@@ -6186,6 +6463,12 @@ type RenderPassTimestampWrites =
         }
 type RenderPipeline internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"RenderPipeline(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? RenderPipeline as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new RenderPipeline(0n)
     member _.GetBindGroupLayout(groupIndex : int) : BindGroupLayout =
         let res = WebGPU.Raw.WebGPU.RenderPipelineGetBindGroupLayout(handle, uint32(groupIndex))
@@ -6199,9 +6482,13 @@ type RenderPipeline internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.RenderPipelineRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type RequestDeviceCallback = delegate of IDisposable * status : RequestDeviceStatus * device : Device * message : string -> unit
 type RequestDeviceCallback2 = delegate of IDisposable * status : RequestDeviceStatus * device : Device * message : string -> unit
 type RequestDeviceCallbackInfo = 
@@ -6667,6 +6954,12 @@ type RenderPipelineDescriptor =
         }
 type Sampler internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"Sampler(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? Sampler as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new Sampler(0n)
     member _.SetLabel(label : string) : unit =
         let _labelArr = Encoding.UTF8.GetBytes(label)
@@ -6677,9 +6970,13 @@ type Sampler internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.SamplerRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type SamplerDescriptor = 
     {
         Next : ISamplerDescriptorExtension
@@ -6742,6 +7039,12 @@ type SamplerDescriptor =
         }
 type ShaderModule internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"ShaderModule(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? ShaderModule as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new ShaderModule(0n)
     member _.GetCompilationInfo(callback : CompilationInfoCallback) : unit =
         let mutable _callbackGC = Unchecked.defaultof<GCHandle>
@@ -6774,9 +7077,13 @@ type ShaderModule internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.ShaderModuleRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type ShaderModuleDescriptor = 
     {
         Next : IShaderModuleDescriptorExtension
@@ -6976,6 +7283,12 @@ type StencilFaceState =
         }
 type Surface internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"Surface(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? Surface as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new Surface(0n)
     member _.Configure(config : SurfaceConfiguration) : unit =
         config.Pin(fun _configPtr ->
@@ -6983,10 +7296,25 @@ type Surface internal(handle : nativeint) =
             res
         )
     member _.GetCapabilities(adapter : Adapter, capabilities : byref<SurfaceCapabilities>) : Status =
-        capabilities.Pin(fun _capabilitiesPtr ->
-            let res = WebGPU.Raw.WebGPU.SurfaceGetCapabilities(handle, adapter.Handle, _capabilitiesPtr)
-            res
-        )
+        let mutable capabilitiesCopy = capabilities
+        try
+            capabilities.Pin(fun _capabilitiesPtr ->
+                if NativePtr.toNativeInt _capabilitiesPtr = 0n then
+                    let mutable capabilitiesNative = Unchecked.defaultof<WebGPU.Raw.SurfaceCapabilities>
+                    use _capabilitiesPtr = fixed &capabilitiesNative
+                    let res = WebGPU.Raw.WebGPU.SurfaceGetCapabilities(handle, adapter.Handle, _capabilitiesPtr)
+                    let _ret = res
+                    capabilitiesCopy <- SurfaceCapabilities.Read(&capabilitiesNative)
+                    _ret
+                else
+                    let res = WebGPU.Raw.WebGPU.SurfaceGetCapabilities(handle, adapter.Handle, _capabilitiesPtr)
+                    let _ret = res
+                    let capabilitiesResult = NativePtr.toByRef _capabilitiesPtr
+                    capabilitiesCopy <- SurfaceCapabilities.Read(&capabilitiesResult)
+                    _ret
+            )
+        finally
+            capabilities <- capabilitiesCopy
     member _.CurrentTexture : SurfaceTexture =
         let mutable res = Unchecked.defaultof<_>
         let ptr = fixed &res
@@ -7007,9 +7335,13 @@ type Surface internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.SurfaceRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type SurfaceDescriptor = 
     {
         Next : ISurfaceDescriptorExtension
@@ -7219,7 +7551,7 @@ type SurfaceSourceXlibWindow =
     {
         Next : ISurfaceDescriptorExtension
         Display : nativeint
-        Window : uint64
+        Window : int64
     }
     static member Null = Unchecked.defaultof<SurfaceSourceXlibWindow>
     [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
@@ -7234,7 +7566,7 @@ type SurfaceSourceXlibWindow =
                         nextInChain,
                         sType,
                         this.Display,
-                        this.Window
+                        uint64(this.Window)
                     )
                 use ptr = fixed &value
                 action ptr
@@ -7248,7 +7580,7 @@ type SurfaceSourceXlibWindow =
         {
             Next = ExtensionDecoder.decode<ISurfaceDescriptorExtension> backend.NextInChain
             Display = backend.Display
-            Window = backend.Window
+            Window = int64(backend.Window)
         }
 type SurfaceDescriptorFromWaylandSurface = SurfaceSourceWaylandSurface
 type SurfaceSourceWaylandSurface = 
@@ -7380,6 +7712,12 @@ type SurfaceTexture =
         }
 type Texture internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"Texture(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? Texture as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new Texture(0n)
     member _.CreateView(descriptor : TextureViewDescriptor) : TextureView =
         descriptor.Pin(fun _descriptorPtr ->
@@ -7397,29 +7735,29 @@ type Texture internal(handle : nativeint) =
         let _labelLen = WebGPU.Raw.StringView(_labelPtr, unativeint _labelArr.Length)
         let res = WebGPU.Raw.WebGPU.TextureSetLabel(handle, _labelLen)
         res
-    member _.GetWidth() : int =
-        let res = WebGPU.Raw.WebGPU.TextureGetWidth(handle)
+    member this.Width : int =
+        let mutable res = WebGPU.Raw.WebGPU.TextureGetWidth(handle)
         int(res)
-    member _.GetHeight() : int =
-        let res = WebGPU.Raw.WebGPU.TextureGetHeight(handle)
+    member this.Height : int =
+        let mutable res = WebGPU.Raw.WebGPU.TextureGetHeight(handle)
         int(res)
-    member _.GetDepthOrArrayLayers() : int =
-        let res = WebGPU.Raw.WebGPU.TextureGetDepthOrArrayLayers(handle)
+    member this.DepthOrArrayLayers : int =
+        let mutable res = WebGPU.Raw.WebGPU.TextureGetDepthOrArrayLayers(handle)
         int(res)
-    member _.GetMipLevelCount() : int =
-        let res = WebGPU.Raw.WebGPU.TextureGetMipLevelCount(handle)
+    member this.MipLevelCount : int =
+        let mutable res = WebGPU.Raw.WebGPU.TextureGetMipLevelCount(handle)
         int(res)
-    member _.GetSampleCount() : int =
-        let res = WebGPU.Raw.WebGPU.TextureGetSampleCount(handle)
+    member this.SampleCount : int =
+        let mutable res = WebGPU.Raw.WebGPU.TextureGetSampleCount(handle)
         int(res)
-    member _.GetDimension() : TextureDimension =
-        let res = WebGPU.Raw.WebGPU.TextureGetDimension(handle)
+    member this.Dimension : TextureDimension =
+        let mutable res = WebGPU.Raw.WebGPU.TextureGetDimension(handle)
         res
-    member _.GetFormat() : TextureFormat =
-        let res = WebGPU.Raw.WebGPU.TextureGetFormat(handle)
+    member this.Format : TextureFormat =
+        let mutable res = WebGPU.Raw.WebGPU.TextureGetFormat(handle)
         res
-    member _.GetUsage() : TextureUsage =
-        let res = WebGPU.Raw.WebGPU.TextureGetUsage(handle)
+    member this.Usage : TextureUsage =
+        let mutable res = WebGPU.Raw.WebGPU.TextureGetUsage(handle)
         res
     member _.Destroy() : unit =
         let res = WebGPU.Raw.WebGPU.TextureDestroy(handle)
@@ -7427,13 +7765,17 @@ type Texture internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.TextureRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type TextureDataLayout = 
     {
         Next : IExtension
-        Offset : uint64
+        Offset : int64
         BytesPerRow : int
         RowsPerImage : int
     }
@@ -7447,7 +7789,7 @@ type TextureDataLayout =
                 let mutable value =
                     new WebGPU.Raw.TextureDataLayout(
                         nextInChain,
-                        this.Offset,
+                        uint64(this.Offset),
                         uint32(this.BytesPerRow),
                         uint32(this.RowsPerImage)
                     )
@@ -7459,7 +7801,7 @@ type TextureDataLayout =
     static member Read(backend : inref<WebGPU.Raw.TextureDataLayout>) = 
         {
             Next = ExtensionDecoder.decode<IExtension> backend.NextInChain
-            Offset = backend.Offset
+            Offset = int64(backend.Offset)
             BytesPerRow = int(backend.BytesPerRow)
             RowsPerImage = int(backend.RowsPerImage)
         }
@@ -7607,6 +7949,12 @@ type TextureViewDescriptor =
         }
 type TextureView internal(handle : nativeint) =
     member x.Handle = handle
+    override x.ToString() = $"TextureView(%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? TextureView as other -> other.Handle = x.Handle
+        | _ -> false
     static member Null = new TextureView(0n)
     member _.SetLabel(label : string) : unit =
         let _labelArr = Encoding.UTF8.GetBytes(label)
@@ -7617,9 +7965,13 @@ type TextureView internal(handle : nativeint) =
     member _.Release() : unit =
         let res = WebGPU.Raw.WebGPU.TextureViewRelease(handle)
         res
-    member x.Dispose() = x.Release()
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
     interface System.IDisposable with
-        member x.Dispose() = x.Release()
+        member x.Dispose() = x.Dispose(true)
 type YCbCrVkDescriptor = 
     {
         Next : ISamplerDescriptorExtension
@@ -7634,7 +7986,7 @@ type YCbCrVkDescriptor =
         VkYChromaOffset : int
         VkChromaFilter : FilterMode
         ForceExplicitReconstruction : bool
-        ExternalFormat : uint64
+        ExternalFormat : int64
     }
     static member Null = Unchecked.defaultof<YCbCrVkDescriptor>
     [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
@@ -7659,7 +8011,7 @@ type YCbCrVkDescriptor =
                         uint32(this.VkYChromaOffset),
                         this.VkChromaFilter,
                         (if this.ForceExplicitReconstruction then 1 else 0),
-                        this.ExternalFormat
+                        uint64(this.ExternalFormat)
                     )
                 use ptr = fixed &value
                 action ptr
@@ -7684,7 +8036,7 @@ type YCbCrVkDescriptor =
             VkYChromaOffset = int(backend.VkYChromaOffset)
             VkChromaFilter = backend.VkChromaFilter
             ForceExplicitReconstruction = (backend.ForceExplicitReconstruction <> 0)
-            ExternalFormat = backend.ExternalFormat
+            ExternalFormat = int64(backend.ExternalFormat)
         }
 type DawnTextureInternalUsageDescriptor = 
     {
@@ -7785,7 +8137,7 @@ type DawnAdapterPropertiesPowerPreference =
 type MemoryHeapInfo = 
     {
         Properties : HeapProperty
-        Size : uint64
+        Size : int64
     }
     static member Null = Unchecked.defaultof<MemoryHeapInfo>
     [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
@@ -7796,7 +8148,7 @@ type MemoryHeapInfo =
             let mutable value =
                 new WebGPU.Raw.MemoryHeapInfo(
                     this.Properties,
-                    this.Size
+                    uint64(this.Size)
                 )
             use ptr = fixed &value
             action ptr
@@ -7805,7 +8157,7 @@ type MemoryHeapInfo =
     static member Read(backend : inref<WebGPU.Raw.MemoryHeapInfo>) = 
         {
             Properties = backend.Properties
-            Size = backend.Size
+            Size = int64(backend.Size)
         }
 type AdapterPropertiesMemoryHeaps = 
     {

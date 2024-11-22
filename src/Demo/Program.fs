@@ -2,7 +2,6 @@
 open WebGPU
 open Aardvark.Base
 open System.Threading
-open System.Runtime.InteropServices
 open Microsoft.FSharp.NativeInterop
 
 #nowarn "9"
@@ -70,19 +69,30 @@ module Window =
             render()
 
 [<EntryPoint>]
-let main argv =
+let main _argv =
     //
     // let lib = NativeLibrary.Load "/Users/schorsch/Library/Application Support/Aardvark/Cache/Native/WebGPU/a86276e2-ce19-133f-c75b-f3f45da7d698/mac/ARM64/libwebgpu_dawn.dylib"    
     // printfn "%A" lib
     // //
     
     Aardvark.Init()
-    let instance = WebGPU.CreateInstance()
+    
+    let instance =
+        WebGPU.CreateInstance {
+            Next = null
+            Features = WebGPU.InstanceFeatures
+        }
+    printfn "%A" instance
     
     
     let win = Window.create()
     
-    let surf = instance.CreateGLFWSurface(NativePtr.toNativeInt win)
+    let surf =
+        instance.CreateGLFWSurface {
+            Label = "Siegfried"
+            Window = win
+        }
+    
     printfn "%A" surf.Handle
    
    
@@ -122,13 +132,18 @@ let main argv =
             RequiredLimits = { Next = null; Limits = adapter.Limits.Limits }
             DefaultQueue = { Next = null; Label = "Quentin" }
         }).Result
-    let queue = device.GetQueue()
+    let queue = device.Queue
         
     //     
     // let cap = adapter.GetFormatCapabilities(TextureFormat.RGBA8UnormSrgb)
     // printfn "%A" cap
     let cap = surf.GetCapabilities(adapter)
+    
+    let mutable surfaceCapabilities = Unchecked.defaultof<SurfaceCapabilities>
+    let _status = surf.GetCapabilities(adapter, &surfaceCapabilities)
+    
     printfn "%A" cap
+    printfn "%A" surfaceCapabilities
     surf.Configure {
         Next = null
         Device = device
@@ -144,7 +159,7 @@ let main argv =
     printfn "%A" surf.CurrentTexture.Status
     printfn "%A" surf.CurrentTexture.Texture.Handle
     
-    let layout = 
+    let _layout = 
         device.CreatePipelineLayout {
             Next = null
             Label = "Peter"
@@ -158,7 +173,7 @@ let main argv =
                         
                     }
                 |]
-            ImmediateDataRangeByteSize = 128
+            ImmediateDataRangeByteSize = 0
             
         }
         
@@ -178,7 +193,7 @@ let main argv =
                 StencilReadOnly = true
             }
             
-        let bundle = 
+        let _bundle = 
             enc.Finish {
                 Next = null
                 Label = "Randy"

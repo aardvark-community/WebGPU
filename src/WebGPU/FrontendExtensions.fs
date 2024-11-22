@@ -26,9 +26,14 @@ type FrontendDeviceDescriptor =
         DefaultQueue : QueueDescriptor
     }
 
+type GLFWSurfaceDescriptor = 
+    {
+        Label : string
+        Window : nativeptr<Silk.NET.GLFW.WindowHandle>
+    }
 
 #nowarn "9"
-[<AbstractClass; Sealed; Extension>]
+[<AbstractClass; Sealed>]
 type WebGPU private() =
     static do
         match RuntimeInformation.ProcessArchitecture with
@@ -40,20 +45,48 @@ type WebGPU private() =
         
     static let enumRx = Regex @"([a-zA-Z_0-9]+)::"
     
-    static member CreateInstance() =
+    static let instanceFeatures =
+        lazy (
+            match RuntimeInformation.ProcessArchitecture with
+            | Architecture.Wasm ->
+                { Next = null; TimedWaitAnyEnable = false; TimedWaitAnyMaxCount = 0L }
+            | _ -> 
+                let mutable ftrs = Unchecked.defaultof<WebGPU.Raw.InstanceFeatures>
+                use ptr = fixed &ftrs
+                let status = WebGPU.Raw.WebGPU.GetInstanceFeatures(ptr)
+                if status <> Status.Success then
+                    failwith $"could not get instance features: {status}"
+                InstanceFeatures.Read(&ftrs)
+        )
+    
+    static member InstanceFeatures = instanceFeatures.Value
+        
+    static member CreateInstance(descriptor : InstanceDescriptor) =
         match RuntimeInformation.ProcessArchitecture with
         | Architecture.Wasm ->
             new Instance(0n)
-        | _ -> 
-            let mutable options = Unchecked.defaultof<WebGPU.Raw.InstanceDescriptor>
-            use ptr = fixed &options
-            let handle = WebGPU.Raw.WebGPU.CreateInstance(ptr)
-            new Instance(handle)
+        | _ ->
+            descriptor.Pin(fun ptr ->
+                let handle = WebGPU.Raw.WebGPU.CreateInstance(ptr)
+                new Instance(handle)
+            )
     
+    static member CreateInstance() =
+        WebGPU.CreateInstance {
+            Next = null
+            Features = WebGPU.InstanceFeatures
+        }
+            
     [<Extension>]
-    static member CreateGLFWSurface(this : Instance, window : nativeint) =
-        let handle = WebGPU.Raw.WebGPU.InstanceCreateGLFWSurface(this.Handle, window)
-        new Surface(handle)
+    static member CreateGLFWSurface(this : Instance, descriptor : GLFWSurfaceDescriptor) =
+        match RuntimeInformation.ProcessArchitecture with
+        | Architecture.Wasm ->
+            failwith "GLFW is not supported in WASM"
+        | _ ->
+            let handle = WebGPU.Raw.WebGPU.InstanceCreateGLFWSurface(this.Handle, NativePtr.toNativeInt descriptor.Window)
+            let surf = new Surface(handle)
+            if not (isNull descriptor.Label) then surf.SetLabel descriptor.Label
+            surf
         
     [<Extension>]
     static member RequestDeviceAsync(this : Adapter, options : FrontendDeviceDescriptor) =
@@ -117,6 +150,8 @@ type WebGPU private() =
          let mutable res = Unchecked.defaultof<WebGPU.Raw.FormatCapabilities>
          use ptr = fixed &res
          let status = WebGPU.Raw.WebGPU.AdapterGetFormatCapabilities(this.Handle, format, ptr)
+         if status <> Status.Success then
+             failwith $"could not get format capabilities: {status}"
          FormatCapabilities.Read(&res)
          
     [<Extension>]
@@ -124,6 +159,8 @@ type WebGPU private() =
         let mutable res = Unchecked.defaultof<WebGPU.Raw.SurfaceCapabilities>
         use ptr = fixed &res
         let status = WebGPU.Raw.WebGPU.SurfaceGetCapabilities(this.Handle, adapter.Handle, ptr)
+        if status <> Status.Success then
+            failwith $"could not get surface capabilities: {status}"
         SurfaceCapabilities.Read(&res)
     
     [<Extension>]
@@ -146,13 +183,13 @@ type WebGPU private() =
         arr
         
     [<Extension>]
-    static member Mapped<'r>(buffer : Buffer, instance : Instance,  mode : MapMode, offset : nativeint, size : nativeint, action : nativeint -> 'r) =
-        match buffer.GetMapState() with
+    static member Mapped<'r>(buffer : Buffer, mode : MapMode, offset : int64, size : int64, action : nativeint -> 'r) =
+        match buffer.MapState with
         | BufferMapState.Mapped ->
             let ptr =
                 match mode with
-                | MapMode.Write -> buffer.GetMappedRange(unativeint offset, unativeint size)
-                | _ -> buffer.GetConstMappedRange(unativeint offset, unativeint size)
+                | MapMode.Write -> buffer.GetMappedRange(offset, size)
+                | _ -> buffer.GetConstMappedRange(offset, size)
             try action ptr |> Task.FromResult
             finally buffer.Unmap()
         | _ ->
@@ -168,8 +205,8 @@ type WebGPU private() =
                         | MapAsyncStatus.Success ->
                             let ptr = 
                                 match mode with
-                                | MapMode.Write -> buffer.GetMappedRange(unativeint offset, unativeint size)
-                                | _ -> buffer.GetConstMappedRange(unativeint offset, unativeint size)
+                                | MapMode.Write -> buffer.GetMappedRange(offset, size)
+                                | _ -> buffer.GetConstMappedRange(offset, size)
                             let res = action ptr
                             buffer.Unmap()
                             tcs.SetResult res
@@ -178,25 +215,13 @@ type WebGPU private() =
                     )
                 }
             
-            let f = buffer.MapAsync2(mode, unativeint offset, unativeint size, info)
-            // let s = instance.WaitAny([|{ FutureWaitInfo.Future = f; Completed = false }|], System.UInt64.MaxValue)
-            // printfn "STATUS: %A" s
-            // buffer.MapAsync(mode, unativeint offset, unativeint size, BufferMapCallback (fun d s ->
-            //     d.Dispose()
-            //     match s with
-            //     | BufferMapAsyncStatus.Success ->
-            //         let ptr = buffer.GetMappedRange(unativeint offset, unativeint size)
-            //         let res = action ptr
-            //         buffer.Unmap()
-            //         tcs.SetResult res
-            //     | s ->
-            //         tcs.SetException (Exception (sprintf "could not map buffer: %A" s))    
-            // ))
-            
+            buffer.MapAsync2(mode, offset, size, info) |> ignore
+           
             tcs.Task
+    
     [<Extension>]
-    static member Mapped<'r>(buffer : Buffer, instance, mode : MapMode, action : nativeint -> 'r) =
-        buffer.Mapped(instance, mode, 0n, nativeint (buffer.GetSize()), action)
+    static member Mapped<'r>(buffer : Buffer, mode : MapMode, action : nativeint -> 'r) =
+        buffer.Mapped(mode, 0L, buffer.Size, action)
     
     [<Extension>]
     static member Wait(this : Queue) =

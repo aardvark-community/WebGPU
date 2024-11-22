@@ -457,34 +457,63 @@ let tryResolveType (t : TypeRef) =
     
 
 
-let deviceChild =
-    let device = 
-        allList |> Seq.pick (fun d -> 
-            match d with
-            | Object o when o.Name = "device" -> Some o
-            | _ -> None
-        )
-
-    device.Methods 
-    |> Seq.choose (fun m -> 
-        if m.Name.StartsWith "create " then 
-            match tryResolveType m.Return with
-            | Some (Object o) ->
-                Some o.Name
-            | _ ->
-                None
-        else
-            None
-    )
-    |> Set.ofSeq
-
-for c in deviceChild do
-    printfn "%0A" c
-
+let childTypes, parentTypes =
+    let mutable res = Map.empty
+    let mutable parents = Map.empty
+    for a in all do
+        match a with
+        | Object o ->
+            for meth in o.Methods do
+                if meth.Name.StartsWith "create " then
+                    let parent = o.Name
+                    let child = meth.Return.TypeName
+                    match tryResolveType meth.Return with
+                    | Some (Object _) ->
+                        let mutable otherParent = None
+                        let mutable isChild = true
+                        match Map.tryFind child parents with
+                        | Some (Some p) ->
+                            if p <> parent then
+                                parents <- Map.add child None parents
+                                otherParent <- Some p
+                                isChild <- false
+                        | Some None ->
+                            isChild <- false
+                        | None ->
+                            parents <- Map.add child (Some parent) parents
+                        
+                        match otherParent with
+                        | Some other ->
+                            match Map.tryFind other res with
+                            | Some l ->
+                                res <- Map.add other (Map.remove child l) res
+                            | None ->
+                                ()
+                        | None ->
+                            ()
+                        if isChild then
+                            match Map.tryFind o.Name res with
+                            | Some l ->
+                                res <- Map.add o.Name (Map.add meth.Return.TypeName meth.Name l) res
+                            | None ->
+                                res <- Map.add o.Name (Map.ofList [meth.Return.TypeName, meth.Name]) res
+                    | _ ->
+                        ()
+                    
+                    
+        | _ ->
+            ()
+            
+    let mutable pp = Map.empty
+    for KeyValue(c, p) in parents do
+        match p with
+        | Some p -> pp <- Map.add c p pp
+        | None -> ()
+            
+    res, pp
 
 let rx = System.Text.RegularExpressions.Regex "^[0-9]+.*$"
-                
-    
+              
 // print native wrapper
 let pascalCase (str : string) =
     let res = 
@@ -506,6 +535,44 @@ let camelCase (str : string) =
     elif rx.IsMatch res then "d" + res
     else res
 
+    
+for (KeyValue(c, p)) in parentTypes do
+    printfn $"{pascalCase p} -> {pascalCase c}"
+
+    
+for (KeyValue(p, cs)) in childTypes do
+    printfn $"{pascalCase p}"
+    for (KeyValue(c, m)) in cs do
+        printfn $"    .{pascalCase m} : {pascalCase c}"
+
+
+//
+// let deviceChild =
+//     let device = 
+//         allList |> Seq.pick (fun d -> 
+//             match d with
+//             | Object o when o.Name = "device" -> Some o
+//             | _ -> None
+//         )
+//
+//     device.Methods 
+//     |> Seq.choose (fun m -> 
+//         if m.Name.StartsWith "create " then 
+//             match tryResolveType m.Return with
+//             | Some (Object o) ->
+//                 Some o.Name
+//             | _ ->
+//                 None
+//         else
+//             None
+//     )
+//     |> Set.ofSeq
+//
+// for c in deviceChild do
+//     printfn "%0A" c
+
+  
+    
 let isDawn (tags : list<string>) =
     tags = [] || tags |> List.exists (fun t -> t = "dawn" || t = "native")
 
@@ -1147,6 +1214,8 @@ module Frontend =
                                                 yield $"WebGPU.Raw.Pinnable.pinArray [| {var} |] (fun {ptrField} ->"
                                                 for c in code do
                                                     yield $"    {c}"
+                                                yield $"    let {var}Result = NativePtr.toByRef {ptrField}"
+                                                yield $"    {var} <- {innerType}.Read(&{var}Result)"
                                                 yield ")"
                                             | _ ->
                                                 yield $"let mutable {handleField} = {var}"
@@ -1196,6 +1265,27 @@ module Frontend =
                             Read = fun var -> $"({var.[h.Name]} <> 0)"
                         }
                     marshalInternal allFields (self :: acc) t
+                    
+                elif h.Type.TypeName = "size_t" then
+                    let self = 
+                        {
+                            FrontendField = { h with Type = { h.Type with TypeName = "int64" } }
+                            BackendFields = fun var -> Map.ofList [h.Name, $"unativeint({var})"]
+                            PinFrontend = fun _ code -> code
+                            Read = fun var -> $"int64({var.[h.Name]})"
+                        }
+                    marshalInternal allFields (self :: acc) t
+                    
+                elif h.Type.TypeName = "uint64_t" then
+                    let self = 
+                        {
+                            FrontendField = { h with Type = { h.Type with TypeName = "int64" } }
+                            BackendFields = fun var -> Map.ofList [h.Name, $"uint64({var})"]
+                            PinFrontend = fun _ code -> code
+                            Read = fun var -> $"int64({var.[h.Name]})"
+                        }
+                    marshalInternal allFields (self :: acc) t
+                    
                 elif h.Type.TypeName = "uint32_t" then
                     let self = 
                         {
@@ -1249,12 +1339,46 @@ module Frontend =
                             let varName = $"_{camelCase h.Name}Ptr"
                             
                             let wrap (var : string) (code : list<string>) =
-                                [
-                                    $"{var}.Pin(fun {varName} ->"
-                                    for c in code do
-                                        $"    {c}"
-                                    $")"
-                                ]
+                                match h.Type.Annotation with
+                                | Some "*" ->
+                                    [
+                                        yield $"let mutable {var}Copy = {var}"
+                                        yield "try"
+                                        yield $"    {var}.Pin(fun {varName} ->"
+                                        yield $"        if NativePtr.toNativeInt {varName} = 0n then"
+                                        let len = List.length code
+                                        yield $"            let mutable {var}Native = Unchecked.defaultof<WebGPU.Raw.{pascalCase h.Type.TypeName}>"
+                                        yield $"            use {varName} = fixed &{var}Native"
+                                        for i,c in List.indexed code do
+                                            if i < len - 1 then
+                                                yield $"            {c}"
+                                            else
+                                                yield $"            let _ret = {c}"
+                                                yield $"            {var}Copy <- {pascalCase h.Type.TypeName}.Read(&{var}Native)"
+                                                yield $"            _ret"
+                                        
+                                        yield $"        else"
+                                        let len = List.length code
+                                        for i,c in List.indexed code do
+                                            if i < len - 1 then
+                                                yield $"            {c}"
+                                            else
+                                                yield $"            let _ret = {c}"
+                                                yield $"            let {var}Result = NativePtr.toByRef {varName}"
+                                                yield $"            {var}Copy <- {pascalCase h.Type.TypeName}.Read(&{var}Result)"
+                                                yield $"            _ret"
+                                        yield $"    )"
+                                        yield "finally"
+                                        yield $"    {var} <- {var}Copy"
+                                    ]
+                                          
+                                | _ -> 
+                                    [
+                                        yield $"{var}.Pin(fun {varName} ->"
+                                        for c in code do
+                                            yield $"    {c}"
+                                        yield $")"
+                                    ]
                             
                             let access = 
                                 match h.Type.Annotation with
@@ -1399,6 +1523,8 @@ module Frontend =
         printfn "open System.Runtime.InteropServices"
         printfn "open Microsoft.FSharp.NativeInterop"
         printfn "#nowarn \"9\""
+        printfn "#nowarn \"26\""
+        printfn "#nowarn \"1182\""
         
         printfn "[<AllowNullLiteral>]"
         printfn "type IExtension ="
@@ -1674,8 +1800,22 @@ module Frontend =
                 printfn $"type {pascalCase o.Name} internal(handle : nativeint) ="
                 printfn "    member x.Handle = handle"
                 
+                printfn $"    override x.ToString() = $\"{pascalCase o.Name}(0x%%08X{{handle}})\""
+                printfn "    override x.GetHashCode() = hash handle"
+                printfn "    override x.Equals(obj) ="
+                printfn "        match obj with"
+                printfn $"        | :? {pascalCase o.Name} as other -> other.Handle = x.Handle"
+                printfn "        | _ -> false"
+                
                 printfn $"    static member Null = new {pascalCase o.Name}(0n)"
                 
+                let (|SimpleGetter|_|) (m : FunctionDef) =
+                    match m.Args with
+                    | [] when m.Name.StartsWith "get " ->
+                        Some ()
+                    | _ ->
+                        None
+                        
                 let (|Getter|_|) (m : FunctionDef) =
                     match m.Args with
                     | [arg] when arg.Type.Annotation = Some "*" && m.Name.StartsWith "get " ->
@@ -1694,6 +1834,22 @@ module Frontend =
                 
                 for m in o.Methods do
                     match m with
+                    | SimpleGetter ->
+                        let ret =
+                            marshal [
+                                { Name = "result"; Type = m.Return; Tags = []; Default = None; Optional = false; Length = None }
+                            ] |> List.head
+                        let methName = o.Name + " " + m.Name
+                        let read = ret.Read (Map.ofList ["result", "res"])
+                        
+                        let propertyName =
+                            if m.Name.StartsWith "get " then m.Name.Substring 4
+                            else m.Name
+                        
+                        printfn $"    member this.{pascalCase propertyName} : {frontendName false ret.FrontendField.Type} ="
+                        printfn $"        let mutable res = WebGPU.Raw.WebGPU.{pascalCase methName}(handle)"
+                        printfn $"        {read}"
+                        
                     | Getter(goodStatus, arg) ->
                         let ret = marshal [arg] |> List.head
                         let methName = o.Name + " " + m.Name
@@ -1759,11 +1915,15 @@ module Frontend =
                         for b in body do
                             printfn "        %s" b
                 
-                let hasDestroy = o.Methods |> List.exists (fun m -> m.Name = "release")
-                if hasDestroy then
-                    printfn "    member x.Dispose() = x.Release()"
+                let hasRelease = o.Methods |> List.exists (fun m -> m.Name = "release")
+                if hasRelease then
+                    printfn "    member private x.Dispose(disposing : bool) ="
+                    printfn "        if disposing then System.GC.SuppressFinalize(x)"
+                    printfn "        x.Release()"
+                    printfn "    member x.Dispose() = x.Dispose(true)"
+                    printfn "    override x.Finalize() = x.Dispose(false)"
                     printfn "    interface System.IDisposable with"
-                    printfn "        member x.Dispose() = x.Release()"
+                    printfn "        member x.Dispose() = x.Dispose(true)"
                     
         File.WriteAllText(Path.Combine(__SOURCE_DIRECTORY__, "src", "WebGPU", "Frontend.fs"), b.ToString())
 
