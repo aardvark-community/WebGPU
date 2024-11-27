@@ -2,6 +2,7 @@ namespace rec WebGPU.Raw
 open System.Collections.Generic
 open System
 open System.Runtime.InteropServices
+open Microsoft.FSharp.NativeInterop
 open WebGPU
 #nowarn "9"
 [<Struct; StructLayout(LayoutKind.Sequential)>]

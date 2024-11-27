@@ -594,7 +594,7 @@
     "string view": {
         "category": "structure",
         "members": [
-            {"name": "data", "type": "char", "annotation": "const*", "optional": true},
+            {"name": "data", "type": "char", "annotation": "const*", "optional": true, "length": "length"},
             {"name": "length", "type": "size_t", "default": "WGPU_STRLEN"}
         ]
     },

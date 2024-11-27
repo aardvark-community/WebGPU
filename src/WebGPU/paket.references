@@ -1,6 +1,8 @@
 FSharp.Core
 FSharp.Data.Adaptive
 Aardvark.Base
+Aardvark.Base.FSharp
+Aardvark.Base.Tensors
 Silk.NET.WebGPU
 Aardvark.Build
 Silk.NET.GLFW

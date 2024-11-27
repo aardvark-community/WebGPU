@@ -10,6 +10,7 @@
     <Compile Include="Wrapper.fs" />
     <Compile Include="Frontend.fs" />
     <Compile Include="FrontendExtensions.fs" />
+    <Content Include="paket.references" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

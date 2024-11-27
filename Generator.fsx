@@ -35,6 +35,15 @@ module TypeRef =
         | _ ->
             false
             
+    let isPointer (t : TypeRef) =
+        match t.Annotation with
+        | Some "*" | Some "const *" | Some "const*" -> true
+        | _ ->
+            match t.TypeName with
+            | "void *"
+            | "void const *" -> true
+            | _ -> false
+            
 type FieldDef =
     {
         Type : TypeRef
@@ -512,6 +521,25 @@ let childTypes, parentTypes =
             
     res, pp
 
+let deviceChildren =
+    Set.ofList [
+        "queue"
+        "buffer"
+        "shared buffer memory"
+        "texture"
+        "bind group"
+        "command encoder"
+        //"compute pipeline"
+        "external texture"
+        "pipeline layout"
+        "query set"
+        "render bundle encoder"
+        //"render pipeline"
+        "sampler"
+        "shader module"
+    ]
+
+
 let rx = System.Text.RegularExpressions.Regex "^[0-9]+.*$"
               
 // print native wrapper
@@ -809,6 +837,55 @@ module RawWrapper =
                 | "const*const*" -> $"nativeptr<nativeptr<{baseType}>>"
                 | _ -> failwith "asdasdsad"
       
+    [<Struct>]
+    type TypeSize(ptrCount : int, size : int, custom : Map<string, int>) =
+        member x.PointerCount = ptrCount
+        member x.Size = size
+        member x.Custom : Map<string, int> = custom
+        
+        static member Zero = TypeSize(0, 0, Map.empty)
+        
+        static member (+) (l : TypeSize, r : TypeSize) =
+            
+            let mutable current = l.Custom
+            for KeyValue(k, c) in r.Custom do
+                match Map.tryFind k current with
+                | Some cnt -> current <- Map.add k (cnt + c) current
+                | None -> current <- Map.add k c current
+            
+            TypeSize(
+                l.PointerCount + r.PointerCount,
+                l.Size + r.Size,
+                current
+            )
+            
+        static member Pointer = TypeSize(1, 0, Map.empty)
+        static member Fixed s = TypeSize(0, s, Map.empty)
+        static member CustomSize str = TypeSize(0, 0, Map.ofList [str, 1])
+            
+        override x.ToString() =
+            let baseStr = 
+                if ptrCount <= 0 then
+                    if size <= 0 then
+                        "0n"
+                    else
+                        sprintf "%dn" size
+                elif ptrCount = 1 then
+                    if size <= 0 then "sizeof<nativeint>"
+                    else sprintf "sizeof<nativeint> + %dn" size
+                else
+                    if size <= 0 then sprintf "%d * sizeof<nativeint>" ptrCount
+                    else sprintf "%d * sizeof<nativeint> + %dn" ptrCount size
+            
+            let suffix =
+                custom |> Seq.map (fun (KeyValue(k, v)) ->
+                    if v = 1 then k
+                    else sprintf "%d * %s" v k
+                ) |> String.concat " + "
+                
+            if suffix.Length = 0 then baseStr
+            else baseStr + " + " + suffix
+            
     
     let print() =
         let b = System.Text.StringBuilder()
@@ -819,6 +896,7 @@ module RawWrapper =
         printfn "open System.Collections.Generic"
         printfn "open System"
         printfn "open System.Runtime.InteropServices"
+        printfn "open Microsoft.FSharp.NativeInterop"
         printfn "open WebGPU"
         printfn "#nowarn \"9\""
         
@@ -911,7 +989,7 @@ module RawWrapper =
                                     u
                             String.concat ", " args
                         printfn $"        new({ctorArgs}) = {pascalCase s.Name}({ctoruse})"
-                        
+                    
                     printfn "    end"
             | Function _ | Native _ | Object _ ->
                 () // TODO
@@ -1082,8 +1160,9 @@ module Frontend =
         {
             FrontendField   : FieldDef
             PinFrontend     : string -> list<string> -> list<string>
-            BackendFields   : string -> Map<string, string>
-            Read                : Map<string, string> -> string
+            WriteFrontend   : string -> string -> list<string>
+            BackendFields   : string -> bool -> Map<string, string>
+            Read            : Map<string, string> -> string
         }
                 
     module Map =
@@ -1098,7 +1177,7 @@ module Frontend =
             | [] -> innercode pinned
             | h :: t ->
                 let access = $"{valueName}.{pascalCase h.FrontendField.Name}"
-                let p = Map.union pinned (h.BackendFields access)
+                let p = Map.union pinned (h.BackendFields access true)
                 let innercode = pin p t innercode
                 h.PinFrontend access innercode
         pin Map.empty trafo innercode
@@ -1109,7 +1188,7 @@ module Frontend =
             | [] -> innercode pinned
             | h :: t ->
                 let access = $"{camelCase h.FrontendField.Name}"
-                let p = Map.union pinned (h.BackendFields access)
+                let p = Map.union pinned (h.BackendFields access true)
                 let innercode = pin p t innercode
                 h.PinFrontend access innercode
         pin Map.empty trafo innercode
@@ -1152,7 +1231,24 @@ module Frontend =
                 let self =
                     {
                         FrontendField = { Name = ptr.Name; Tags = []; Type = { TypeName = $"array<{innerType}>"; Annotation = None } ; Default = None; Optional = false; Length = None }
-                        BackendFields = fun var -> Map.ofList [cntName, lenField; ptr.Name, ptrField]
+                        BackendFields = fun _ var -> Map.ofList [cntName, lenField; ptr.Name, ptrField]
+                        WriteFrontend = fun stream var ->
+                            [
+                                match ptr with
+                                | FieldOfType(Object _, _) ->
+                                    yield $"let {handleField} = {var} |> Array.map (fun a -> a.Handle)"
+                                    yield $"let {ptrField} = {stream}.Array({handleField})"
+                                    yield $"let {lenField} = {cntTypeStr} {var}.Length"
+                                    
+                                | FieldOfType(Struct _, _) ->
+                                    yield $"let {ptrField} = {stream}.WriteableArray({var})"
+                                    yield $"let {lenField} = {cntTypeStr} {var}.Length"
+                                | _ ->
+                                    yield $"let {ptrField} = {stream}.Array({var})"
+                                    yield $"let {lenField} = {cntTypeStr} {var}.Length"
+                                    
+                                    
+                            ]
                         PinFrontend = fun var code ->
                             [
                                 match ptr with
@@ -1162,7 +1258,7 @@ module Frontend =
                                     yield $"let {lenField} = {cntTypeStr} {var}.Length"
                                     yield! code
                                 | FieldOfType(Struct _, _) ->
-                                    yield $"WebGPU.Raw.Pinnable.pinArray {var} (fun {ptrField} ->"
+                                    yield $"WebGPU.Raw.Pinnable.pinArray device {var} (fun {ptrField} ->"
                                     yield $"    let {lenField} = {cntTypeStr} {var}.Length"
                                     for c in code do
                                         yield $"    {c}"
@@ -1176,10 +1272,13 @@ module Frontend =
                             let lenField = vars.[cntName]
                             let ptrField = vars.[ptr.Name]
                             match ptr with
-                            | FieldOfType(Object _, _) ->
-                                $"let ptr = {ptrField} in Array.init (int {lenField}) (fun i -> new {innerType}(NativePtr.get ptr i))"//TODO3 {lenField} {ptrField}"
+                            | FieldOfType(Object o, _) ->
+                                let prefix = 
+                                    if Set.contains o.Name deviceChildren then "device, "
+                                    else ""
+                                $"let ptr = {ptrField} in Array.init (int {lenField}) (fun i -> new {innerType}({prefix}NativePtr.get ptr i))"//TODO3 {lenField} {ptrField}"
                             | FieldOfType(Struct _, _) ->
-                                $"let ptr = {ptrField} in Array.init (int {lenField}) (fun i -> let r = NativePtr.toByRef (NativePtr.add ptr i) in {innerType}.Read(&r))"
+                                $"let ptr = {ptrField} in Array.init (int {lenField}) (fun i -> let r = NativePtr.toByRef (NativePtr.add ptr i) in {innerType}.Read(device, &r))"
                             | _ ->
                                 $"let ptr = {ptrField} in Array.init (int {lenField}) (fun i -> NativePtr.get ptr i)"
                     }
@@ -1202,7 +1301,17 @@ module Frontend =
                             let self =
                                 {
                                     FrontendField = { Name = ptr.Name; Tags = []; Type = { TypeName = $"{innerType}"; Annotation = None } ; Default = None; Optional = false; Length = None }
-                                    BackendFields = fun var -> Map.ofList [ptr.Name, ptrField]
+                                    BackendFields = fun _ var -> Map.ofList [ptr.Name, ptrField]
+                                    WriteFrontend = fun stream var ->
+                                        [
+                                            match ptr with
+                                            | FieldOfType(Object _, _) ->
+                                                yield $"let {ptrField} = {stream}.Value({var}.Handle)"
+                                            | FieldOfType(Struct _, _) ->
+                                                yield $"let {ptrField} = {var}.WriteTo({stream})"
+                                            | _ ->
+                                                yield $"let {ptrField} = {stream}.Value({var})"
+                                        ]
                                     PinFrontend = fun var code ->
                                         [
                                             match ptr with
@@ -1215,7 +1324,7 @@ module Frontend =
                                                 for c in code do
                                                     yield $"    {c}"
                                                 yield $"    let {var}Result = NativePtr.toByRef {ptrField}"
-                                                yield $"    {var} <- {innerType}.Read(&{var}Result)"
+                                                yield $"    {var} <- {innerType}.Read(device, &{var}Result)"
                                                 yield ")"
                                             | _ ->
                                                 yield $"let mutable {handleField} = {var}"
@@ -1225,10 +1334,13 @@ module Frontend =
                                     Read = fun vars ->
                                         let ptrField = vars.[ptr.Name]
                                         match ptr with
-                                        | FieldOfType(Object _, _) ->
-                                            $"let ptr = {ptrField} in new {innerType}(NativePtr.read ptr)"
+                                        | FieldOfType(Object o, _) ->
+                                            let prefix = 
+                                                if Set.contains o.Name deviceChildren then "device, "
+                                                else ""
+                                            $"let ptr = {ptrField} in new {innerType}({prefix}NativePtr.read ptr)"
                                         | FieldOfType(Struct _, _) ->
-                                            $"let ptr = {ptrField} in let r = NativePtr.toByRef ptr in {innerType}.Read(&r)"
+                                            $"let ptr = {ptrField} in let r = NativePtr.toByRef ptr in {innerType}.Read(device, &r)"
                                         | _ ->
                                             $"let ptr = {ptrField} in NativePtr.read ptr"
                                 }
@@ -1238,7 +1350,8 @@ module Frontend =
                             let self =
                                 {
                                     FrontendField = h
-                                    BackendFields = fun var -> Map.ofList [h.Name, var]
+                                    BackendFields = fun var _ -> Map.ofList [h.Name, var]
+                                    WriteFrontend = fun _ _ -> []
                                     PinFrontend = fun _ code -> code
                                     Read = fun var -> var.[h.Name]
                                 }
@@ -1251,8 +1364,15 @@ module Frontend =
                     let self = 
                         {
                             FrontendField = { FieldDef.Name = h.Name; Tags = h.Tags; Type = { TypeName = "string"; Annotation = None }; Default = None; Optional = false; Length = None }
-                            BackendFields = fun _var -> Map.ofList [h.Name, varName]
-                            PinFrontend = fun var code -> $"use {varName} = fixed (Encoding.UTF8.GetBytes({var}))" :: code
+                            BackendFields = fun _var _ -> Map.ofList [h.Name, varName]
+                            WriteFrontend = fun stream var ->
+                                [
+                                    $"let mutable {varName} = 0n"
+                                    $"if not (isNull {var}) then"
+                                    $"    let {varName}Data = Encoding.UTF8.GetBytes({var})"
+                                    $"    {varName} <- {stream}.Array({varName}Data)"
+                                ]
+                            PinFrontend = fun var code -> $"use {varName} = fixed (if isNull {var} then null else Encoding.UTF8.GetBytes({var}))" :: code
                             Read = fun var -> $"Marshal.PtrToStringAnsi(NativePtr.toNativeInt {var.[h.Name]})"
                         }
                     marshalInternal allFields (self :: acc) t
@@ -1260,7 +1380,8 @@ module Frontend =
                     let self = 
                         {
                             FrontendField = h
-                            BackendFields = fun var -> Map.ofList [h.Name, $"(if {var} then 1 else 0)"]
+                            BackendFields = fun var _ -> Map.ofList [h.Name, $"(if {var} then 1 else 0)"]
+                            WriteFrontend = fun _ _ -> []
                             PinFrontend = fun _ code -> code
                             Read = fun var -> $"({var.[h.Name]} <> 0)"
                         }
@@ -1270,7 +1391,8 @@ module Frontend =
                     let self = 
                         {
                             FrontendField = { h with Type = { h.Type with TypeName = "int64" } }
-                            BackendFields = fun var -> Map.ofList [h.Name, $"unativeint({var})"]
+                            BackendFields = fun var _ -> Map.ofList [h.Name, $"unativeint({var})"]
+                            WriteFrontend = fun _ _ -> []
                             PinFrontend = fun _ code -> code
                             Read = fun var -> $"int64({var.[h.Name]})"
                         }
@@ -1280,7 +1402,8 @@ module Frontend =
                     let self = 
                         {
                             FrontendField = { h with Type = { h.Type with TypeName = "int64" } }
-                            BackendFields = fun var -> Map.ofList [h.Name, $"uint64({var})"]
+                            BackendFields = fun var _ -> Map.ofList [h.Name, $"uint64({var})"]
+                            WriteFrontend = fun _ _ -> []
                             PinFrontend = fun _ code -> code
                             Read = fun var -> $"int64({var.[h.Name]})"
                         }
@@ -1290,20 +1413,25 @@ module Frontend =
                     let self = 
                         {
                             FrontendField = { h with Type = { h.Type with TypeName = "int" } }
-                            BackendFields = fun var -> Map.ofList [h.Name, $"uint32({var})"]
+                            BackendFields = fun var _ -> Map.ofList [h.Name, $"uint32({var})"]
+                            WriteFrontend = fun _ _ -> []
                             PinFrontend = fun _ code -> code
                             Read = fun var -> $"int({var.[h.Name]})"
                         }
                     marshalInternal allFields (self :: acc) t
                 else
                     match tryResolveType h.Type with
-                    | Some (Object _) when Option.isNone h.Type.Annotation->
+                    | Some (Object o) when Option.isNone h.Type.Annotation->
+                        let prefix = 
+                            if Set.contains o.Name deviceChildren then "device, "
+                            else ""
                         let self =
                             {
                                 FrontendField = h
-                                BackendFields = fun var -> Map.ofList [h.Name, $"{var}.Handle"]
+                                BackendFields = fun var _ -> Map.ofList [h.Name, $"{var}.Handle"]
+                                WriteFrontend = fun _ _ -> []
                                 PinFrontend = fun _ code -> code
-                                Read = fun var -> $"new {frontendName false h.Type}({var.[h.Name]})"
+                                Read = fun var -> $"new {frontendName false h.Type}({prefix}{var.[h.Name]})"
                             }
                         marshalInternal allFields (self :: acc) t
                     | Some (Struct s | CallbackInfo s) ->
@@ -1315,16 +1443,26 @@ module Frontend =
 
                             let wrap (var : string) (code : list<string>) =
                                 [
-                                    yield $"let {arrName} = Encoding.UTF8.GetBytes({var})"
+                                    yield $"let {arrName} = if isNull {var} then null else Encoding.UTF8.GetBytes({var})"
                                     yield $"use {ptrName} = fixed {arrName}"
-                                    yield $"let {structName} = WebGPU.Raw.StringView({ptrName}, unativeint {arrName}.Length)"
+                                    yield $"let {structName} = WebGPU.Raw.StringView({ptrName}, if isNull {arrName} then 0un else unativeint {arrName}.Length)"
                                     yield! code
                                 ]
 
                             let self =
                                 {
                                     FrontendField = { h with Type = { TypeName = "string"; Annotation = None } }
-                                    BackendFields = fun var -> Map.ofList [h.Name, structName]
+                                    BackendFields = fun var _ -> Map.ofList [h.Name, structName]
+                                    WriteFrontend = fun stream var ->
+                                        [
+                                            $"let {structName} = "
+                                            $"    if not (isNull {var}) then"
+                                            $"        let {arrName} = Encoding.UTF8.GetBytes({var})"
+                                            $"        let {ptrName} = {stream}.Array({arrName})"
+                                            $"        WebGPU.Raw.StringView({ptrName}, unativeint {arrName}.Length)"
+                                            $"    else"
+                                            $"        WebGPU.Raw.StringView(NativePtr.ofNativeInt 0n, 0un)"
+                                        ]
                                     PinFrontend = wrap
                                     Read = fun var ->
                                         $"let {ptrName} = NativePtr.toNativeInt({var.[h.Name]}.Data) in if {ptrName} = 0n then null else Marshal.PtrToStringUTF8({ptrName}, int({var.[h.Name]}.Length))"
@@ -1344,7 +1482,7 @@ module Frontend =
                                     [
                                         yield $"let mutable {var}Copy = {var}"
                                         yield "try"
-                                        yield $"    {var}.Pin(fun {varName} ->"
+                                        yield $"    {var}.Pin(device, fun {varName} ->"
                                         yield $"        if NativePtr.toNativeInt {varName} = 0n then"
                                         let len = List.length code
                                         yield $"            let mutable {var}Native = Unchecked.defaultof<WebGPU.Raw.{pascalCase h.Type.TypeName}>"
@@ -1354,7 +1492,7 @@ module Frontend =
                                                 yield $"            {c}"
                                             else
                                                 yield $"            let _ret = {c}"
-                                                yield $"            {var}Copy <- {pascalCase h.Type.TypeName}.Read(&{var}Native)"
+                                                yield $"            {var}Copy <- {pascalCase h.Type.TypeName}.Read(device, &{var}Native)"
                                                 yield $"            _ret"
                                         
                                         yield $"        else"
@@ -1365,7 +1503,7 @@ module Frontend =
                                             else
                                                 yield $"            let _ret = {c}"
                                                 yield $"            let {var}Result = NativePtr.toByRef {varName}"
-                                                yield $"            {var}Copy <- {pascalCase h.Type.TypeName}.Read(&{var}Result)"
+                                                yield $"            {var}Copy <- {pascalCase h.Type.TypeName}.Read(device, &{var}Result)"
                                                 yield $"            _ret"
                                         yield $"    )"
                                         yield "finally"
@@ -1374,7 +1512,7 @@ module Frontend =
                                           
                                 | _ -> 
                                     [
-                                        yield $"{var}.Pin(fun {varName} ->"
+                                        yield $"{var}.Pin(device, fun {varName} ->"
                                         for c in code do
                                             yield $"    {c}"
                                         yield $")"
@@ -1387,17 +1525,34 @@ module Frontend =
                                 | _ ->
                                     $"(if NativePtr.toNativeInt {varName} = 0n then Unchecked.defaultof<_> else NativePtr.read {varName})"
                             
+                            let accessWrite = 
+                                match h.Type.Annotation with
+                                | Some ("*" | "const*") ->
+                                    varName
+                                | _ ->
+                                    $"(if NativePtr.toNativeInt {varName} = 0n then Unchecked.defaultof<_> else NativePtr.read {varName})"
+                            
                             let self =
                                 {
                                     FrontendField = h
-                                    BackendFields = fun var -> Map.ofList [h.Name, access]
+                                    BackendFields = fun var isPin ->
+                                        if isPin then Map.ofList [h.Name, access]
+                                        else Map.ofList [h.Name, varName]
+                                    WriteFrontend = fun stream var ->
+                                        [
+                                            match h.Type.Annotation with
+                                            | Some ("*" | "const*") ->
+                                                $"let {varName} = {var}.WriteTo({stream})"
+                                            | _ ->
+                                                $"let {varName} = {var}.WriteFieldsTo({stream})"
+                                        ]
                                     PinFrontend = wrap
                                     Read = fun var ->
                                         match h.Type.Annotation with
                                         | Some ("*" | "const*") ->
-                                            $"let m = NativePtr.toByRef {var.[h.Name]} in {frontendName false h.Type}.Read(&m)" //$"//TODO1 {var}"
+                                            $"let m = NativePtr.toByRef {var.[h.Name]} in {frontendName false h.Type}.Read(device, &m)" //$"//TODO1 {var}"
                                         | _ ->
-                                            $"{frontendName false h.Type}.Read(&{var.[h.Name]})"
+                                            $"{frontendName false h.Type}.Read(device, &{var.[h.Name]})"
                                 }
                             marshalInternal allFields (self :: acc) t
                     | Some (Delegate d) ->
@@ -1412,7 +1567,7 @@ module Frontend =
                             let backendArgDef =
                                 let all =
                                     (Map.empty, mm)
-                                    ||> List.fold (fun s m -> Map.union s (m.BackendFields(camelCase m.FrontendField.Name))) 
+                                    ||> List.fold (fun s m -> Map.union s (m.BackendFields (camelCase m.FrontendField.Name) true)) 
                                 
                                 d.Args |> List.map (fun d -> camelCase d.Name)
                                 //     all.[d.Name]    
@@ -1449,7 +1604,12 @@ module Frontend =
                             let self =
                                 {
                                     FrontendField = h
-                                    BackendFields = fun var -> Map.ofList [h.Name, varName; h1.Name, userDataName]
+                                    BackendFields = fun var _ -> Map.ofList [h.Name, varName; h1.Name, userDataName]
+                                    WriteFrontend = fun _ _ ->
+                                        [
+                                            $"let {varName} = failwith \"TODO\""
+                                            $"let {userDataName} = failwith \"TODO\""
+                                        ]
                                     PinFrontend = wrap
                                     Read = fun var -> $"failwith \"cannot read callbacks\"//TODO2 {var}"
                                 }
@@ -1464,7 +1624,7 @@ module Frontend =
                             let backendArgDef =
                                 let all =
                                     (Map.empty, mm)
-                                    ||> List.fold (fun s m -> Map.union s (m.BackendFields(camelCase m.FrontendField.Name))) 
+                                    ||> List.fold (fun s m -> Map.union s (m.BackendFields(camelCase m.FrontendField.Name) true)) 
                                 
                                 d.Args |> List.map (fun d -> camelCase d.Name)
                                 |> String.concat " "
@@ -1476,20 +1636,23 @@ module Frontend =
                             
                             let wrap (var : string) (code : list<string>) =
                                 [
-                                    yield $"let mutable {gcName} = Unchecked.defaultof<GCHandle>"
-                                    yield $"let mutable {delName} = Unchecked.defaultof<WebGPU.Raw.{frontendName false h.Type}>"
-                                    yield $"{delName} <- WebGPU.Raw.{frontendName false h.Type}(fun {backendArgDef} ->"
+                                    yield $"let mutable {varName} = 0n"
+                                    
+                                    yield $"if not (isNull ({var} :> obj)) then"
+                                    yield $"    let mutable {gcName} = Unchecked.defaultof<GCHandle>"
+                                    yield $"    let mutable {delName} = Unchecked.defaultof<WebGPU.Raw.{frontendName false h.Type}>"
+                                    yield $"    {delName} <- WebGPU.Raw.{frontendName false h.Type}(fun {backendArgDef} ->"
                                     //yield $"    {gcName}.Free()"
                                     let names = d.Args |> List.map (fun a -> a.Name, camelCase a.Name) |> Map.ofList
                                     for a in mm do
                                         let name = camelCase a.FrontendField.Name
                                         let code = names |> a.Read
-                                        yield $"    let _{name} = {code}"
-                                    yield $"    {var}.Invoke({realArgs})"
-                                    yield $")"
-                                    yield $"{gcName} <- GCHandle.Alloc({delName})"
+                                        yield $"        let _{name} = {code}"
+                                    yield $"        {var}.Invoke({realArgs})"
+                                    yield $"    )"
+                                    yield $"    {gcName} <- GCHandle.Alloc({delName})"
                                     
-                                    yield $"let {varName} = Marshal.GetFunctionPointerForDelegate({delName})"
+                                    yield $"    {varName} <- Marshal.GetFunctionPointerForDelegate({delName})"
                                     // yield $"let {gcName} = GCHandle.Alloc({delName})"
                                     // yield $"let {varName} = Marshal.GetFunctionPointerForDelegate({delName})"
                                     for c in code do
@@ -1498,7 +1661,11 @@ module Frontend =
                             let self =
                                 {
                                     FrontendField = h
-                                    BackendFields = fun var -> Map.ofList [h.Name, varName]
+                                    BackendFields = fun var _ -> Map.ofList [h.Name, varName]
+                                    WriteFrontend = fun stream var ->
+                                        [
+                                            $"let {varName} = failwith \"TODO\""
+                                        ]
                                     PinFrontend = wrap
                                     Read = fun var -> $"failwith \"cannot read callbacks\"//TODO2 {var}"
                                 }
@@ -1511,6 +1678,72 @@ module Frontend =
     let rec marshal (a : list<FieldDef>) =
         marshalInternal a [] a
         
+    let wrapMarshal (s : StructDef) (chainRootTypes : Set<string>) (extensible : bool) (chained : bool) marshal =
+        if chained then
+            let rootName = 
+                if chained then
+                    match s.ChainRoots with
+                    | [a] -> a
+                    | roots -> List.head roots //failwithf "bad roots: %A" roots
+                else s.Name
+            {
+                BackendFields = fun _ _ ->
+                    Map.ofList [
+                        "next in chain", "nextInChain"
+                        "s type", "sType"
+                    ]
+                FrontendField = { Name = "Next"; Tags = []; Type = { TypeName = ""; Annotation = None }; Default = None; Optional = false; Length = None }
+                Read = fun a -> a.["next in chain"]
+                WriteFrontend = fun stream var ->
+                    [
+                        if Set.contains rootName chainRootTypes then
+                            yield $"let nextInChain = if isNull {var} then 0n else {var}.WriteTo({stream})"
+                        else
+                            yield "let nextInChain = 0n"
+                            
+                        yield $"let sType = SType.{pascalCase s.Name}"
+                    ]
+                PinFrontend = fun a b ->
+                    if Set.contains rootName chainRootTypes then
+                        [
+                            yield $"PinHelper.PinNullable({a}, fun nextInChain ->"
+                            yield $"    let sType = SType.{pascalCase s.Name}"
+                            for b in b do yield $"    {b}"
+                            yield ")"
+                        ]
+                    else
+                        "let nextInChain = 0n" :: b
+            } :: marshal
+        elif extensible then
+            {
+                BackendFields = fun _ _ ->
+                    Map.ofList [
+                        "next in chain", "nextInChain"
+                    ]
+                FrontendField = { Name = "Next"; Tags = []; Type = { TypeName = ""; Annotation = None }; Default = None; Optional = false; Length = None }
+                Read = fun a -> a.["next in chain"]
+                WriteFrontend = fun stream var ->
+                    [
+                        let rootName = s.Name
+                        if Set.contains rootName chainRootTypes then
+                             $"let nextInChain = if isNull {var} then 0n else {var}.WriteTo({stream})"
+                        else
+                            "let nextInChain = 0n"
+                    ]
+                PinFrontend = fun a b ->
+                    let rootName = s.Name
+                    if Set.contains rootName chainRootTypes then
+                        [
+                            yield $"PinHelper.PinNullable({a}, fun nextInChain ->"
+                            for b in b do yield $"    {b}"
+                            yield ")"
+                        ]
+                    else
+                        "let nextInChain = 0n" :: b
+            } :: marshal
+        else
+            marshal
+        
     let print() =
         
         let b = System.Text.StringBuilder()
@@ -1520,6 +1753,7 @@ module Frontend =
         printfn "namespace rec WebGPU"
         printfn "open System"
         printfn "open System.Text"
+        printfn "open System.Diagnostics"
         printfn "open System.Runtime.InteropServices"
         printfn "open Microsoft.FSharp.NativeInterop"
         printfn "#nowarn \"9\""
@@ -1528,6 +1762,7 @@ module Frontend =
         
         printfn "[<AllowNullLiteral>]"
         printfn "type IExtension ="
+        //printfn "    inherit WebGPU.Raw.INativeWriteable"
         printfn "    abstract member Pin<'r> : action : (nativeint -> 'r) -> 'r"
         let chainRootTypes =
             all |> Seq.collect (fun a ->
@@ -1546,7 +1781,7 @@ module Frontend =
             | _ -> failwith "bad s type"
 
         printfn "module private ExtensionDecoder ="
-        printfn "    let decode<'a when 'a :> IExtension> (ptr : nativeint) : 'a ="
+        printfn "    let decode<'a when 'a :> IExtension> (device : Device) (ptr : nativeint) : 'a ="
         printfn "        if ptr = 0n then"
         printfn "            Unchecked.defaultof<'a>"
         printfn "        else"
@@ -1572,7 +1807,7 @@ module Frontend =
                 | Some (Struct sd) when not (List.isEmpty sd.ChainRoots) ->
                     printfn $"                | SType.{pascalCase s} ->"
                     printfn $"                    let rr = NativePtr.toByRef (NativePtr.ofNativeInt<WebGPU.Raw.{pascalCase s}> (ptr))"
-                    printfn $"                    {pascalCase s}.Read(&rr) :> obj :?> 'a"
+                    printfn $"                    {pascalCase s}.Read(device, &rr) :> obj :?> 'a"
                 | _ ->
                     ()
             printfn "                | _ -> failwithf \"bad s type: %%A\" sType" 
@@ -1611,10 +1846,8 @@ module Frontend =
             | Struct s | CallbackInfo s ->
                 let marshal = marshal s.Fields
                 
-                let extensible = Option.isSome s.Extensible //&& Set.contains s.Name chainRootTypes
-                    
-                let chained =
-                    Option.isSome s.Chained 
+                let extensible = Option.isSome s.Extensible
+                let chained = Option.isSome s.Chained 
                 
                 let fields =
                     if chained then
@@ -1653,8 +1886,9 @@ module Frontend =
                             
                         if Set.contains rootName chainRootTypes then
                             printfn $"        Next : I{pascalCase rootName}Extension"
-                        else
-                            printfn $"        Next : IExtension"
+                        // else
+                        //     printfn $"        [<DefaultValue>]"
+                        //     printfn $"        Next : IExtension"
 
                     
                     for d in fielddef do
@@ -1664,50 +1898,16 @@ module Frontend =
                     printfn $"    static member Null = Unchecked.defaultof<{pascalCase s.Name}>"
                     
                     printfn $"    [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]"
-                    printfn $"    member this.Pin<'r>(action : nativeptr<WebGPU.Raw.{pascalCase s.Name}> -> 'r) : 'r = "
+                    printfn $"    member this.Pin<'r>(device : Device, action : nativeptr<WebGPU.Raw.{pascalCase s.Name}> -> 'r) : 'r = "
                     printfn $"        if isNull (this :> obj) then"
                     // printfn $"            let mutable v = Unchecked.defaultof<WebGPU.Raw.{pascalCase s.Name}>"
                     // printfn $"            use ptr = fixed &v"
                     printfn $"            action (NativePtr.ofNativeInt 0n)"
                     printfn $"        else"
                     
-                    let marshal =
-                        if chained then
-                            {
-                                BackendFields = fun _ ->
-                                    Map.ofList [
-                                        "next in chain", "nextInChain"
-                                        "s type", "sType"
-                                    ]
-                                FrontendField = { Name = "Next"; Tags = []; Type = { TypeName = ""; Annotation = None }; Default = None; Optional = false; Length = None }
-                                Read = fun a -> a.["next in chain"]
-                                PinFrontend = fun a b ->
-                                    [
-                                        yield $"PinHelper.PinNullable({a}, fun nextInChain ->"
-                                        yield $"    let sType = SType.{pascalCase s.Name}"
-                                        for b in b do yield $"    {b}"
-                                        yield ")"
-                                    ]
-                            } :: marshal
-                        elif extensible then
-                            {
-                                BackendFields = fun _ ->
-                                    Map.ofList [
-                                        "next in chain", "nextInChain"
-                                    ]
-                                FrontendField = { Name = "Next"; Tags = []; Type = { TypeName = ""; Annotation = None }; Default = None; Optional = false; Length = None }
-                                Read = fun a -> a.["next in chain"]
-                                PinFrontend = fun a b ->
-                                    [
-                                        yield $"PinHelper.PinNullable({a}, fun nextInChain ->"
-                                        for b in b do yield $"    {b}"
-                                        yield ")"
-                                    ]
-                            } :: marshal
-                        else
-                            marshal
                     
                     
+                    let marshal = wrapMarshal s chainRootTypes extensible chained marshal
                         
                     let body = 
                         pinStruct "this" marshal (fun pinned ->
@@ -1718,7 +1918,6 @@ module Frontend =
                                     | Some v -> v
                                     | None -> "Unchecked.defaultof<_>"
                                 )
-                            //let args = List.map fst pinned 
                             [
                                 yield $"let mutable value ="
                                 yield $"    new {backendName}("
@@ -1736,9 +1935,60 @@ module Frontend =
                     for b in body do
                         printfn "            %s" b
                         
+                        
+                    //
+                    // printfn $"    member this.WriteFieldsTo(stream : WebGPU.Raw.NativeStream) : WebGPU.Raw.{pascalCase s.Name} = "
+                    // printfn $"        if isNull (this :> obj) then"
+                    // printfn $"            Unchecked.defaultof<_>"
+                    // printfn $"        else"
+                    // let mutable pinned = Map.empty
+                    // for m in marshal do
+                    //     let name = $"this.{pascalCase m.FrontendField.Name}"
+                    //     let code = m.WriteFrontend "stream" name
+                    //     for c in code do
+                    //         printfn $"            {c}"
+                    //     pinned <- Map.union pinned (m.BackendFields name false)      
+                    // let backendName = $"WebGPU.Raw.{pascalCase s.Name}"
+                    // let args =
+                    //     fields |> List.map (fun f ->
+                    //         match Map.tryFind f.Name pinned with
+                    //         | Some v -> v, TypeRef.isPointer f.Type, RawWrapper.fsharpName f.Type = "nativeint"
+                    //         | None -> "Unchecked.defaultof<_>", false, false
+                    //     )
+                    // //let args = List.map fst pinned
+                    // printfn $"            new {backendName}("
+                    // for i, (a, isPointer, isNativeInt) in List.indexed args do
+                    //     // let a =
+                    //     //     if isPointer then
+                    //     //         if isNativeInt then $"(if {a} = 0n then 0n else {a} - originalPos)"
+                    //     //         else $"NativePtr.ofNativeInt(if NativePtr.toNativeInt {a} = 0n then 0n else NativePtr.toNativeInt {a} - originalPos)"
+                    //     //     else a
+                    //     if i < args.Length - 1 then
+                    //         printfn $"                {a},"
+                    //     else
+                    //         printfn $"                {a}"
+                    // printfn $"            )"
+                    //
+                    //     
+                    //     
+                    //
+                    // printfn $"    member this.WriteTo(stream : WebGPU.Raw.NativeStream) : nativeint = "
+                    // printfn $"        let originalPos = stream.Pointer"
+                    // printfn $"        stream.Pointer <- originalPos + nativeint sizeof<WebGPU.Raw.{pascalCase s.Name}>"
+                    // printfn $"        let value = this.WriteFieldsTo(stream)"
+                    // printfn $"        let final = stream.Pointer"
+                    // printfn $"        try"
+                    // printfn $"            stream.Pointer <- originalPos"
+                    // printfn $"            stream.Value(value) |> NativePtr.toNativeInt"
+                    // printfn $"        finally"
+                    // printfn $"            stream.Pointer <- final"
+                
+                    // printfn "    interface WebGPU.Raw.INativeWriteable with"
+                    // printfn "        member this.WriteTo(stream : WebGPU.Raw.NativeStream) = this.WriteTo(stream)"
+                    //
                     if not (List.isEmpty s.ChainRoots) then
                         printfn $"    interface IExtension with"
-                        printfn $"        member x.Pin<'r>(action : nativeint -> 'r) = x.Pin(fun ptr -> action(NativePtr.toNativeInt ptr))"
+                        printfn $"        member x.Pin<'r>(action : nativeint -> 'r) = x.Pin(Unchecked.defaultof<_>, fun ptr -> action(NativePtr.toNativeInt ptr))"
                     for r in s.ChainRoots do
                         if Set.contains r chainRootTypes then
                             printfn $"    interface I{pascalCase r}Extension"
@@ -1753,11 +2003,14 @@ module Frontend =
                     // printfn "        action ptr"
                     () // TODO
                     
+       
                     
-                printfn $"    interface WebGPU.Raw.IPinnable<WebGPU.Raw.{pascalCase s.Name}> with"
-                printfn $"        member x.Pin(action) = x.Pin(action)"
                     
-                printfn $"    static member Read(backend : inref<WebGPU.Raw.{pascalCase s.Name}>) = "
+                    
+                printfn $"    interface WebGPU.Raw.IPinnable<Device, WebGPU.Raw.{pascalCase s.Name}> with"
+                printfn $"        member x.Pin(device, action) = x.Pin(device, action)"
+                    
+                printfn $"    static member Read(device : Device, backend : inref<WebGPU.Raw.{pascalCase s.Name}>) = "
                 
                 match marshal with
                 | [] when not extensible && not chained ->
@@ -1787,31 +2040,44 @@ module Frontend =
                                 | roots -> List.head roots //failwithf "bad roots: %A" roots
                             else s.Name
                         if Set.contains rootName chainRootTypes then
-                            printfn $"            Next = ExtensionDecoder.decode<I{pascalCase rootName}Extension> backend.NextInChain"
-                        else
-                            printfn $"            Next = ExtensionDecoder.decode<IExtension> backend.NextInChain"
-                        
+                            printfn $"            Next = ExtensionDecoder.decode<I{pascalCase rootName}Extension> device backend.NextInChain"
+                        // else
+                        //     printfn $"            Next = ExtensionDecoder.decode<IExtension> device backend.NextInChain"
+                        //
                     for (name, value) in values do
                         
                         printfn $"            {name} = {value}"
                     printfn "        }"
                     
             | Object o ->
-                printfn $"type {pascalCase o.Name} internal(handle : nativeint) ="
-                printfn "    member x.Handle = handle"
+                let isDeviceChild = Set.contains o.Name deviceChildren
+                let prefix = 
+                    if isDeviceChild then "device : Device, "
+                    else ""
+                    
+                let thisName =
+                    if o.Name = "device" then "device"
+                    else "_"
+                    
+                    
+                if o.Name = "buffer" then printfn "[<DebuggerTypeProxy(typeof<BufferProxy>)>]"
+                    
+                let suffix =
+                    if o.Name = "device" then " as device"
+                    else ""
+                    
+                printfn $"type {pascalCase o.Name} internal({prefix}handle : nativeint){suffix} ="
                 
-                printfn $"    override x.ToString() = $\"{pascalCase o.Name}(0x%%08X{{handle}})\""
-                printfn "    override x.GetHashCode() = hash handle"
-                printfn "    override x.Equals(obj) ="
-                printfn "        match obj with"
-                printfn $"        | :? {pascalCase o.Name} as other -> other.Handle = x.Handle"
-                printfn "        | _ -> false"
+                if not isDeviceChild && o.Name <> "device" then
+                    printfn "    static let device = Unchecked.defaultof<Device>"
+                    
+                if isDeviceChild then printfn $"    static let nullptr = new {pascalCase o.Name}(Unchecked.defaultof<_>, 0n)"
+                else printfn $"    static let nullptr = new {pascalCase o.Name}(0n)"
                 
-                printfn $"    static member Null = new {pascalCase o.Name}(0n)"
                 
                 let (|SimpleGetter|_|) (m : FunctionDef) =
                     match m.Args with
-                    | [] when m.Name.StartsWith "get " ->
+                    | [] when m.Name.StartsWith "get " && m.Return.TypeName <> "future" ->
                         Some ()
                     | _ ->
                         None
@@ -1846,9 +2112,41 @@ module Frontend =
                             if m.Name.StartsWith "get " then m.Name.Substring 4
                             else m.Name
                         
-                        printfn $"    member this.{pascalCase propertyName} : {frontendName false ret.FrontendField.Type} ="
-                        printfn $"        let mutable res = WebGPU.Raw.WebGPU.{pascalCase methName}(handle)"
-                        printfn $"        {read}"
+                        printfn $"    let {camelCase propertyName} ="
+                        printfn $"        lazy ("
+                        printfn $"            let mutable res = WebGPU.Raw.WebGPU.{pascalCase methName}(handle)"
+                        printfn $"            {read}"
+                        printfn $"        )"
+                    | _ ->
+                        ()
+                
+                printfn "    member x.Handle = handle"
+                
+                
+                if isDeviceChild then printfn $"    member x.Device = device"
+                
+                printfn $"    override x.ToString() = $\"{pascalCase o.Name}(0x%%08X{{handle}})\""
+                printfn "    override x.GetHashCode() = hash handle"
+                printfn "    override x.Equals(obj) ="
+                printfn "        match obj with"
+                printfn $"        | :? {pascalCase o.Name} as other -> other.Handle = x.Handle"
+                printfn "        | _ -> false"
+                
+                printfn $"    static member Null = nullptr"
+                
+                for m in o.Methods do
+                    match m with
+                    | SimpleGetter ->
+                        let ret =
+                            marshal [
+                                { Name = "result"; Type = m.Return; Tags = []; Default = None; Optional = false; Length = None }
+                            ] |> List.head
+                        let propertyName =
+                            if m.Name.StartsWith "get " then m.Name.Substring 4
+                            else m.Name
+                        
+                        printfn $"    member {thisName}.{pascalCase propertyName} : {frontendName false ret.FrontendField.Type} ="
+                        printfn $"        {camelCase propertyName}.Value"
                         
                     | Getter(goodStatus, arg) ->
                         let ret = marshal [arg] |> List.head
@@ -1859,7 +2157,7 @@ module Frontend =
                             if m.Name.StartsWith "get " then m.Name.Substring 4
                             else m.Name
                         
-                        printfn $"    member _.{pascalCase propertyName} : {frontendName false ret.FrontendField.Type} ="
+                        printfn $"    member {thisName}.{pascalCase propertyName} : {frontendName false ret.FrontendField.Type} ="
                         printfn "        let mutable res = Unchecked.defaultof<_>"
                         printfn "        let ptr = fixed &res"
                         if Option.isSome goodStatus then
@@ -1883,7 +2181,7 @@ module Frontend =
                             |> String.concat ", "
                                     
                         let methName = o.Name + " " + m.Name
-                        printfn $"    member _.{pascalCase m.Name}({argdef}) : {frontendName false ret.FrontendField.Type} ="
+                        printfn $"    member {thisName}.{pascalCase m.Name}({argdef}) : {frontendName false ret.FrontendField.Type} ="
                         
                         let body = 
                             pinArgs mm (fun pinned ->
@@ -1915,6 +2213,9 @@ module Frontend =
                         for b in body do
                             printfn "        %s" b
                 
+                if o.Name = "device" then
+                    printfn "    member x.Instance : Instance = x.Adapter.Instance"
+                
                 let hasRelease = o.Methods |> List.exists (fun m -> m.Name = "release")
                 if hasRelease then
                     printfn "    member private x.Dispose(disposing : bool) ="
@@ -1924,6 +2225,74 @@ module Frontend =
                     printfn "    override x.Finalize() = x.Dispose(false)"
                     printfn "    interface System.IDisposable with"
                     printfn "        member x.Dispose() = x.Dispose(true)"
+             
+                if o.Name = "buffer" then
+                    printfn "    member buffer.ToByteArray(offset : int64, size : int64) : byte[] ="
+                    printfn "        let device = buffer.Device"
+                    printfn "        let queue = device.Queue"
+                    printfn "        let arr = Array.zeroCreate<byte> (int size)"
+                    printfn "        use tmp = device.CreateBuffer { Next = null; Label = null; Size = size; MappedAtCreation = false; Usage = BufferUsage.MapRead ||| BufferUsage.CopyDst }"
+                    printfn "        use enc = buffer.Device.CreateCommandEncoder { Label = null; Next = null }"
+                    printfn "        enc.CopyBufferToBuffer(buffer, offset, tmp, 0L, size)"
+                    printfn "        use cmd = enc.Finish { Label = null }"
+                    printfn "        queue.Submit [| cmd |]"
+                    printfn "        let f = queue.OnSubmittedWorkDone2 { Mode = CallbackMode.WaitAnyOnly; Callback = QueueWorkDoneCallback2 (fun _ _ -> ()) }"
+                    printfn "        device.Instance.WaitAny([| { FutureWaitInfo.Future = f; Completed = false } |], 1000000000L) |> ignore"
+                    printfn "        let info : BufferMapCallbackInfo2 ="
+                    printfn "           {"
+                    printfn "               Mode = CallbackMode.WaitAnyOnly"
+                    printfn "               Callback = BufferMapCallback2(fun d status msg -> ())"
+                    printfn "           }"
+                    printfn "        let f = tmp.MapAsync2(MapMode.Read, 0L, size, info)"
+                    printfn "        device.Instance.WaitAny([| { FutureWaitInfo.Future = f; Completed = false } |], 1000000000L) |> ignore"
+                    printfn "        let ptr = tmp.GetConstMappedRange(0L, size)"
+                    printfn "        System.Runtime.InteropServices.Marshal.Copy(ptr, arr, 0, arr.Length)"
+                    printfn "        tmp.Unmap()"
+                    printfn "        arr"
+             
+         
+
+        printfn "type BufferProxy(buffer : Buffer) ="
+        printfn "    let size = buffer.Size"
+        printfn "    "
+        printfn "    let content = buffer.ToByteArray(0L, buffer.Size)"
+        printfn "    member x.UInt8Array = content"
+        printfn "    member x.UInt16Array = "
+        printfn "        use ptr = fixed content"
+        printfn "        let ptr = NativePtr.ofNativeInt<uint16> (NativePtr.toNativeInt ptr)"
+        printfn "        Array.init (content.Length / 2) (fun i -> NativePtr.get ptr i)"
+        printfn "    member x.UInt32Array = "
+        printfn "        use ptr = fixed content"
+        printfn "        let ptr = NativePtr.ofNativeInt<uint32> (NativePtr.toNativeInt ptr)"
+        printfn "        Array.init (content.Length / 4) (fun i -> NativePtr.get ptr i)"
+        printfn "    member x.UInt64Array = "
+        printfn "        use ptr = fixed content"
+        printfn "        let ptr = NativePtr.ofNativeInt<uint64> (NativePtr.toNativeInt ptr)"
+        printfn "        Array.init (content.Length / 8) (fun i -> NativePtr.get ptr i)"
+        printfn "    member x.Int8Array = "
+        printfn "        use ptr = fixed content"
+        printfn "        let ptr = NativePtr.ofNativeInt<int8> (NativePtr.toNativeInt ptr)"
+        printfn "        Array.init (content.Length) (fun i -> NativePtr.get ptr i)"
+        printfn "    member x.Int16Array = "
+        printfn "        use ptr = fixed content"
+        printfn "        let ptr = NativePtr.ofNativeInt<int16> (NativePtr.toNativeInt ptr)"
+        printfn "        Array.init (content.Length / 2) (fun i -> NativePtr.get ptr i)"
+        printfn "    member x.Int32Array = "
+        printfn "        use ptr = fixed content"
+        printfn "        let ptr = NativePtr.ofNativeInt<int32> (NativePtr.toNativeInt ptr)"
+        printfn "        Array.init (content.Length / 4) (fun i -> NativePtr.get ptr i)"
+        printfn "    member x.Int64Array = "
+        printfn "        use ptr = fixed content"
+        printfn "        let ptr = NativePtr.ofNativeInt<int64> (NativePtr.toNativeInt ptr)"
+        printfn "        Array.init (content.Length / 8) (fun i -> NativePtr.get ptr i)"
+        printfn "    member x.Float32Array = "
+        printfn "        use ptr = fixed content"
+        printfn "        let ptr = NativePtr.ofNativeInt<float32> (NativePtr.toNativeInt ptr)"
+        printfn "        Array.init (content.Length / 4) (fun i -> NativePtr.get ptr i)"
+        printfn "    member x.Float64Array = "
+        printfn "        use ptr = fixed content"
+        printfn "        let ptr = NativePtr.ofNativeInt<double> (NativePtr.toNativeInt ptr)"
+        printfn "        Array.init (content.Length / 8) (fun i -> NativePtr.get ptr i)"
                     
         File.WriteAllText(Path.Combine(__SOURCE_DIRECTORY__, "src", "WebGPU", "Frontend.fs"), b.ToString())
 
