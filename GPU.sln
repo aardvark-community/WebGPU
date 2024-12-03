@@ -21,6 +21,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		RELEASE_NOTES.md = RELEASE_NOTES.md
 		.gitignore = .gitignore
 		dotnet-tools.json = .config/dotnet-tools.json
+		buildnative.sh = buildnative.sh
+		pulldawn.sh = pulldawn.sh
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WebGPUNative", "WebGPUNative", "{5A7FC622-B393-4DFD-8789-503B04F22AFB}"
@@ -29,9 +31,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WebGPUNative", "WebGPUNativ
 		src\WebGPUNative\CMakeLists.txt = src\WebGPUNative\CMakeLists.txt
 		src\WebGPUNative\dllexport.h = src\WebGPUNative\dllexport.h
 		src\WebGPUNative\WebGPU.cpp = src\WebGPUNative\WebGPU.cpp
+		src\WebGPUNative\utils_metal.mm = src\WebGPUNative\utils_metal.mm
 	EndProjectSection
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FShade.WGSL", "src\FShade.WGSL\FShade.WGSL.fsproj", "{1EFC5E0C-CD8A-42DD-AF93-0ECCDA3926C5}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Aardvark.Rendering.WebGPU", "src\Aardvark.Rendering.WebGPU\Aardvark.Rendering.WebGPU.fsproj", "{9876BB78-82E2-4600-BEBF-B31F5203E1F0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{5B63B0C9-970E-494A-BD23-A86478242D06}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Aardvark.Application.Slim.WebGPU", "src\Aardvark.Application.Slim.WebGPU\Aardvark.Application.Slim.WebGPU.fsproj", "{57410CEC-A58B-4223-B004-7A9A658DF194}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -54,11 +63,22 @@ Global
 		{1EFC5E0C-CD8A-42DD-AF93-0ECCDA3926C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1EFC5E0C-CD8A-42DD-AF93-0ECCDA3926C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1EFC5E0C-CD8A-42DD-AF93-0ECCDA3926C5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9876BB78-82E2-4600-BEBF-B31F5203E1F0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9876BB78-82E2-4600-BEBF-B31F5203E1F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9876BB78-82E2-4600-BEBF-B31F5203E1F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9876BB78-82E2-4600-BEBF-B31F5203E1F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57410CEC-A58B-4223-B004-7A9A658DF194}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57410CEC-A58B-4223-B004-7A9A658DF194}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57410CEC-A58B-4223-B004-7A9A658DF194}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57410CEC-A58B-4223-B004-7A9A658DF194}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{AFB9F2EC-4164-4D6D-A801-4D8799E6FF64} = {E90DA2D0-2327-479F-8F98-46C69E4AACBE}
 		{59187546-4E13-407E-8CA7-E5DEACEA8EF9} = {E90DA2D0-2327-479F-8F98-46C69E4AACBE}
 		{5A7FC622-B393-4DFD-8789-503B04F22AFB} = {E90DA2D0-2327-479F-8F98-46C69E4AACBE}
-		{1EFC5E0C-CD8A-42DD-AF93-0ECCDA3926C5} = {E90DA2D0-2327-479F-8F98-46C69E4AACBE}
+		{9876BB78-82E2-4600-BEBF-B31F5203E1F0} = {E90DA2D0-2327-479F-8F98-46C69E4AACBE}
+		{5B63B0C9-970E-494A-BD23-A86478242D06} = {E90DA2D0-2327-479F-8F98-46C69E4AACBE}
+		{AFB9F2EC-4164-4D6D-A801-4D8799E6FF64} = {5B63B0C9-970E-494A-BD23-A86478242D06}
+		{1EFC5E0C-CD8A-42DD-AF93-0ECCDA3926C5} = {5B63B0C9-970E-494A-BD23-A86478242D06}
+		{57410CEC-A58B-4223-B004-7A9A658DF194} = {E90DA2D0-2327-479F-8F98-46C69E4AACBE}
 	EndGlobalSection
 EndGlobal

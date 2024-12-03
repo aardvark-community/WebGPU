@@ -8,7 +8,10 @@ nuget Aardvark.Base             ~> 5.3.4
 nuget Aardvark.Base.FSharp      ~> 5.3.4
 nuget Aardvark.Build            ~> 2.0.3
 nuget Aardvark.Rendering        ~> 5.5.8
-nuget Silk.NET.GLFW             ~> 2.22.0
+nuget Aardvark.Application.Slim ~> 5.5.8
+nuget Aardvark.SceneGraph       ~> 5.5.8
+nuget Silk.NET.GLFW             = 2.15
+nuget Silk.NET.Core                      = 2.15.0
 nuget Aardvark.PixImage.ImageSharp ~> 2.0.1
 
 nuget FShade.Core ~> 5.6.0
@@ -39,5 +42,3 @@ nuget Microsoft.JSInterop ~> 8.0.10
 nuget Microsoft.JSInterop.WebAssembly ~> 8.0.10
 nuget Microsoft.AspNetCore.Components.WebAssembly ~> 8.0.10
 nuget Microsoft.AspNetCore.Components.WebAssembly.DevServer ~> 8.0.10
-
-nuget Silk.NET.WebGPU ~> 2.22.0

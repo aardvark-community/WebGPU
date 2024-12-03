@@ -335,9 +335,17 @@ for kv in doc.RootElement.EnumerateObject() do
                                 None
                         )
                         
-                    let meth =
+                    let releaseMeth =
                         {
                             FunctionDef.Name = "release"
+                            Tags = []
+                            Return = { TypeName = "void"; Annotation = None }
+                            Args = []
+                        }
+                        
+                    let addRefMeth =
+                        {
+                            FunctionDef.Name = "add ref"
                             Tags = []
                             Return = { TypeName = "void"; Annotation = None }
                             Args = []
@@ -345,7 +353,7 @@ for kv in doc.RootElement.EnumerateObject() do
 
                     match meths |> List.mapOption id with
                     | Some meths ->
-                        let meths = meths @ [meth]
+                        let meths = meths @ [releaseMeth; addRefMeth]
                         allList.Add (Object { Name = kv.Name; Tags = tags; Methods = meths })
                     | None ->
                         ()
@@ -657,19 +665,19 @@ module Native =
         printfn "#include <stdlib.h>"
         printfn "#include <stdio.h>"
         printfn "#include <stdint.h>"
-        printfn "#include \"webgpu.h\""
+        printfn "#include \"webgpu/webgpu.h\""
         printfn " "
-        if not emscripten then
-            printfn "#include \"webgpu_glfw.h\""
+        // if not emscripten then
+        //     printfn "#include \"webgpu_glfw.h\""
 
 
-            printfn "DllExport(WGPUSurface) gpuInstanceCreateGLFWSurface(WGPUInstance self, const void* window) {"
-            printfn "    auto instance = wgpu::Instance(self);"
-            printfn "    auto surf = wgpu::glfw::CreateSurfaceForWindow(instance, (GLFWwindow*)window);"
-            printfn "    auto handle = surf.Get();"
-            printfn "    wgpuSurfaceAddRef(handle);"
-            printfn "    return handle;"
-            printfn "}"
+        //     printfn "DllExport(WGPUSurface) gpuInstanceCreateGLFWSurface(WGPUInstance self, const void* window) {"
+        //     printfn "    auto instance = wgpu::Instance(self);"
+        //     printfn "    auto surf = wgpu::glfw::CreateSurfaceForWindow(instance, (GLFWwindow*)window);"
+        //     printfn "    auto handle = surf.Get();"
+        //     printfn "    wgpuSurfaceAddRef(handle);"
+        //     printfn "    return handle;"
+        //     printfn "}"
 
         for a in all do
             let functions = 
@@ -1010,9 +1018,9 @@ module RawWrapper =
         
         printfn "module WebGPU = "
         printfn ""
-
-        printfn $"    [<DllImport(\"WebGPU\", EntryPoint=\"gpuInstanceCreateGLFWSurface\")>]"
-        printfn $"    extern nativeint InstanceCreateGLFWSurface(void* self, void* window)"
+        //
+        // printfn $"    [<DllImport(\"WebGPU\", EntryPoint=\"gpuInstanceCreateGLFWSurface\")>]"
+        // printfn $"    extern nativeint InstanceCreateGLFWSurface(void* self, void* window)"
 
         for m in methods do
             if FunctionDef.isBadWasmFunction m then
@@ -2051,9 +2059,22 @@ module Frontend =
                     
             | Object o ->
                 let isDeviceChild = Set.contains o.Name deviceChildren
-                let prefix = 
-                    if isDeviceChild then "device : Device, "
-                    else ""
+                
+                // let descriptorType = { TypeName = o.Name + " descriptor"; Annotation = None }
+                // let args =
+                //     if o.Name = "adapter" || o.Name = "instance" || o.Name = "device" then []
+                //     else [$"descriptor : {frontendName false descriptorType}"]
+                
+                let args = []
+                let args =
+                    if isDeviceChild then "device : Device" :: args
+                    else args
+                    
+                
+                let prefix =
+                    match args with
+                    | [] -> ""
+                    | _ -> String.concat ", " args + ", "
                     
                 let thisName =
                     if o.Name = "device" then "device"
@@ -2071,8 +2092,13 @@ module Frontend =
                 if not isDeviceChild && o.Name <> "device" then
                     printfn "    static let device = Unchecked.defaultof<Device>"
                     
-                if isDeviceChild then printfn $"    static let nullptr = new {pascalCase o.Name}(Unchecked.defaultof<_>, 0n)"
-                else printfn $"    static let nullptr = new {pascalCase o.Name}(0n)"
+                
+                let nullArgs = args @ ["asd"] |> List.map (fun _ -> "Unchecked.defaultof<_>") |> String.concat ", " 
+                printfn $"    static let nullptr = new {pascalCase o.Name}({nullArgs})"
+                
+                
+                if o.Name = "device" then
+                    printfn "    let mutable runtime : Aardvark.Rendering.IRuntime = Unchecked.defaultof<_>"
                 
                 
                 let (|SimpleGetter|_|) (m : FunctionDef) =
@@ -2133,6 +2159,31 @@ module Frontend =
                 printfn "        | _ -> false"
                 
                 printfn $"    static member Null = nullptr"
+        //     interface IDisposable with
+        //     member x.Dispose() = x.Dispose()
+        //
+        // interface IBufferRange with
+        //     member x.Buffer = x
+        //     member x.Offset = 0n
+        //     member x.SizeInBytes = nativeint size
+        //
+        // interface IBackendBuffer with
+        //     member x.Handle = buffer.Handle
+        //     member x.Runtime = runtime
+                
+                if o.Name = "device" then
+                    printfn "    member x.Runtime"
+                    printfn "        with get() : Aardvark.Rendering.IRuntime = runtime"
+                    printfn "        and set (v : Aardvark.Rendering.IRuntime) = runtime <- v"
+                if o.Name = "buffer" then
+                    printfn "    interface Aardvark.Rendering.IBufferRange with"
+                    printfn "        member x.Buffer = x"
+                    printfn "        member x.Offset = 0n"
+                    printfn "        member x.SizeInBytes = nativeint x.Size"
+                    printfn "    "
+                    printfn "    interface Aardvark.Rendering.IBackendBuffer with"
+                    printfn "        member x.Handle = handle"
+                    printfn "        member x.Runtime = device.Runtime"
                 
                 for m in o.Methods do
                     match m with
@@ -2304,69 +2355,3 @@ Native.print (Path.Combine(__SOURCE_DIRECTORY__, "src", "WebGPU", "WebGPU.cpp"))
 Native.print (Path.Combine(__SOURCE_DIRECTORY__, "src", "WebGPUNative", "WebGPU.cpp")) false
 RawWrapper.print()
 Frontend.print()
-//     
-// let referenced = HashSet()
-// for a in all do
-//     referenced.UnionWith a.ReferencedTypes
-//     
-// let annotations = referenced |> Seq.choose (fun t -> t.Annotation) |> Set.ofSeq
-//
-// for a in annotations do
-//     printfn "%s" a
-//     
-// for a in referenced do
-//     if not (table.ContainsKey a.TypeName) then
-//         failwithf "MISSING TYPE: %A" a.TypeName
-//     
-//         
-// let countPointers (a : option<string>) =
-//     match a with
-//     | Some a -> a.ToCharArray() |> Array.sumBy(fun c -> if c = '*' then 1 else 0)
-//     | None -> 0
-//     
-
-//               
-//         
-// let nativeTypeName (t : TypeRef) (annotation : option<string>) =
-//     let mutable res = 
-//         match t.TypeName with
-//         | "size_t" -> "nativeint"
-//         | "void *" -> "nativeint"
-//         | "string view" -> "nativeptr<byte>"
-//         | _ -> pascalCase t.TypeName
-//     let ptr = countPointers annotation
-//     for i in 1 .. ptr do
-//         res <- sprintf "nativeptr<%s>" res
-//     res
-//     
-//
-//     
-// let printStruct (s : StructDef) =
-//     printfn "[<Struct; StructLayout(LayoutKind.Sequential)>]"
-//     printfn "type %s =" s.Name
-//     printfn "    {"
-//     for f in s.Fields do
-//         let typ = nativeTypeName f.Type f.Annotation
-//         let name = f.Name
-//         
-//         printfn "        %s : %s" name typ
-//     printfn "    }"
-//     printfn ""
-//     
-// for KeyValue(name, ptr) in functionPointers do
-//     let args =
-//         ptr.Args |> List.map (fun f ->
-//             let typ = nativeTypeName f.Type f.Annotation
-//             let name = f.Name
-//             sprintf "%s : %s" name typ
-//         ) |> String.concat " * "
-//     
-//     printfn "type %s = delegate of %s -> unit" (pascalCase name) args
-//     
-//     
-//         
-// printStruct  structs.["DeviceDescriptor"]
-//
-
-
-

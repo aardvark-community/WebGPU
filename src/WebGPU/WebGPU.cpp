@@ -6,7 +6,7 @@ typedef void* WGPUExternalTexture;
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
-#include "webgpu.h"
+#include "webgpu/webgpu.h"
  
 EMSCRIPTEN_KEEPALIVE WGPUInstance gpuCreateInstance(const WGPUInstanceDescriptor* descriptor) {
     return wgpuCreateInstance(descriptor);
@@ -38,17 +38,26 @@ EMSCRIPTEN_KEEPALIVE WGPUFuture gpuAdapterRequestDevice2(WGPUAdapter self, const
 EMSCRIPTEN_KEEPALIVE void gpuAdapterRelease(WGPUAdapter self) {
     return wgpuAdapterRelease(self);
 }
+EMSCRIPTEN_KEEPALIVE void gpuAdapterAddRef(WGPUAdapter self) {
+    return wgpuAdapterAddRef(self);
+}
 EMSCRIPTEN_KEEPALIVE void gpuBindGroupSetLabel(WGPUBindGroup self, WGPUStringView label) {
     return wgpuBindGroupSetLabel(self, label);
 }
 EMSCRIPTEN_KEEPALIVE void gpuBindGroupRelease(WGPUBindGroup self) {
     return wgpuBindGroupRelease(self);
 }
+EMSCRIPTEN_KEEPALIVE void gpuBindGroupAddRef(WGPUBindGroup self) {
+    return wgpuBindGroupAddRef(self);
+}
 EMSCRIPTEN_KEEPALIVE void gpuBindGroupLayoutSetLabel(WGPUBindGroupLayout self, WGPUStringView label) {
     return wgpuBindGroupLayoutSetLabel(self, label);
 }
 EMSCRIPTEN_KEEPALIVE void gpuBindGroupLayoutRelease(WGPUBindGroupLayout self) {
     return wgpuBindGroupLayoutRelease(self);
+}
+EMSCRIPTEN_KEEPALIVE void gpuBindGroupLayoutAddRef(WGPUBindGroupLayout self) {
+    return wgpuBindGroupLayoutAddRef(self);
 }
 typedef struct { 
    WGPUBuffer Self;
@@ -94,11 +103,17 @@ EMSCRIPTEN_KEEPALIVE void gpuBufferDestroy(WGPUBuffer self) {
 EMSCRIPTEN_KEEPALIVE void gpuBufferRelease(WGPUBuffer self) {
     return wgpuBufferRelease(self);
 }
+EMSCRIPTEN_KEEPALIVE void gpuBufferAddRef(WGPUBuffer self) {
+    return wgpuBufferAddRef(self);
+}
 EMSCRIPTEN_KEEPALIVE void gpuCommandBufferSetLabel(WGPUCommandBuffer self, WGPUStringView label) {
     return wgpuCommandBufferSetLabel(self, label);
 }
 EMSCRIPTEN_KEEPALIVE void gpuCommandBufferRelease(WGPUCommandBuffer self) {
     return wgpuCommandBufferRelease(self);
+}
+EMSCRIPTEN_KEEPALIVE void gpuCommandBufferAddRef(WGPUCommandBuffer self) {
+    return wgpuCommandBufferAddRef(self);
 }
 EMSCRIPTEN_KEEPALIVE WGPUCommandBuffer gpuCommandEncoderFinish(WGPUCommandEncoder self, const WGPUCommandBufferDescriptor* descriptor) {
     return wgpuCommandEncoderFinish(self, descriptor);
@@ -167,6 +182,9 @@ EMSCRIPTEN_KEEPALIVE void gpuCommandEncoderSetLabel(WGPUCommandEncoder self, WGP
 EMSCRIPTEN_KEEPALIVE void gpuCommandEncoderRelease(WGPUCommandEncoder self) {
     return wgpuCommandEncoderRelease(self);
 }
+EMSCRIPTEN_KEEPALIVE void gpuCommandEncoderAddRef(WGPUCommandEncoder self) {
+    return wgpuCommandEncoderAddRef(self);
+}
 EMSCRIPTEN_KEEPALIVE void gpuComputePassEncoderInsertDebugMarker(WGPUComputePassEncoder self, WGPUStringView markerLabel) {
     return wgpuComputePassEncoderInsertDebugMarker(self, markerLabel);
 }
@@ -205,6 +223,9 @@ EMSCRIPTEN_KEEPALIVE void gpuComputePassEncoderSetLabel(WGPUComputePassEncoder s
 EMSCRIPTEN_KEEPALIVE void gpuComputePassEncoderRelease(WGPUComputePassEncoder self) {
     return wgpuComputePassEncoderRelease(self);
 }
+EMSCRIPTEN_KEEPALIVE void gpuComputePassEncoderAddRef(WGPUComputePassEncoder self) {
+    return wgpuComputePassEncoderAddRef(self);
+}
 EMSCRIPTEN_KEEPALIVE WGPUBindGroupLayout gpuComputePipelineGetBindGroupLayout(WGPUComputePipeline self, uint32_t groupIndex) {
     return wgpuComputePipelineGetBindGroupLayout(self, groupIndex);
 }
@@ -213,6 +234,9 @@ EMSCRIPTEN_KEEPALIVE void gpuComputePipelineSetLabel(WGPUComputePipeline self, W
 }
 EMSCRIPTEN_KEEPALIVE void gpuComputePipelineRelease(WGPUComputePipeline self) {
     return wgpuComputePipelineRelease(self);
+}
+EMSCRIPTEN_KEEPALIVE void gpuComputePipelineAddRef(WGPUComputePipeline self) {
+    return wgpuComputePipelineAddRef(self);
 }
 EMSCRIPTEN_KEEPALIVE WGPUBindGroup gpuDeviceCreateBindGroup(WGPUDevice self, const WGPUBindGroupDescriptor* descriptor) {
     return wgpuDeviceCreateBindGroup(self, descriptor);
@@ -289,9 +313,6 @@ EMSCRIPTEN_KEEPALIVE WGPUStatus gpuDeviceGetAdapterInfo(WGPUDevice self, WGPUAda
 EMSCRIPTEN_KEEPALIVE WGPUQueue gpuDeviceGetQueue(WGPUDevice self) {
     return wgpuDeviceGetQueue(self);
 }
-EMSCRIPTEN_KEEPALIVE void gpuDeviceSetUncapturedErrorCallback(WGPUDevice self, WGPUErrorCallback callback, void * userdata) {
-    return wgpuDeviceSetUncapturedErrorCallback(self, callback, userdata);
-}
 EMSCRIPTEN_KEEPALIVE void gpuDevicePushErrorScope(WGPUDevice self, WGPUErrorFilter filter) {
     return wgpuDevicePushErrorScope(self, filter);
 }
@@ -309,6 +330,9 @@ EMSCRIPTEN_KEEPALIVE void gpuDeviceSetLabel(WGPUDevice self, WGPUStringView labe
 }
 EMSCRIPTEN_KEEPALIVE void gpuDeviceRelease(WGPUDevice self) {
     return wgpuDeviceRelease(self);
+}
+EMSCRIPTEN_KEEPALIVE void gpuDeviceAddRef(WGPUDevice self) {
+    return wgpuDeviceAddRef(self);
 }
 EMSCRIPTEN_KEEPALIVE WGPUSurface gpuInstanceCreateSurface(WGPUInstance self, const WGPUSurfaceDescriptor* descriptor) {
     return wgpuInstanceCreateSurface(self, descriptor);
@@ -343,6 +367,9 @@ EMSCRIPTEN_KEEPALIVE size_t gpuInstanceEnumerateWGSLLanguageFeatures(WGPUInstanc
 EMSCRIPTEN_KEEPALIVE void gpuInstanceRelease(WGPUInstance self) {
     return wgpuInstanceRelease(self);
 }
+EMSCRIPTEN_KEEPALIVE void gpuInstanceAddRef(WGPUInstance self) {
+    return wgpuInstanceAddRef(self);
+}
 EMSCRIPTEN_KEEPALIVE WGPUStatus gpuGetInstanceFeatures(WGPUInstanceFeatures* features) {
     return wgpuGetInstanceFeatures(features);
 }
@@ -351,6 +378,9 @@ EMSCRIPTEN_KEEPALIVE void gpuPipelineLayoutSetLabel(WGPUPipelineLayout self, WGP
 }
 EMSCRIPTEN_KEEPALIVE void gpuPipelineLayoutRelease(WGPUPipelineLayout self) {
     return wgpuPipelineLayoutRelease(self);
+}
+EMSCRIPTEN_KEEPALIVE void gpuPipelineLayoutAddRef(WGPUPipelineLayout self) {
+    return wgpuPipelineLayoutAddRef(self);
 }
 EMSCRIPTEN_KEEPALIVE void gpuQuerySetSetLabel(WGPUQuerySet self, WGPUStringView label) {
     return wgpuQuerySetSetLabel(self, label);
@@ -366,6 +396,9 @@ EMSCRIPTEN_KEEPALIVE void gpuQuerySetDestroy(WGPUQuerySet self) {
 }
 EMSCRIPTEN_KEEPALIVE void gpuQuerySetRelease(WGPUQuerySet self) {
     return wgpuQuerySetRelease(self);
+}
+EMSCRIPTEN_KEEPALIVE void gpuQuerySetAddRef(WGPUQuerySet self) {
+    return wgpuQuerySetAddRef(self);
 }
 EMSCRIPTEN_KEEPALIVE void gpuQueueSubmit(WGPUQueue self, size_t commandCount, const WGPUCommandBuffer* commands) {
     return wgpuQueueSubmit(self, commandCount, commands);
@@ -403,11 +436,17 @@ EMSCRIPTEN_KEEPALIVE void gpuQueueSetLabel(WGPUQueue self, WGPUStringView label)
 EMSCRIPTEN_KEEPALIVE void gpuQueueRelease(WGPUQueue self) {
     return wgpuQueueRelease(self);
 }
+EMSCRIPTEN_KEEPALIVE void gpuQueueAddRef(WGPUQueue self) {
+    return wgpuQueueAddRef(self);
+}
 EMSCRIPTEN_KEEPALIVE void gpuRenderBundleSetLabel(WGPURenderBundle self, WGPUStringView label) {
     return wgpuRenderBundleSetLabel(self, label);
 }
 EMSCRIPTEN_KEEPALIVE void gpuRenderBundleRelease(WGPURenderBundle self) {
     return wgpuRenderBundleRelease(self);
+}
+EMSCRIPTEN_KEEPALIVE void gpuRenderBundleAddRef(WGPURenderBundle self) {
+    return wgpuRenderBundleAddRef(self);
 }
 EMSCRIPTEN_KEEPALIVE void gpuRenderBundleEncoderSetPipeline(WGPURenderBundleEncoder self, WGPURenderPipeline pipeline) {
     return wgpuRenderBundleEncoderSetPipeline(self, pipeline);
@@ -482,6 +521,9 @@ EMSCRIPTEN_KEEPALIVE void gpuRenderBundleEncoderSetLabel(WGPURenderBundleEncoder
 }
 EMSCRIPTEN_KEEPALIVE void gpuRenderBundleEncoderRelease(WGPURenderBundleEncoder self) {
     return wgpuRenderBundleEncoderRelease(self);
+}
+EMSCRIPTEN_KEEPALIVE void gpuRenderBundleEncoderAddRef(WGPURenderBundleEncoder self) {
+    return wgpuRenderBundleEncoderAddRef(self);
 }
 EMSCRIPTEN_KEEPALIVE void gpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder self, WGPURenderPipeline pipeline) {
     return wgpuRenderPassEncoderSetPipeline(self, pipeline);
@@ -612,6 +654,9 @@ EMSCRIPTEN_KEEPALIVE void gpuRenderPassEncoderSetLabel(WGPURenderPassEncoder sel
 EMSCRIPTEN_KEEPALIVE void gpuRenderPassEncoderRelease(WGPURenderPassEncoder self) {
     return wgpuRenderPassEncoderRelease(self);
 }
+EMSCRIPTEN_KEEPALIVE void gpuRenderPassEncoderAddRef(WGPURenderPassEncoder self) {
+    return wgpuRenderPassEncoderAddRef(self);
+}
 EMSCRIPTEN_KEEPALIVE WGPUBindGroupLayout gpuRenderPipelineGetBindGroupLayout(WGPURenderPipeline self, uint32_t groupIndex) {
     return wgpuRenderPipelineGetBindGroupLayout(self, groupIndex);
 }
@@ -621,11 +666,17 @@ EMSCRIPTEN_KEEPALIVE void gpuRenderPipelineSetLabel(WGPURenderPipeline self, WGP
 EMSCRIPTEN_KEEPALIVE void gpuRenderPipelineRelease(WGPURenderPipeline self) {
     return wgpuRenderPipelineRelease(self);
 }
+EMSCRIPTEN_KEEPALIVE void gpuRenderPipelineAddRef(WGPURenderPipeline self) {
+    return wgpuRenderPipelineAddRef(self);
+}
 EMSCRIPTEN_KEEPALIVE void gpuSamplerSetLabel(WGPUSampler self, WGPUStringView label) {
     return wgpuSamplerSetLabel(self, label);
 }
 EMSCRIPTEN_KEEPALIVE void gpuSamplerRelease(WGPUSampler self) {
     return wgpuSamplerRelease(self);
+}
+EMSCRIPTEN_KEEPALIVE void gpuSamplerAddRef(WGPUSampler self) {
+    return wgpuSamplerAddRef(self);
 }
 EMSCRIPTEN_KEEPALIVE void gpuShaderModuleGetCompilationInfo(WGPUShaderModule self, WGPUCompilationInfoCallback callback, void * userdata) {
     return wgpuShaderModuleGetCompilationInfo(self, callback, userdata);
@@ -641,6 +692,9 @@ EMSCRIPTEN_KEEPALIVE void gpuShaderModuleSetLabel(WGPUShaderModule self, WGPUStr
 }
 EMSCRIPTEN_KEEPALIVE void gpuShaderModuleRelease(WGPUShaderModule self) {
     return wgpuShaderModuleRelease(self);
+}
+EMSCRIPTEN_KEEPALIVE void gpuShaderModuleAddRef(WGPUShaderModule self) {
+    return wgpuShaderModuleAddRef(self);
 }
 EMSCRIPTEN_KEEPALIVE void gpuSurfaceConfigure(WGPUSurface self, const WGPUSurfaceConfiguration* config) {
     return wgpuSurfaceConfigure(self, config);
@@ -662,6 +716,9 @@ EMSCRIPTEN_KEEPALIVE void gpuSurfaceSetLabel(WGPUSurface self, WGPUStringView la
 }
 EMSCRIPTEN_KEEPALIVE void gpuSurfaceRelease(WGPUSurface self) {
     return wgpuSurfaceRelease(self);
+}
+EMSCRIPTEN_KEEPALIVE void gpuSurfaceAddRef(WGPUSurface self) {
+    return wgpuSurfaceAddRef(self);
 }
 EMSCRIPTEN_KEEPALIVE WGPUTextureView gpuTextureCreateView(WGPUTexture self, const WGPUTextureViewDescriptor* descriptor) {
     return wgpuTextureCreateView(self, descriptor);
@@ -699,9 +756,15 @@ EMSCRIPTEN_KEEPALIVE void gpuTextureDestroy(WGPUTexture self) {
 EMSCRIPTEN_KEEPALIVE void gpuTextureRelease(WGPUTexture self) {
     return wgpuTextureRelease(self);
 }
+EMSCRIPTEN_KEEPALIVE void gpuTextureAddRef(WGPUTexture self) {
+    return wgpuTextureAddRef(self);
+}
 EMSCRIPTEN_KEEPALIVE void gpuTextureViewSetLabel(WGPUTextureView self, WGPUStringView label) {
     return wgpuTextureViewSetLabel(self, label);
 }
 EMSCRIPTEN_KEEPALIVE void gpuTextureViewRelease(WGPUTextureView self) {
     return wgpuTextureViewRelease(self);
+}
+EMSCRIPTEN_KEEPALIVE void gpuTextureViewAddRef(WGPUTextureView self) {
+    return wgpuTextureViewAddRef(self);
 }

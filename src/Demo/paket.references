@@ -3,6 +3,8 @@ FSharp.Data.Adaptive
 Aardvark.Base
 Aardvark.Rendering
 Aardvark.PixImage.ImageSharp
-Silk.NET.WebGPU
+Aardvark.SceneGraph
 Aardvark.Build
 Silk.NET.GLFW
+Aardvark.Application
+Aardvark.Application.Slim

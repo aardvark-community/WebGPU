@@ -72,14 +72,10 @@ type DeviceDescriptor =
         val mutable public RequiredFeatures : nativeptr<FeatureName>
         val mutable public RequiredLimits : nativeptr<RequiredLimits>
         val mutable public DefaultQueue : QueueDescriptor
-        val mutable public DeviceLostCallback : nativeint
-        val mutable public DeviceLostUserdata : nativeint
-        val mutable public DeviceLostCallbackInfo : DeviceLostCallbackInfo
-        val mutable public UncapturedErrorCallbackInfo : UncapturedErrorCallbackInfo
         val mutable public DeviceLostCallbackInfo2 : DeviceLostCallbackInfo2
         val mutable public UncapturedErrorCallbackInfo2 : UncapturedErrorCallbackInfo2
-        new(nextInChain : nativeint, label : StringView, requiredFeatureCount : unativeint, requiredFeatures : nativeptr<FeatureName>, requiredLimits : nativeptr<RequiredLimits>, defaultQueue : QueueDescriptor, deviceLostCallback : nativeint, deviceLostUserdata : nativeint, deviceLostCallbackInfo : DeviceLostCallbackInfo, uncapturedErrorCallbackInfo : UncapturedErrorCallbackInfo, deviceLostCallbackInfo2 : DeviceLostCallbackInfo2, uncapturedErrorCallbackInfo2 : UncapturedErrorCallbackInfo2) = { NextInChain = nextInChain; Label = label; RequiredFeatureCount = requiredFeatureCount; RequiredFeatures = requiredFeatures; RequiredLimits = requiredLimits; DefaultQueue = defaultQueue; DeviceLostCallback = deviceLostCallback; DeviceLostUserdata = deviceLostUserdata; DeviceLostCallbackInfo = deviceLostCallbackInfo; UncapturedErrorCallbackInfo = uncapturedErrorCallbackInfo; DeviceLostCallbackInfo2 = deviceLostCallbackInfo2; UncapturedErrorCallbackInfo2 = uncapturedErrorCallbackInfo2 }
-        new(label : StringView, requiredFeatureCount : unativeint, requiredFeatures : nativeptr<FeatureName>, requiredLimits : nativeptr<RequiredLimits>, defaultQueue : QueueDescriptor, deviceLostCallback : nativeint, deviceLostUserdata : nativeint, deviceLostCallbackInfo : DeviceLostCallbackInfo, uncapturedErrorCallbackInfo : UncapturedErrorCallbackInfo, deviceLostCallbackInfo2 : DeviceLostCallbackInfo2, uncapturedErrorCallbackInfo2 : UncapturedErrorCallbackInfo2) = DeviceDescriptor(0n, label, requiredFeatureCount, requiredFeatures, requiredLimits, defaultQueue, deviceLostCallback, deviceLostUserdata, deviceLostCallbackInfo, uncapturedErrorCallbackInfo, deviceLostCallbackInfo2, uncapturedErrorCallbackInfo2)
+        new(nextInChain : nativeint, label : StringView, requiredFeatureCount : unativeint, requiredFeatures : nativeptr<FeatureName>, requiredLimits : nativeptr<RequiredLimits>, defaultQueue : QueueDescriptor, deviceLostCallbackInfo2 : DeviceLostCallbackInfo2, uncapturedErrorCallbackInfo2 : UncapturedErrorCallbackInfo2) = { NextInChain = nextInChain; Label = label; RequiredFeatureCount = requiredFeatureCount; RequiredFeatures = requiredFeatures; RequiredLimits = requiredLimits; DefaultQueue = defaultQueue; DeviceLostCallbackInfo2 = deviceLostCallbackInfo2; UncapturedErrorCallbackInfo2 = uncapturedErrorCallbackInfo2 }
+        new(label : StringView, requiredFeatureCount : unativeint, requiredFeatures : nativeptr<FeatureName>, requiredLimits : nativeptr<RequiredLimits>, defaultQueue : QueueDescriptor, deviceLostCallbackInfo2 : DeviceLostCallbackInfo2, uncapturedErrorCallbackInfo2 : UncapturedErrorCallbackInfo2) = DeviceDescriptor(0n, label, requiredFeatureCount, requiredFeatures, requiredLimits, defaultQueue, deviceLostCallbackInfo2, uncapturedErrorCallbackInfo2)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnTogglesDescriptor = 
@@ -429,15 +425,6 @@ type ComputePipelineDescriptor =
         new(label : StringView, layout : nativeint, compute : ProgrammableStageDescriptor) = ComputePipelineDescriptor(0n, label, layout, compute)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
-type DawnComputePipelineFullSubgroups = 
-    struct
-        val mutable public NextInChain : nativeint
-        val mutable public SType : SType
-        val mutable public RequiresFullSubgroups : int
-        new(nextInChain : nativeint, sType : SType, requiresFullSubgroups : int) = { NextInChain = nextInChain; SType = sType; RequiresFullSubgroups = requiresFullSubgroups }
-        new(requiresFullSubgroups : int) = DawnComputePipelineFullSubgroups(0n, Unchecked.defaultof<SType>, requiresFullSubgroups)
-    end
-[<Struct; StructLayout(LayoutKind.Sequential)>]
 type CopyTextureForBrowserOptions = 
     struct
         val mutable public NextInChain : nativeint
@@ -611,6 +598,16 @@ type Limits =
         new(maxTextureDimension1D : uint32, maxTextureDimension2D : uint32, maxTextureDimension3D : uint32, maxTextureArrayLayers : uint32, maxBindGroups : uint32, maxBindGroupsPlusVertexBuffers : uint32, maxBindingsPerBindGroup : uint32, maxDynamicUniformBuffersPerPipelineLayout : uint32, maxDynamicStorageBuffersPerPipelineLayout : uint32, maxSampledTexturesPerShaderStage : uint32, maxSamplersPerShaderStage : uint32, maxStorageBuffersPerShaderStage : uint32, maxStorageTexturesPerShaderStage : uint32, maxUniformBuffersPerShaderStage : uint32, maxUniformBufferBindingSize : uint64, maxStorageBufferBindingSize : uint64, minUniformBufferOffsetAlignment : uint32, minStorageBufferOffsetAlignment : uint32, maxVertexBuffers : uint32, maxBufferSize : uint64, maxVertexAttributes : uint32, maxVertexBufferArrayStride : uint32, maxInterStageShaderComponents : uint32, maxInterStageShaderVariables : uint32, maxColorAttachments : uint32, maxColorAttachmentBytesPerSample : uint32, maxComputeWorkgroupStorageSize : uint32, maxComputeInvocationsPerWorkgroup : uint32, maxComputeWorkgroupSizeX : uint32, maxComputeWorkgroupSizeY : uint32, maxComputeWorkgroupSizeZ : uint32, maxComputeWorkgroupsPerDimension : uint32) = { MaxTextureDimension1D = maxTextureDimension1D; MaxTextureDimension2D = maxTextureDimension2D; MaxTextureDimension3D = maxTextureDimension3D; MaxTextureArrayLayers = maxTextureArrayLayers; MaxBindGroups = maxBindGroups; MaxBindGroupsPlusVertexBuffers = maxBindGroupsPlusVertexBuffers; MaxBindingsPerBindGroup = maxBindingsPerBindGroup; MaxDynamicUniformBuffersPerPipelineLayout = maxDynamicUniformBuffersPerPipelineLayout; MaxDynamicStorageBuffersPerPipelineLayout = maxDynamicStorageBuffersPerPipelineLayout; MaxSampledTexturesPerShaderStage = maxSampledTexturesPerShaderStage; MaxSamplersPerShaderStage = maxSamplersPerShaderStage; MaxStorageBuffersPerShaderStage = maxStorageBuffersPerShaderStage; MaxStorageTexturesPerShaderStage = maxStorageTexturesPerShaderStage; MaxUniformBuffersPerShaderStage = maxUniformBuffersPerShaderStage; MaxUniformBufferBindingSize = maxUniformBufferBindingSize; MaxStorageBufferBindingSize = maxStorageBufferBindingSize; MinUniformBufferOffsetAlignment = minUniformBufferOffsetAlignment; MinStorageBufferOffsetAlignment = minStorageBufferOffsetAlignment; MaxVertexBuffers = maxVertexBuffers; MaxBufferSize = maxBufferSize; MaxVertexAttributes = maxVertexAttributes; MaxVertexBufferArrayStride = maxVertexBufferArrayStride; MaxInterStageShaderComponents = maxInterStageShaderComponents; MaxInterStageShaderVariables = maxInterStageShaderVariables; MaxColorAttachments = maxColorAttachments; MaxColorAttachmentBytesPerSample = maxColorAttachmentBytesPerSample; MaxComputeWorkgroupStorageSize = maxComputeWorkgroupStorageSize; MaxComputeInvocationsPerWorkgroup = maxComputeInvocationsPerWorkgroup; MaxComputeWorkgroupSizeX = maxComputeWorkgroupSizeX; MaxComputeWorkgroupSizeY = maxComputeWorkgroupSizeY; MaxComputeWorkgroupSizeZ = maxComputeWorkgroupSizeZ; MaxComputeWorkgroupsPerDimension = maxComputeWorkgroupsPerDimension }
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
+type AdapterPropertiesSubgroups = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public SType : SType
+        val mutable public MinSubgroupSize : uint32
+        val mutable public MaxSubgroupSize : uint32
+        new(nextInChain : nativeint, sType : SType, minSubgroupSize : uint32, maxSubgroupSize : uint32) = { NextInChain = nextInChain; SType = sType; MinSubgroupSize = minSubgroupSize; MaxSubgroupSize = maxSubgroupSize }
+        new(minSubgroupSize : uint32, maxSubgroupSize : uint32) = AdapterPropertiesSubgroups(0n, Unchecked.defaultof<SType>, minSubgroupSize, maxSubgroupSize)
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnExperimentalSubgroupLimits = 
     struct
         val mutable public NextInChain : nativeint
@@ -628,6 +625,15 @@ type DawnExperimentalImmediateDataLimits =
         val mutable public MaxImmediateDataRangeByteSize : uint32
         new(nextInChain : nativeint, sType : SType, maxImmediateDataRangeByteSize : uint32) = { NextInChain = nextInChain; SType = sType; MaxImmediateDataRangeByteSize = maxImmediateDataRangeByteSize }
         new(maxImmediateDataRangeByteSize : uint32) = DawnExperimentalImmediateDataLimits(0n, Unchecked.defaultof<SType>, maxImmediateDataRangeByteSize)
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type DawnTexelCopyBufferRowAlignmentLimits = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public SType : SType
+        val mutable public MinTexelCopyBufferRowAlignment : uint32
+        new(nextInChain : nativeint, sType : SType, minTexelCopyBufferRowAlignment : uint32) = { NextInChain = nextInChain; SType = sType; MinTexelCopyBufferRowAlignment = minTexelCopyBufferRowAlignment }
+        new(minTexelCopyBufferRowAlignment : uint32) = DawnTexelCopyBufferRowAlignmentLimits(0n, Unchecked.defaultof<SType>, minTexelCopyBufferRowAlignment)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RequiredLimits = 
@@ -675,8 +681,6 @@ type ExternalTextureDescriptor =
         val mutable public Label : StringView
         val mutable public Plane0 : nativeint
         val mutable public Plane1 : nativeint
-        val mutable public VisibleOrigin : Origin2D
-        val mutable public VisibleSize : Extent2D
         val mutable public CropOrigin : Origin2D
         val mutable public CropSize : Extent2D
         val mutable public ApparentSize : Extent2D
@@ -687,8 +691,8 @@ type ExternalTextureDescriptor =
         val mutable public GamutConversionMatrix : nativeptr<float32>
         val mutable public Mirrored : int
         val mutable public Rotation : ExternalTextureRotation
-        new(nextInChain : nativeint, label : StringView, plane0 : nativeint, plane1 : nativeint, visibleOrigin : Origin2D, visibleSize : Extent2D, cropOrigin : Origin2D, cropSize : Extent2D, apparentSize : Extent2D, doYuvToRgbConversionOnly : int, yuvToRgbConversionMatrix : nativeptr<float32>, srcTransferFunctionParameters : nativeptr<float32>, dstTransferFunctionParameters : nativeptr<float32>, gamutConversionMatrix : nativeptr<float32>, mirrored : int, rotation : ExternalTextureRotation) = { NextInChain = nextInChain; Label = label; Plane0 = plane0; Plane1 = plane1; VisibleOrigin = visibleOrigin; VisibleSize = visibleSize; CropOrigin = cropOrigin; CropSize = cropSize; ApparentSize = apparentSize; DoYuvToRgbConversionOnly = doYuvToRgbConversionOnly; YuvToRgbConversionMatrix = yuvToRgbConversionMatrix; SrcTransferFunctionParameters = srcTransferFunctionParameters; DstTransferFunctionParameters = dstTransferFunctionParameters; GamutConversionMatrix = gamutConversionMatrix; Mirrored = mirrored; Rotation = rotation }
-        new(label : StringView, plane0 : nativeint, plane1 : nativeint, visibleOrigin : Origin2D, visibleSize : Extent2D, cropOrigin : Origin2D, cropSize : Extent2D, apparentSize : Extent2D, doYuvToRgbConversionOnly : int, yuvToRgbConversionMatrix : nativeptr<float32>, srcTransferFunctionParameters : nativeptr<float32>, dstTransferFunctionParameters : nativeptr<float32>, gamutConversionMatrix : nativeptr<float32>, mirrored : int, rotation : ExternalTextureRotation) = ExternalTextureDescriptor(0n, label, plane0, plane1, visibleOrigin, visibleSize, cropOrigin, cropSize, apparentSize, doYuvToRgbConversionOnly, yuvToRgbConversionMatrix, srcTransferFunctionParameters, dstTransferFunctionParameters, gamutConversionMatrix, mirrored, rotation)
+        new(nextInChain : nativeint, label : StringView, plane0 : nativeint, plane1 : nativeint, cropOrigin : Origin2D, cropSize : Extent2D, apparentSize : Extent2D, doYuvToRgbConversionOnly : int, yuvToRgbConversionMatrix : nativeptr<float32>, srcTransferFunctionParameters : nativeptr<float32>, dstTransferFunctionParameters : nativeptr<float32>, gamutConversionMatrix : nativeptr<float32>, mirrored : int, rotation : ExternalTextureRotation) = { NextInChain = nextInChain; Label = label; Plane0 = plane0; Plane1 = plane1; CropOrigin = cropOrigin; CropSize = cropSize; ApparentSize = apparentSize; DoYuvToRgbConversionOnly = doYuvToRgbConversionOnly; YuvToRgbConversionMatrix = yuvToRgbConversionMatrix; SrcTransferFunctionParameters = srcTransferFunctionParameters; DstTransferFunctionParameters = dstTransferFunctionParameters; GamutConversionMatrix = gamutConversionMatrix; Mirrored = mirrored; Rotation = rotation }
+        new(label : StringView, plane0 : nativeint, plane1 : nativeint, cropOrigin : Origin2D, cropSize : Extent2D, apparentSize : Extent2D, doYuvToRgbConversionOnly : int, yuvToRgbConversionMatrix : nativeptr<float32>, srcTransferFunctionParameters : nativeptr<float32>, dstTransferFunctionParameters : nativeptr<float32>, gamutConversionMatrix : nativeptr<float32>, mirrored : int, rotation : ExternalTextureRotation) = ExternalTextureDescriptor(0n, label, plane0, plane1, cropOrigin, cropSize, apparentSize, doYuvToRgbConversionOnly, yuvToRgbConversionMatrix, srcTransferFunctionParameters, dstTransferFunctionParameters, gamutConversionMatrix, mirrored, rotation)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedBufferMemoryProperties = 
@@ -1788,8 +1792,6 @@ type DawnBufferDescriptorErrorInfoFromWireClient =
     end
 module WebGPU = 
 
-    [<DllImport("WebGPU", EntryPoint="gpuInstanceCreateGLFWSurface")>]
-    extern nativeint InstanceCreateGLFWSurface(void* self, void* window)
     [<DllImport("WebGPU", EntryPoint="gpuCreateInstance")>]
     extern nativeint CreateInstance(InstanceDescriptor* descriptor)
     [<DllImport("WebGPU", EntryPoint="gpuGetProcAddress")>]
@@ -1816,14 +1818,20 @@ module WebGPU =
     extern Status AdapterGetFormatCapabilities(nativeint self, TextureFormat format, FormatCapabilities* capabilities)
     [<DllImport("WebGPU", EntryPoint="gpuAdapterRelease")>]
     extern void AdapterRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuAdapterAddRef")>]
+    extern void AdapterAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuBindGroupSetLabel")>]
     extern void BindGroupSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuBindGroupRelease")>]
     extern void BindGroupRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuBindGroupAddRef")>]
+    extern void BindGroupAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuBindGroupLayoutSetLabel")>]
     extern void BindGroupLayoutSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuBindGroupLayoutRelease")>]
     extern void BindGroupLayoutRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuBindGroupLayoutAddRef")>]
+    extern void BindGroupLayoutAddRef(nativeint self)
     [<Struct; StructLayout(LayoutKind.Sequential)>]
     type BufferMapAsyncArgs = 
         {
@@ -1869,10 +1877,14 @@ module WebGPU =
     extern void BufferDestroy(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuBufferRelease")>]
     extern void BufferRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuBufferAddRef")>]
+    extern void BufferAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuCommandBufferSetLabel")>]
     extern void CommandBufferSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuCommandBufferRelease")>]
     extern void CommandBufferRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuCommandBufferAddRef")>]
+    extern void CommandBufferAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderFinish")>]
     extern nativeint CommandEncoderFinish(nativeint self, CommandBufferDescriptor* descriptor)
     [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderBeginComputePass")>]
@@ -1985,6 +1997,8 @@ module WebGPU =
     extern void CommandEncoderSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderRelease")>]
     extern void CommandEncoderRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderAddRef")>]
+    extern void CommandEncoderAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuComputePassEncoderInsertDebugMarker")>]
     extern void ComputePassEncoderInsertDebugMarker(nativeint self, StringView markerLabel)
     [<DllImport("WebGPU", EntryPoint="gpuComputePassEncoderPopDebugGroup")>]
@@ -2022,12 +2036,16 @@ module WebGPU =
     extern void ComputePassEncoderSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuComputePassEncoderRelease")>]
     extern void ComputePassEncoderRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuComputePassEncoderAddRef")>]
+    extern void ComputePassEncoderAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuComputePipelineGetBindGroupLayout")>]
     extern nativeint ComputePipelineGetBindGroupLayout(nativeint self, uint32 groupIndex)
     [<DllImport("WebGPU", EntryPoint="gpuComputePipelineSetLabel")>]
     extern void ComputePipelineSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuComputePipelineRelease")>]
     extern void ComputePipelineRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuComputePipelineAddRef")>]
+    extern void ComputePipelineAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateBindGroup")>]
     extern nativeint DeviceCreateBindGroup(nativeint self, BindGroupDescriptor* descriptor)
     [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateBindGroupLayout")>]
@@ -2104,8 +2122,6 @@ module WebGPU =
     extern void DeviceForceLoss(nativeint self, DeviceLostReason typ, StringView message)
     [<DllImport("WebGPU", EntryPoint="gpuDeviceTick")>]
     extern void DeviceTick(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceSetUncapturedErrorCallback")>]
-    extern void DeviceSetUncapturedErrorCallback(nativeint self, nativeint callback, nativeint userdata)
     [<DllImport("WebGPU", EntryPoint="gpuDeviceSetLoggingCallback")>]
     extern void DeviceSetLoggingCallback(nativeint self, nativeint callback, nativeint userdata)
     [<DllImport("WebGPU", EntryPoint="gpuDevicePushErrorScope")>]
@@ -2122,6 +2138,8 @@ module WebGPU =
     extern void DeviceValidateTextureDescriptor(nativeint self, TextureDescriptor* descriptor)
     [<DllImport("WebGPU", EntryPoint="gpuDeviceRelease")>]
     extern void DeviceRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuDeviceAddRef")>]
+    extern void DeviceAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuExternalTextureSetLabel")>]
     extern void ExternalTextureSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuExternalTextureDestroy")>]
@@ -2132,6 +2150,8 @@ module WebGPU =
     extern void ExternalTextureRefresh(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuExternalTextureRelease")>]
     extern void ExternalTextureRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuExternalTextureAddRef")>]
+    extern void ExternalTextureAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuSharedBufferMemorySetLabel")>]
     extern void SharedBufferMemorySetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuSharedBufferMemoryGetProperties")>]
@@ -2146,6 +2166,8 @@ module WebGPU =
     extern int SharedBufferMemoryIsDeviceLost(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuSharedBufferMemoryRelease")>]
     extern void SharedBufferMemoryRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuSharedBufferMemoryAddRef")>]
+    extern void SharedBufferMemoryAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuSharedTextureMemorySetLabel")>]
     extern void SharedTextureMemorySetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuSharedTextureMemoryGetProperties")>]
@@ -2160,10 +2182,14 @@ module WebGPU =
     extern int SharedTextureMemoryIsDeviceLost(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuSharedTextureMemoryRelease")>]
     extern void SharedTextureMemoryRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuSharedTextureMemoryAddRef")>]
+    extern void SharedTextureMemoryAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuSharedFenceExportInfo")>]
     extern void SharedFenceExportInfo(nativeint self, SharedFenceExportInfo* info)
     [<DllImport("WebGPU", EntryPoint="gpuSharedFenceRelease")>]
     extern void SharedFenceRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuSharedFenceAddRef")>]
+    extern void SharedFenceAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuInstanceCreateSurface")>]
     extern nativeint InstanceCreateSurface(nativeint self, SurfaceDescriptor* descriptor)
     [<DllImport("WebGPU", EntryPoint="gpuInstanceProcessEvents")>]
@@ -2199,12 +2225,16 @@ module WebGPU =
     extern unativeint InstanceEnumerateWGSLLanguageFeatures(nativeint self, WGSLFeatureName* features)
     [<DllImport("WebGPU", EntryPoint="gpuInstanceRelease")>]
     extern void InstanceRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuInstanceAddRef")>]
+    extern void InstanceAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuGetInstanceFeatures")>]
     extern Status GetInstanceFeatures(InstanceFeatures* features)
     [<DllImport("WebGPU", EntryPoint="gpuPipelineLayoutSetLabel")>]
     extern void PipelineLayoutSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuPipelineLayoutRelease")>]
     extern void PipelineLayoutRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuPipelineLayoutAddRef")>]
+    extern void PipelineLayoutAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuQuerySetSetLabel")>]
     extern void QuerySetSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuQuerySetGetType")>]
@@ -2215,6 +2245,8 @@ module WebGPU =
     extern void QuerySetDestroy(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuQuerySetRelease")>]
     extern void QuerySetRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuQuerySetAddRef")>]
+    extern void QuerySetAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuQueueSubmit")>]
     extern void QueueSubmit(nativeint self, unativeint commandCount, nativeint* commands)
     [<DllImport("WebGPU", EntryPoint="gpuQueueOnSubmittedWorkDone")>]
@@ -2275,10 +2307,14 @@ module WebGPU =
     extern void QueueSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuQueueRelease")>]
     extern void QueueRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuQueueAddRef")>]
+    extern void QueueAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuRenderBundleSetLabel")>]
     extern void RenderBundleSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuRenderBundleRelease")>]
     extern void RenderBundleRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleAddRef")>]
+    extern void RenderBundleAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderSetPipeline")>]
     extern void RenderBundleEncoderSetPipeline(nativeint self, nativeint pipeline)
     [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderSetBindGroup")>]
@@ -2396,6 +2432,8 @@ module WebGPU =
     extern void RenderBundleEncoderSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderRelease")>]
     extern void RenderBundleEncoderRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderAddRef")>]
+    extern void RenderBundleEncoderAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderSetPipeline")>]
     extern void RenderPassEncoderSetPipeline(nativeint self, nativeint pipeline)
     [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderSetBindGroup")>]
@@ -2600,16 +2638,22 @@ module WebGPU =
     extern void RenderPassEncoderSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderRelease")>]
     extern void RenderPassEncoderRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderAddRef")>]
+    extern void RenderPassEncoderAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuRenderPipelineGetBindGroupLayout")>]
     extern nativeint RenderPipelineGetBindGroupLayout(nativeint self, uint32 groupIndex)
     [<DllImport("WebGPU", EntryPoint="gpuRenderPipelineSetLabel")>]
     extern void RenderPipelineSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuRenderPipelineRelease")>]
     extern void RenderPipelineRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuRenderPipelineAddRef")>]
+    extern void RenderPipelineAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuSamplerSetLabel")>]
     extern void SamplerSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuSamplerRelease")>]
     extern void SamplerRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuSamplerAddRef")>]
+    extern void SamplerAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuShaderModuleGetCompilationInfo")>]
     extern void ShaderModuleGetCompilationInfo(nativeint self, nativeint callback, nativeint userdata)
     [<DllImport("WebGPU", EntryPoint="gpuShaderModuleGetCompilationInfoF")>]
@@ -2620,6 +2664,8 @@ module WebGPU =
     extern void ShaderModuleSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuShaderModuleRelease")>]
     extern void ShaderModuleRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuShaderModuleAddRef")>]
+    extern void ShaderModuleAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuSurfaceConfigure")>]
     extern void SurfaceConfigure(nativeint self, SurfaceConfiguration* config)
     [<DllImport("WebGPU", EntryPoint="gpuSurfaceGetCapabilities")>]
@@ -2634,6 +2680,8 @@ module WebGPU =
     extern void SurfaceSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuSurfaceRelease")>]
     extern void SurfaceRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuSurfaceAddRef")>]
+    extern void SurfaceAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuTextureCreateView")>]
     extern nativeint TextureCreateView(nativeint self, TextureViewDescriptor* descriptor)
     [<DllImport("WebGPU", EntryPoint="gpuTextureCreateErrorView")>]
@@ -2660,10 +2708,14 @@ module WebGPU =
     extern void TextureDestroy(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuTextureRelease")>]
     extern void TextureRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuTextureAddRef")>]
+    extern void TextureAddRef(nativeint self)
     [<DllImport("WebGPU", EntryPoint="gpuTextureViewSetLabel")>]
     extern void TextureViewSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPU", EntryPoint="gpuTextureViewRelease")>]
     extern void TextureViewRelease(nativeint self)
+    [<DllImport("WebGPU", EntryPoint="gpuTextureViewAddRef")>]
+    extern void TextureViewAddRef(nativeint self)
 type WebGPUCallbacks() =
     static let requestAdapterCallbackCallbacks = Dictionary<nativeint, RequestAdapterCallback>()
     static let mutable requestAdapterCallbackCurrent = 0n

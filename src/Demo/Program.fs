@@ -6,76 +6,77 @@ open Aardvark.Rendering
 open System.Threading
 open Aardvark.Rendering.DefaultSemantic
 open Microsoft.FSharp.NativeInterop
-open WebGPU
+open global.WebGPU
+open FSharp.Data.Adaptive
 
 #nowarn "9"
-
-type MyGLFW() =
-
-    inherit Silk.NET.GLFW.Glfw(MyGLFW.Context)
-
-    static let ctx =
-        lazy (
-            let lib = Aardvark.LoadLibrary(typeof<Instance>.Assembly, "libglfw.3.dylib")
-            {
-                new Silk.NET.Core.Contexts.INativeContext with
-                    member x.Dispose() = ()
-                    member this.GetProcAddress(proc,slot) = Aardvark.GetProcAddress(lib, proc)
-                    member this.TryGetProcAddress(proc,addr,slot) =
-                        let ptr = Aardvark.GetProcAddress(lib, proc)
-                        if ptr = 0n then false
-                        else
-                            addr <- ptr
-                            true
-            }
-        )
-    static member Context = ctx.Value
-
-module Window =
-    open Silk.NET.GLFW
-    
-    let glfw =
-        lazy (
-            let glfw = new MyGLFW() :> Glfw
-            glfw.Init() |> ignore
-            glfw
-        )
-    
-    let create () =
-        let glfw = glfw.Value
-        glfw.DefaultWindowHints()
-        // let retina =
-        //     if RuntimeInformation.IsOSPlatform OSPlatform.OSX then true
-        //     else false
-        //glfw.WindowHint(unbox<WindowHintBool> 0x00023001, retina)
-        glfw.WindowHint(WindowHintBool.TransparentFramebuffer, false)
-        glfw.WindowHint(WindowHintBool.Visible, false)
-        glfw.WindowHint(WindowHintBool.Resizable, true)
-        glfw.WindowHint(WindowHintInt.RefreshRate, 0)
-        glfw.WindowHint(WindowHintBool.FocusOnShow, true)
-        glfw.WindowHint(WindowHintClientApi.ClientApi, ClientApi.NoApi)
-        let win = glfw.CreateWindow(1024, 768, "Winnie", NativePtr.ofNativeInt 0n, NativePtr.ofNativeInt 0n)
-        if NativePtr.toNativeInt win = 0n then
-            let description = "Could not create window"
-
-            let msg = $"[GLFW] {description}"
-            Report.Error msg
-            failwith msg
-        win
-        
-    let run (render : V2i -> unit) (win : nativeptr<WindowHandle>) =
-        let glfw = glfw.Value
-        glfw.ShowWindow(win)
-        let mutable run = true
-        glfw.SetWindowCloseCallback(win, GlfwCallbacks.WindowCloseCallback(fun _ ->
-            run <- false
-            glfw.HideWindow(win)
-            glfw.PostEmptyEvent()
-        )) |> ignore
-        while run do
-            glfw.PollEvents()
-            let (w, h) = glfw.GetWindowSize(win)
-            render(V2i(w,h))
+//
+// type MyGLFW() =
+//
+//     inherit Silk.NET.GLFW.Glfw(MyGLFW.Context)
+//
+//     static let ctx =
+//         lazy (
+//             let lib = Aardvark.LoadLibrary(typeof<Instance>.Assembly, "libglfw.3.dylib")
+//             {
+//                 new Silk.NET.Core.Contexts.INativeContext with
+//                     member x.Dispose() = ()
+//                     member this.GetProcAddress(proc,slot) = Aardvark.GetProcAddress(lib, proc)
+//                     member this.TryGetProcAddress(proc,addr,slot) =
+//                         let ptr = Aardvark.GetProcAddress(lib, proc)
+//                         if ptr = 0n then false
+//                         else
+//                             addr <- ptr
+//                             true
+//             }
+//         )
+//     static member Context = ctx.Value
+//
+// module Window =
+//     open Silk.NET.GLFW
+//     
+//     let glfw =
+//         lazy (
+//             let glfw = new MyGLFW() :> Glfw
+//             glfw.Init() |> ignore
+//             glfw
+//         )
+//     
+//     let create () =
+//         let glfw = glfw.Value
+//         glfw.DefaultWindowHints()
+//         // let retina =
+//         //     if RuntimeInformation.IsOSPlatform OSPlatform.OSX then true
+//         //     else false
+//         //glfw.WindowHint(unbox<WindowHintBool> 0x00023001, retina)
+//         glfw.WindowHint(WindowHintBool.TransparentFramebuffer, false)
+//         glfw.WindowHint(WindowHintBool.Visible, false)
+//         glfw.WindowHint(WindowHintBool.Resizable, true)
+//         glfw.WindowHint(WindowHintInt.RefreshRate, 0)
+//         glfw.WindowHint(WindowHintBool.FocusOnShow, true)
+//         glfw.WindowHint(WindowHintClientApi.ClientApi, ClientApi.NoApi)
+//         let win = glfw.CreateWindow(1024, 768, "Winnie", NativePtr.ofNativeInt 0n, NativePtr.ofNativeInt 0n)
+//         if NativePtr.toNativeInt win = 0n then
+//             let description = "Could not create window"
+//
+//             let msg = $"[GLFW] {description}"
+//             Report.Error msg
+//             failwith msg
+//         win
+//         
+//     let run (render : V2i -> unit) (win : nativeptr<WindowHandle>) =
+//         let glfw = glfw.Value
+//         glfw.ShowWindow(win)
+//         let mutable run = true
+//         glfw.SetWindowCloseCallback(win, GlfwCallbacks.WindowCloseCallback(fun _ ->
+//             run <- false
+//             glfw.HideWindow(win)
+//             glfw.PostEmptyEvent()
+//         )) |> ignore
+//         while run do
+//             glfw.PollEvents()
+//             let (w, h) = glfw.GetWindowSize(win)
+//             render(V2i(w,h))
 
 
 type Blitter(device : Device, format : TextureFormat) =
@@ -148,7 +149,6 @@ type Blitter(device : Device, format : TextureFormat) =
     
     let pipeline =
         device.CreateComputePipeline {
-            Next = null
             Label = "BlitterPipeline"
             Layout = layout
             Compute =
@@ -218,6 +218,7 @@ module Shader =
         {
             [<Position>] pos : V4d
             [<TexCoord>] tc : V2d
+            [<Normal>] n : V3d
             [<Color>] col : V4d
         }
         
@@ -241,7 +242,7 @@ module Shader =
         
     let fragment (v : Vertex) =
         fragment {
-            return V4d.IIII * sammy tex v.tc
+            return V4d(1.0, 0.0, 0.0, 1.0) //Vec.normalize v.n * 0.5 + V3d.Half, 1.0)
         }
 
     [<LocalSize(X = 64)>]
@@ -301,6 +302,9 @@ module Shader =
         
         Report.BeginTimed "shader compile"
         
+        for l in lineRx.Split code do
+            Log.line "%s" l
+        
         withDevice (fun device ->
             let shader =
                 device.CreateShaderModule {
@@ -342,16 +346,6 @@ module Shader =
         
     let compileWGSL (effects : list<Effect>) =
         let effect = Effect.compose effects
-        let signature =
-            { new IFramebufferSignature with
-                member x.Dispose() = ()
-                member x.ColorAttachments = Map.ofList [0, { Name = DefaultSemantic.Colors; Format = TextureFormat.Rgba8 }]
-                member x.DepthStencilAttachment = Some TextureFormat.Depth24Stencil8
-                member x.LayerCount = 1
-                member x.Samples = 1
-                member x.PerLayerUniforms = Set.empty
-                member x.Runtime = Unchecked.defaultof<_>
-            }
         
         let config =
             {
@@ -366,465 +360,640 @@ module Shader =
             |> Effect.toModule config
             |> ModuleCompiler.compileWGSL
         tryCompileWGSL code.code
+        code
 
-let inline bla< ^a, ^b when ^a : (static member (+) : ^a -> ^a -> ^a)> (a : ^a) (b : ^a) =
-    a + b
+
+    let createPipelineLayout (device : Device) (iface : WGSL.WGSLProgramInterface) =
+        
+        let mutable groupDescriptors = MapExt.empty
+        
+        let stages = WebGPU.ShaderStage.Vertex ||| WebGPU.ShaderStage.Fragment
+        for KeyValue(_, b) in iface.images do
+            let sampleType =
+                match b.imageType.valueType with
+                | WGSL.WGSLType.Int(true,_) -> TextureSampleType.Sint
+                | WGSL.WGSLType.Int(false,_) -> TextureSampleType.Uint
+                | WGSL.WGSLType.Float _ -> TextureSampleType.Float
+                | _ -> TextureSampleType.Undefined
+            
+            let viewDimension =
+                match b.imageType.dimension with
+                | SamplerDimension.Sampler1d -> TextureViewDimension.D1D
+                | SamplerDimension.Sampler2d -> TextureViewDimension.D2D
+                | SamplerDimension.Sampler3d -> TextureViewDimension.D3D
+                | SamplerDimension.SamplerCube -> TextureViewDimension.Cube
+                | _ -> TextureViewDimension.Undefined
+                
+            groupDescriptors <-
+                groupDescriptors |> MapExt.alter b.imageGroup (fun g ->
+                    let g = 
+                        match g with
+                        | Some g -> g
+                        | None -> MapExt.empty
+                    g |> MapExt.add b.imageBinding (
+                        BindGroupLayoutEntry.Texture(b.imageBinding, stages, {
+                            TextureBindingLayout.Multisampled = b.imageType.isMS
+                            TextureBindingLayout.SampleType = sampleType
+                            TextureBindingLayout.ViewDimension = viewDimension
+                        })
+                    ) |> Some
+                )
+               
+        for KeyValue(_, b) in iface.samplers do
+            groupDescriptors <-
+                groupDescriptors |> MapExt.alter b.samplerGroup (fun g ->
+                    let g = 
+                        match g with
+                        | Some g -> g
+                        | None -> MapExt.empty
+                    g |> MapExt.add b.samplerBinding (
+                        BindGroupLayoutEntry.Sampler(b.samplerBinding, stages, SamplerBindingType.Filtering)
+                    ) |> Some
+                )
+                
+        for KeyValue(_, t) in iface.textures do
+            let sampleType =
+                match t.textureType.valueType with
+                | WGSL.WGSLType.Int(true,_) -> TextureSampleType.Sint
+                | WGSL.WGSLType.Int(false,_) -> TextureSampleType.Uint
+                | WGSL.WGSLType.Float _ -> TextureSampleType.Float
+                | _ -> TextureSampleType.Undefined
+            
+            let viewDimension =
+                match t.textureType.dimension with
+                | SamplerDimension.Sampler1d -> TextureViewDimension.D1D
+                | SamplerDimension.Sampler2d -> TextureViewDimension.D2D
+                | SamplerDimension.Sampler3d -> TextureViewDimension.D3D
+                | SamplerDimension.SamplerCube -> TextureViewDimension.Cube
+                | _ -> TextureViewDimension.Undefined
+                
+            groupDescriptors <-
+                groupDescriptors |> MapExt.alter t.textureGroup (fun g ->
+                    let g = 
+                        match g with
+                        | Some g -> g
+                        | None -> MapExt.empty
+                    g |> MapExt.add t.textureBinding (
+                        BindGroupLayoutEntry.Texture(t.textureBinding, stages, {
+                            TextureBindingLayout.Multisampled = t.textureType.isMS
+                            TextureBindingLayout.SampleType = sampleType
+                            TextureBindingLayout.ViewDimension = viewDimension
+                        })
+                    ) |> Some
+                )
+               
+        for KeyValue(_, b) in iface.storageBuffers do
+            groupDescriptors <-
+                groupDescriptors |> MapExt.alter b.ssbGroup (fun g ->
+                    let g = 
+                        match g with
+                        | Some g -> g
+                        | None -> MapExt.empty
+                    g |> MapExt.add b.ssbBinding (
+                        BindGroupLayoutEntry.Buffer(b.ssbBinding, stages, {
+                            BufferBindingLayout.Type = BufferBindingType.Storage
+                            BufferBindingLayout.HasDynamicOffset = false
+                            BufferBindingLayout.MinBindingSize = 0L
+                        })
+                    ) |> Some
+                )
+        
+        for KeyValue(_, b) in iface.uniformBuffers do
+            groupDescriptors <-
+                groupDescriptors |> MapExt.alter b.ubGroup (fun g ->
+                    let g = 
+                        match g with
+                        | Some g -> g
+                        | None -> MapExt.empty
+                    g |> MapExt.add b.ubBinding (
+                        BindGroupLayoutEntry.Buffer(b.ubBinding, stages, {
+                            BufferBindingLayout.Type = BufferBindingType.Uniform
+                            BufferBindingLayout.HasDynamicOffset = false
+                            BufferBindingLayout.MinBindingSize = int64 b.ubSize
+                        })
+                    ) |> Some
+                )
+        
+       
+        let groupLayouts =
+            groupDescriptors |> MapExt.map (fun gi bindings ->
+                device.CreateBindGroupLayout {
+                    Label = null
+                    Entries = bindings |> MapExt.values |> Array.ofSeq
+                }    
+            )
+            
+        let maxKey = MapExt.tryMax groupLayouts
+            
+        let groupLayouts =
+            match maxKey with
+            | Some maxIndex ->
+                let arr = Array.zeroCreate (maxIndex + 1)
+                groupLayouts |> MapExt.iter (fun k v -> arr.[k] <- v)
+                arr
+            | None ->
+                [||]
+            
+        device.CreatePipelineLayout {
+            Next = null
+            Label = null
+            BindGroupLayouts = groupLayouts
+            ImmediateDataRangeByteSize = 0
+        }
+            
+module Scene =
+    open FSharp.Data.Adaptive
+    open Aardvark.SceneGraph
+    open Aardvark.Rendering.WebGPU
+    let scene (size : aval<V2i>) (view : aval<Trafo3d>)  =
+        Sg.box' C4b.Red Box3d.Unit
+        |> Sg.shader {
+            do! DefaultSurfaces.trafo
+            do! DefaultSurfaces.constantColor C4f.White
+            do! DefaultSurfaces.simpleLighting
+        }
+        |> Sg.viewTrafo view
+        |> Sg.projTrafo (size |> AVal.map (fun s -> Frustum.perspective 90.0 0.1 100.0 (float s.X / float s.Y) |> Frustum.projTrafo))
+    
+    let renderTask (size : aval<V2i>) (view : aval<Trafo3d>) (device : Device) =
+        let rt = Runtime(device) 
+        let signature = device.CreateFramebufferSignature(1, Map.ofList [0, { Name = DefaultSemantic.Colors; Format = TextureFormat.Bgra8 }], Some TextureFormat.Depth24Stencil8)
+        let objs = Aardvark.SceneGraph.Semantics.RenderObjectSemantics.Semantic.renderObjects Ag.Scope.Root (scene size view)
+        //let objs = objs |> ASet.force |> ASet.ofSeq)
+        let task = new RenderTask(device, signature, objs)
+        task
 
 [<EntryPoint>]
 let main _argv =
     Aardvark.Init()
-    
-    Shader.compileCompute Shader.computer
-    Shader.compileWGSL [FShade.Effect.ofFunction Shader.vertex; FShade.Effect.ofFunction Shader.fragment]
-    exit 0
-   
-    
-    let instance =
-        WebGPU.CreateInstance {
-            Next = null
-            Features = WebGPU.InstanceFeatures
-        }
-        
-    let start =
-        ThreadStart(fun () ->
-            while true do
-                instance.ProcessEvents()
-        )
-    let thread = Thread(start, IsBackground = true)
-    thread.Start()
-
-    let adapter = 
-        instance.RequestAdapterAsync({
-            Next = null
-            CompatibleSurface = Surface.Null
-            PowerPreference = PowerPreference.HighPerformance
-            BackendType = BackendType.Undefined
-            ForceFallbackAdapter = false
-            CompatibilityMode = false
-        }).Result
- 
-    let device = 
-        adapter.RequestDeviceAsync({
-            Next = null
-            DebugOutput = true
-            Label = "Devon"
-            RequiredFeatures = adapter.Features.Features
-            RequiredLimits = { Limits = adapter.Limits.Limits }
-            DefaultQueue = { Label = "Quentin" }
-        }).Result
-        
-    
-    let win = Window.create()
-    let surf =
-        instance.CreateGLFWSurface {
-            Label = "Siegfried"
-            Window = win
-        }
-    
-    let blitter = Blitter(device, TextureFormat.RGBA8Unorm)
-        
-    let cap = surf.GetCapabilities(adapter)
-    
-    surf.Configure {
-        Device = device
-        Format = TextureFormat.BGRA8Unorm
-        Usage = cap.Usages
-        ViewFormats = [| TextureFormat.BGRA8Unorm |]
-        AlphaMode = CompositeAlphaMode.Opaque
-        Width = 1024
-        Height = 768
-        PresentMode = PresentMode.Fifo
-    }
-       
-    let code =
-        """
-            struct VertexInput {
-                @location(0) pos : vec4f,
-                @location(1) color : vec4f,
-                @location(2) tc : vec2f
-            }
-            struct VertexOutput {
-                  @builtin(position) pos : vec4f,
-                  @location(0) tc : vec2<f32>
-            }
-            
-            struct UBO {
-                mvp : mat4x4<f32>
-            }
-            
-             @group(0) @binding(0) var<uniform> ubo : UBO;
-             @group(0) @binding(1) var tex : texture_2d<f32>;
-             @group(0) @binding(2) var sam : sampler;
-            
-            fn sample(tc : vec2f) -> vec4f {
-                return textureSample(tex, sam, tc);
-            }
-            
-            @vertex
-            fn vs(input : VertexInput) -> VertexOutput {
-              var res : VertexOutput;
-              res.pos = input.pos * ubo.mvp;
-              res.tc = input.tc;
-              return res;
-            }
-
-            @fragment
-            fn fs(@location(0) tc : vec2f) -> @location(0) vec4f {
-              return sample(tc);
-            }
-
-        """
-       
-    let bgl =
-        device.CreateBindGroupLayout {
-            Label = "Paul"
-            Entries =
-                [|
-                    BindGroupLayoutEntry.Buffer(
-                        0, ShaderStage.Vertex ||| ShaderStage.Fragment, {
-                            Type = BufferBindingType.Uniform
-                            HasDynamicOffset = false
-                            MinBindingSize = 64L
-                        }
-                    )
-                    
-                    BindGroupLayoutEntry.Texture(
-                        1, ShaderStage.Vertex ||| ShaderStage.Fragment, {
-                            SampleType = TextureSampleType.Float
-                            ViewDimension = TextureViewDimension.D2D
-                            Multisampled = false
-                        }
-                    )
-                    
-                    BindGroupLayoutEntry.Sampler(
-                        2, ShaderStage.Vertex ||| ShaderStage.Fragment,
-                        SamplerBindingType.Filtering
-                    )
-                    
-                |]
-        }
-        
-    let layoutDesc =
-        {
-            Next = null
-            Label = "Peter"
-            BindGroupLayouts  = [| bgl |]
-            ImmediateDataRangeByteSize = 0
-        }
-        
-        
-    let layout = 
-        device.CreatePipelineLayout {
-            Next = null
-            Label = "Peter"
-            BindGroupLayouts  = [| bgl |]
-            ImmediateDataRangeByteSize = 0
-        }
-    let shader = device.CompileShader(code)
-    
-    
-    let pipeline =
-        device.CreateRenderPipeline {
-            Label = "Peter"
-            Layout = layout
-            Primitive =
-                {
-                    Topology = PrimitiveTopology.TriangleList
-                    StripIndexFormat = IndexFormat.Undefined
-                    FrontFace = FrontFace.CCW
-                    CullMode = CullMode.None
-                    UnclippedDepth = false
-                }
-            Multisample =
-                {
-                    Count = 1
-                    Mask = 1
-                    AlphaToCoverageEnabled = false
-                }
-            Vertex = {
-                Module = shader
-                EntryPoint = "vs"
-                Constants = [||]
-                Buffers =
-                    [|
-                        {
-                            ArrayStride = 12L
-                            StepMode = VertexStepMode.Vertex
-                            Attributes =
-                                [|
-                                    {
-                                        Format = VertexFormat.Float32x3
-                                        Offset = 0L
-                                        ShaderLocation = 0
-                                    }
-                                |]
-                        }
-                        {
-                            ArrayStride = 4L
-                            StepMode = VertexStepMode.Vertex
-                            Attributes =
-                                [|
-                                    {
-                                        Format = VertexFormat.Unorm8x4BGRA
-                                        Offset = 0L
-                                        ShaderLocation = 1
-                                    }
-                                |]
-                        }
-                        {
-                            ArrayStride = 8L
-                            StepMode = VertexStepMode.Vertex
-                            Attributes =
-                                [|
-                                    {
-                                        Format = VertexFormat.Float32x2
-                                        Offset = 0L
-                                        ShaderLocation = 2
-                                    }
-                                |]
-                        }
-                    |]
-            }
-            Fragment =
-                {
-                    Module = shader
-                    EntryPoint = "fs"
-                    Constants = [||]
-                    Targets =
-                        [|
-                            {
-                                Next = null
-                                Format = TextureFormat.BGRA8Unorm
-                                Blend = BlendState.Null
-                                WriteMask = ColorWriteMask.All
-                            }
-                        |]
-                }
-            
-            DepthStencil = DepthStencilState.Null
-        }
-    
-    
-    let pos = device.CreateBuffer(BufferUsage.Vertex, [| V3f(-0.5, -0.5, 0.0); V3f(0.5, -0.5, 0.0); V3f(0.0, 0.5, 0.0) |]).Result
-    let color = device.CreateBuffer(BufferUsage.Vertex, [| C4b.Red; C4b.Green; C4b.Blue |]).Result
-    let tc = device.CreateBuffer(BufferUsage.Vertex, [| V2f.OO; V2f.IO; V2f(0.5, 1.0) |]).Result
-    let ubo = device.CreateBuffer(BufferUsage.Uniform, [| M44f.Identity |]).Result
-    
-    let bla = tc.[8 .. ]
-    
-    let img = PixImageSharp.Create "/Users/schorsch/Downloads/brick_texture3452.jpg"
-
-    let tex =
-        device.CreateTexture {
-            Next = null
-            Label = "Timmy"
-            Usage = TextureUsage.CopyDst ||| TextureUsage.StorageBinding ||| TextureUsage.TextureBinding
-            Dimension = TextureDimension.D2D
-            Size = { Width = img.Size.X; Height = img.Size.Y; DepthOrArrayLayers = 1 }
-            Format = TextureFormat.RGBA8Unorm
-            MipLevelCount = mipMapLevels img.Size
-            SampleCount = 1
-            ViewFormats = [|TextureFormat.RGBA8Unorm|]
-        }
-        
-    do
-        use enc = device.CreateCommandEncoder { Label = null; Next = null }
-        enc.CopyImageToTexture(img, tex)
-        
-        use cmd = enc.Finish { Label = null }
-        device.Queue.Submit [| cmd |]
-        
-        for l in 1 .. tex.MipLevelCount - 1 do
-            blitter.Run(tex, l - 1, tex, l)
-            
-        device.Queue.Wait().Wait()
-    //     
     //
-    // do
+    // Shader.compileCompute Shader.computer
+    // Shader.compileWGSL [FShade.Effect.ofFunction Shader.vertex; FShade.Effect.ofFunction Shader.fragment]
+    // exit 0
+    //
+    //
+    // let instance =
+    //     WebGPU.CreateInstance {
+    //         Next = null
+    //         Features = WebGPU.InstanceFeatures
+    //     }
     //     
-    //     let bpr = img.Size.X * 4
-    //     let fakebpr =
-    //         if bpr % 256 = 0 then bpr
-    //         else (bpr / 256 + 1) * 256
-    //     
-    //     let tmp =
-    //         device.CreateBuffer {
-    //             Next = null
-    //             Label = null
-    //             Usage = BufferUsage.CopySrc ||| BufferUsage.MapWrite
-    //             Size = int64 fakebpr * int64 img.Size.Y
-    //             MappedAtCreation = true
-    //         }
-    //         
-    //     let tmpPtr = tmp.GetMappedRange(0L, tmp.Size)
-    //     
-    //     
-    //     let fakeWidth = fakebpr / 4
-    //     let dstVolume = NativeVolume<byte>(NativePtr.ofNativeInt tmpPtr, VolumeInfo(0L, V3l(fakeWidth, img.Size.Y, 4), V3l(4L, 4L*int64 fakeWidth, 1L)))
-    //         
-    //     NativeVolume.using img.Volume (fun srcVolume ->
-    //        NativeVolume.copy srcVolume (dstVolume.SubVolume(V3l.Zero, V3l(img.Size.X, img.Size.Y, 4)))
+    // let start =
+    //     ThreadStart(fun () ->
+    //         while true do
+    //             instance.ProcessEvents()
     //     )
-    //     tmp.Unmap()
+    // let thread = Thread(start, IsBackground = true)
+    // thread.Start()
+    //
+    // let adapter = 
+    //     instance.RequestAdapterAsync({
+    //         Next = null
+    //         CompatibleSurface = Surface.Null
+    //         PowerPreference = PowerPreference.HighPerformance
+    //         BackendType = BackendType.Undefined
+    //         ForceFallbackAdapter = false
+    //         CompatibilityMode = false
+    //     }).Result
+    //
+    // let device = 
+    //     adapter.RequestDeviceAsync({
+    //         Next = null
+    //         DebugOutput = true
+    //         Label = "Devon"
+    //         RequiredFeatures = adapter.Features.Features
+    //         RequiredLimits = { Limits = adapter.Limits.Limits }
+    //         DefaultQueue = { Label = "Quentin" }
+    //     }).Result
     //     
-    //     use enc = device.CreateCommandEncoder { Label = null; Next = null }
-    //     let src : ImageCopyBuffer =
-    //         {
-    //             Layout =
-    //                 {
-    //                     Next = null
-    //                     Offset = 0L
-    //                     BytesPerRow = fakebpr
-    //                     RowsPerImage = img.Size.Y
-    //                 }
-    //             Buffer = tmp
-    //         }
-    //     let dst : ImageCopyTexture =
-    //         {
-    //             Texture = tex
-    //             Origin = { X = 0; Y = 0; Z = 0 }
-    //             Aspect = TextureAspect.All
-    //             MipLevel = 0
-    //         }
-    //         
-    //     enc.CopyBufferToTexture(src, dst, { Width = img.Size.X; Height = img.Size.Y; DepthOrArrayLayers = 1 })
-    //     
-    //     use cmd = enc.Finish { Label = null; Next = null }
-    //     device.Queue.Submit [| cmd |]
-    //     device.Queue.Wait().Wait()
-    //    
-        
     
-     
+    let app = Aardvark.Application.Slim.WebGPUApplication.Create(true).Result
+    let win = app.CreateGameWindow()
     
-    let view = tex.CreateView TextureUsage.TextureBinding
-        
-    let sam =
-        device.CreateSampler {
-            Next = null
-            Label = null
-            AddressModeU = AddressMode.Repeat
-            AddressModeV = AddressMode.Repeat
-            AddressModeW = AddressMode.Repeat
-            MagFilter = FilterMode.Linear
-            MinFilter = FilterMode.Linear
-            MipmapFilter = MipmapFilterMode.Linear
-            LodMinClamp = 0.0f
-            LodMaxClamp = 1000.0f
-            Compare = CompareFunction.Undefined
-            MaxAnisotropy = 1us
-        }
+    let cam =
+        CameraView.lookAt (V3d(4,3,2)) V3d.Zero V3d.OOI
+        |> Aardvark.Application.DefaultCameraController.control win.Mouse win.Keyboard win.Time
+        |> AVal.map CameraView.viewTrafo
     
-    
-    let bg =
-        device.CreateBindGroup {
-            Label = "Peggy"
-            Layout = bgl
-            Entries =
-                [|
-                    BindGroupEntry.UniformBuffer(0, ubo)
-                    BindGroupEntry.TextureView(1, view)
-                    BindGroupEntry.Sampler(2, sam)
-                |]
-        }
-    
-    let bundle = 
-        use benc =
-            device.CreateRenderBundleEncoder {
-                Label = null
-                ColorFormats = [| TextureFormat.BGRA8Unorm |]
-                DepthStencilFormat = TextureFormat.Undefined
-                SampleCount = 1
-                DepthReadOnly = true
-                StencilReadOnly = true
-            }
-        benc.SetPipeline pipeline
-        benc.SetBindGroup(0, bg, [||])
-        benc.SetVertexBuffer(0, pos, 0, pos.Size)
-        benc.SetVertexBuffer(1, color, 0, color.Size)
-        benc.SetVertexBuffer(2, tc, 0, tc.Size)
-        benc.Draw(3, 1, 0, 0)
-        benc.Finish {
-            Label = null
-        }
+    win.RenderTask <- Scene.renderTask win.Sizes cam app.Device
+    win.Run()
         
-    let rand = RandomSystem()
-    let sw = Stopwatch.StartNew()
-    win |> Window.run (fun viewport ->
-        
-        use enc =
-            device.CreateRenderBundleEncoder {
-                Label = "Randall"
-                ColorFormats = [| TextureFormat.BGRA8Unorm |]
-                DepthStencilFormat = TextureFormat.Undefined
-                SampleCount = 1
-                DepthReadOnly = true
-                StencilReadOnly = true
-            }
-            
-        let _bundle = 
-            enc.Finish {
-                Label = "Randy"
-            }
-        
-            
-        use enc = device.CreateCommandEncoder { Label = "Conan"; Next = null }
-        
-        use colorView =
-            surf.CurrentTexture.Texture.CreateView {
-                Next = null
-                Label = "Vernon"
-                Format = TextureFormat.BGRA8Unorm
-                Dimension = TextureViewDimension.D2D
-                BaseMipLevel = 0
-                MipLevelCount = 1
-                BaseArrayLayer = 0
-                ArrayLayerCount = 1
-                Aspect = TextureAspect.Undefined
-                Usage = cap.Usages
-            }
-        
-        let colorAtt =
-            {
-                Next = null
-                View = colorView
-                DepthSlice = -1
-                ResolveTarget = TextureView.Null
-                LoadOp = LoadOp.Clear
-                StoreOp = StoreOp.Store
-                ClearValue = { R = 0.0; G = 0.0; B = 0.0; A = 1.0 }
-            }
-        
-        let phi = 0.5 * sw.Elapsed.TotalSeconds
-        let pos = 1.0 * V3d(cos phi, sin phi, 0.5).Normalized
-        let view = CameraView.lookAt pos V3d.Zero V3d.OOI |> CameraView.viewTrafo
-        let proj = Frustum.perspective 90.0 0.1 100.0 (float viewport.X / float viewport.Y) |> Frustum.projTrafo
-        let vp = view * proj
-        
-        
-        device.Queue.WriteBuffer(ubo, System.Span [| M44f vp.Forward |])
-        use renc =
-            enc.BeginRenderPass {
-                Next = null
-                Label = "Ronald"
-                ColorAttachments = [| colorAtt |]
-                DepthStencilAttachment = undefined
-                OcclusionQuerySet = undefined
-                TimestampWrites = undefined
-            }
-            
-        renc.ExecuteBundles [| bundle |]
-            
-        renc.End()
-        use cmd = 
-            enc.Finish {
-                Label = "Conrad"
-            }
-        device.Queue.Submit [| cmd |]
-        device.Queue.Wait().Wait()
-        surf.Present()
-    )
-    
+    // let wgsl = 
+    //     Shader.compileWGSL [
+    //         FShade.Effect.ofFunction DefaultSurfaces.trafo
+    //         FShade.Effect.ofFunction DefaultSurfaces.simpleLighting
+    //     ]
+    // let layout = Shader.createPipelineLayout device wgsl.iface
+    //
+//     let win = Window.create()
+//     let surf =
+//         instance.CreateGLFWSurface {
+//             Label = "Siegfried"
+//             Window = win
+//         }
+//     
+//     let blitter = Blitter(device, TextureFormat.RGBA8Unorm)
+//         
+//     let cap = surf.GetCapabilities(adapter)
+//     
+//     surf.Configure {
+//         Device = device
+//         Format = TextureFormat.BGRA8Unorm
+//         Usage = cap.Usages
+//         ViewFormats = [| TextureFormat.BGRA8Unorm |]
+//         AlphaMode = CompositeAlphaMode.Opaque
+//         Width = 1024
+//         Height = 768
+//         PresentMode = PresentMode.Fifo
+//     }
+// //        
+// //     let code =
+// //         """
+// //             struct VertexInput {
+// //                 @location(0) pos : vec4f,
+// //                 @location(1) color : vec4f,
+// //                 @location(2) tc : vec2f
+// //             }
+// //             struct VertexOutput {
+// //                   @builtin(position) pos : vec4f,
+// //                   @location(0) tc : vec2<f32>
+// //             }
+// //             
+// //             struct UBO {
+// //                 mvp : mat4x4<f32>
+// //             }
+// //             
+// //              @group(0) @binding(0) var<uniform> ubo : UBO;
+// //              @group(0) @binding(1) var tex : texture_2d<f32>;
+// //              @group(0) @binding(2) var sam : sampler;
+// //             
+// //             fn sample(tc : vec2f) -> vec4f {
+// //                 return textureSample(tex, sam, tc);
+// //             }
+// //             
+// //             @vertex
+// //             fn vs(input : VertexInput) -> VertexOutput {
+// //               var res : VertexOutput;
+// //               res.pos = input.pos * ubo.mvp;
+// //               res.tc = input.tc;
+// //               return res;
+// //             }
+// //
+// //             @fragment
+// //             fn fs(@location(0) tc : vec2f) -> @location(0) vec4f {
+// //               return sample(tc);
+// //             }
+// //
+// //         """
+// //        
+// //        
+// //        
+// //     let bgl =
+// //         device.CreateBindGroupLayout {
+// //             Label = "Paul"
+// //             Entries =
+// //                 [|
+// //                     BindGroupLayoutEntry.Buffer(
+// //                         0, ShaderStage.Vertex ||| ShaderStage.Fragment, {
+// //                             Type = BufferBindingType.Uniform
+// //                             HasDynamicOffset = false
+// //                             MinBindingSize = 64L
+// //                         }
+// //                     )
+// //                     
+// //                     BindGroupLayoutEntry.Texture(
+// //                         1, ShaderStage.Vertex ||| ShaderStage.Fragment, {
+// //                             SampleType = TextureSampleType.Float
+// //                             ViewDimension = TextureViewDimension.D2D
+// //                             Multisampled = false
+// //                         }
+// //                     )
+// //                     
+// //                     BindGroupLayoutEntry.Sampler(
+// //                         2, ShaderStage.Vertex ||| ShaderStage.Fragment,
+// //                         SamplerBindingType.Filtering
+// //                     )
+// //                     
+// //                 |]
+// //         }
+// //         
+// //     let layoutDesc =
+// //         {
+// //             Next = null
+// //             Label = "Peter"
+// //             BindGroupLayouts  = [| bgl |]
+// //             ImmediateDataRangeByteSize = 0
+// //         }
+// //         
+// //         
+// //     let layout = 
+// //         device.CreatePipelineLayout {
+// //             Next = null
+// //             Label = "Peter"
+// //             BindGroupLayouts  = [| bgl |]
+// //             ImmediateDataRangeByteSize = 0
+// //         }
+// //     let shader = device.CompileShader(code)
+// //     
+// //     
+// //     let pipeline =
+// //         device.CreateRenderPipeline {
+// //             Label = "Peter"
+// //             Layout = layout
+// //             Primitive =
+// //                 {
+// //                     Topology = PrimitiveTopology.TriangleList
+// //                     StripIndexFormat = IndexFormat.Undefined
+// //                     FrontFace = FrontFace.CCW
+// //                     CullMode = CullMode.None
+// //                     UnclippedDepth = false
+// //                 }
+// //             Multisample =
+// //                 {
+// //                     Count = 1
+// //                     Mask = 1
+// //                     AlphaToCoverageEnabled = false
+// //                 }
+// //             Vertex = {
+// //                 Module = shader
+// //                 EntryPoint = "vs"
+// //                 Constants = [||]
+// //                 Buffers =
+// //                     [|
+// //                         {
+// //                             ArrayStride = 12L
+// //                             StepMode = VertexStepMode.Vertex
+// //                             Attributes =
+// //                                 [|
+// //                                     {
+// //                                         Format = VertexFormat.Float32x3
+// //                                         Offset = 0L
+// //                                         ShaderLocation = 0
+// //                                     }
+// //                                 |]
+// //                         }
+// //                         {
+// //                             ArrayStride = 4L
+// //                             StepMode = VertexStepMode.Vertex
+// //                             Attributes =
+// //                                 [|
+// //                                     {
+// //                                         Format = VertexFormat.Unorm8x4BGRA
+// //                                         Offset = 0L
+// //                                         ShaderLocation = 1
+// //                                     }
+// //                                 |]
+// //                         }
+// //                         {
+// //                             ArrayStride = 8L
+// //                             StepMode = VertexStepMode.Vertex
+// //                             Attributes =
+// //                                 [|
+// //                                     {
+// //                                         Format = VertexFormat.Float32x2
+// //                                         Offset = 0L
+// //                                         ShaderLocation = 2
+// //                                     }
+// //                                 |]
+// //                         }
+// //                     |]
+// //             }
+// //             Fragment =
+// //                 {
+// //                     Module = shader
+// //                     EntryPoint = "fs"
+// //                     Constants = [||]
+// //                     Targets =
+// //                         [|
+// //                             {
+// //                                 Next = null
+// //                                 Format = TextureFormat.BGRA8Unorm
+// //                                 Blend = BlendState.Null
+// //                                 WriteMask = ColorWriteMask.All
+// //                             }
+// //                         |]
+// //                 }
+// //             
+// //             DepthStencil = DepthStencilState.Null
+// //         }
+// //     
+// //     
+// //     let pos = device.CreateBuffer(BufferUsage.Vertex, [| V3f(-0.5, -0.5, 0.0); V3f(0.5, -0.5, 0.0); V3f(0.0, 0.5, 0.0) |]).Result
+// //     let color = device.CreateBuffer(BufferUsage.Vertex, [| C4b.Red; C4b.Green; C4b.Blue |]).Result
+// //     let tc = device.CreateBuffer(BufferUsage.Vertex, [| V2f.OO; V2f.IO; V2f(0.5, 1.0) |]).Result
+// //     let ubo = device.CreateBuffer(BufferUsage.Uniform, [| M44f.Identity |]).Result
+// //     
+// //     let bla = tc.[8 .. ]
+// //     
+// //     let img = PixImageSharp.Create "/Users/schorsch/Downloads/brick_texture3452.jpg"
+// //
+// //     let tex =
+// //         device.CreateTexture {
+// //             Next = null
+// //             Label = "Timmy"
+// //             Usage = TextureUsage.CopyDst ||| TextureUsage.StorageBinding ||| TextureUsage.TextureBinding
+// //             Dimension = TextureDimension.D2D
+// //             Size = { Width = img.Size.X; Height = img.Size.Y; DepthOrArrayLayers = 1 }
+// //             Format = TextureFormat.RGBA8Unorm
+// //             MipLevelCount = mipMapLevels2d img.Size
+// //             SampleCount = 1
+// //             ViewFormats = [|TextureFormat.RGBA8Unorm|]
+// //         }
+// //         
+// //     do
+// //         use enc = device.CreateCommandEncoder { Label = null; Next = null }
+// //         enc.CopyImageToTexture(img, tex)
+// //         
+// //         use cmd = enc.Finish { Label = null }
+// //         device.Queue.Submit [| cmd |]
+// //         
+// //         for l in 1 .. tex.MipLevelCount - 1 do
+// //             blitter.Run(tex, l - 1, tex, l)
+// //             
+// //         device.Queue.Wait().Wait()
+// //     //     
+// //     //
+// //     // do
+// //     //     
+// //     //     let bpr = img.Size.X * 4
+// //     //     let fakebpr =
+// //     //         if bpr % 256 = 0 then bpr
+// //     //         else (bpr / 256 + 1) * 256
+// //     //     
+// //     //     let tmp =
+// //     //         device.CreateBuffer {
+// //     //             Next = null
+// //     //             Label = null
+// //     //             Usage = BufferUsage.CopySrc ||| BufferUsage.MapWrite
+// //     //             Size = int64 fakebpr * int64 img.Size.Y
+// //     //             MappedAtCreation = true
+// //     //         }
+// //     //         
+// //     //     let tmpPtr = tmp.GetMappedRange(0L, tmp.Size)
+// //     //     
+// //     //     
+// //     //     let fakeWidth = fakebpr / 4
+// //     //     let dstVolume = NativeVolume<byte>(NativePtr.ofNativeInt tmpPtr, VolumeInfo(0L, V3l(fakeWidth, img.Size.Y, 4), V3l(4L, 4L*int64 fakeWidth, 1L)))
+// //     //         
+// //     //     NativeVolume.using img.Volume (fun srcVolume ->
+// //     //        NativeVolume.copy srcVolume (dstVolume.SubVolume(V3l.Zero, V3l(img.Size.X, img.Size.Y, 4)))
+// //     //     )
+// //     //     tmp.Unmap()
+// //     //     
+// //     //     use enc = device.CreateCommandEncoder { Label = null; Next = null }
+// //     //     let src : ImageCopyBuffer =
+// //     //         {
+// //     //             Layout =
+// //     //                 {
+// //     //                     Next = null
+// //     //                     Offset = 0L
+// //     //                     BytesPerRow = fakebpr
+// //     //                     RowsPerImage = img.Size.Y
+// //     //                 }
+// //     //             Buffer = tmp
+// //     //         }
+// //     //     let dst : ImageCopyTexture =
+// //     //         {
+// //     //             Texture = tex
+// //     //             Origin = { X = 0; Y = 0; Z = 0 }
+// //     //             Aspect = TextureAspect.All
+// //     //             MipLevel = 0
+// //     //         }
+// //     //         
+// //     //     enc.CopyBufferToTexture(src, dst, { Width = img.Size.X; Height = img.Size.Y; DepthOrArrayLayers = 1 })
+// //     //     
+// //     //     use cmd = enc.Finish { Label = null; Next = null }
+// //     //     device.Queue.Submit [| cmd |]
+// //     //     device.Queue.Wait().Wait()
+// //     //    
+// //         
+// //     
+// //      
+// //     
+// //     let view = tex.CreateView TextureUsage.TextureBinding
+// //         
+// //     let sam =
+// //         device.CreateSampler {
+// //             Next = null
+// //             Label = null
+// //             AddressModeU = AddressMode.Repeat
+// //             AddressModeV = AddressMode.Repeat
+// //             AddressModeW = AddressMode.Repeat
+// //             MagFilter = FilterMode.Linear
+// //             MinFilter = FilterMode.Linear
+// //             MipmapFilter = MipmapFilterMode.Linear
+// //             LodMinClamp = 0.0f
+// //             LodMaxClamp = 1000.0f
+// //             Compare = CompareFunction.Undefined
+// //             MaxAnisotropy = 1us
+// //         }
+// //     
+// //     
+// //     let bg =
+// //         device.CreateBindGroup {
+// //             Label = "Peggy"
+// //             Layout = bgl
+// //             Entries =
+// //                 [|
+// //                     BindGroupEntry.Buffer(0, ubo)
+// //                     BindGroupEntry.TextureView(1, view)
+// //                     BindGroupEntry.Sampler(2, sam)
+// //                 |]
+// //         }
+// //     
+// //     let bundle = 
+// //         use benc =
+// //             device.CreateRenderBundleEncoder {
+// //                 Label = null
+// //                 ColorFormats = [| TextureFormat.BGRA8Unorm |]
+// //                 DepthStencilFormat = TextureFormat.Undefined
+// //                 SampleCount = 1
+// //                 DepthReadOnly = true
+// //                 StencilReadOnly = true
+// //             }
+// //         benc.SetPipeline pipeline
+// //         benc.SetBindGroup(0, bg, [||])
+// //         benc.SetVertexBuffer(0, pos, 0, pos.Size)
+// //         benc.SetVertexBuffer(1, color, 0, color.Size)
+// //         benc.SetVertexBuffer(2, tc, 0, tc.Size)
+// //         benc.Draw(3, 1, 0, 0)
+// //         benc.Finish {
+// //             Label = null
+// //         }
+//         
+//
+//     let size = cval V2i.II
+//     let task = Scene.renderTask size device
+//         
+//     let rand = RandomSystem()
+//     let sw = Stopwatch.StartNew()
+//     
+//     let mutable depthTex : option<Texture> = None
+//     
+//     
+//     
+//     
+//     win |> Window.run (fun viewport ->
+//         transact (fun () -> size.Value <- viewport)
+//         
+//         use colorTex = surf.CurrentTexture.Texture
+//         
+//         let depthTex =
+//             match depthTex with
+//             | Some t when t.Width = colorTex.Width && t.Height = colorTex.Height -> t
+//             | _ ->
+//                 match depthTex with
+//                 | Some t -> t.Dispose()
+//                 | _ -> ()
+//                 let depth =
+//                     device.CreateTexture {
+//                         Next = null
+//                         Label = null
+//                         Usage = TextureUsage.RenderAttachment
+//                         Dimension = TextureDimension.D2D
+//                         Size = { Width = viewport.X; Height = viewport.Y; DepthOrArrayLayers = 1 }
+//                         Format = WebGPU.TextureFormat.Depth24PlusStencil8
+//                         MipLevelCount = 1
+//                         SampleCount = 1
+//                         ViewFormats = [| TextureFormat.Depth24PlusStencil8 |]
+//                     }
+//                 depthTex <- Some depth
+//                 depth
+//         
+//         use colorView =
+//             colorTex.CreateView {
+//                 Next = null
+//                 Label = "Vernon"
+//                 Format = TextureFormat.BGRA8Unorm
+//                 Dimension = TextureViewDimension.D2D
+//                 BaseMipLevel = 0
+//                 MipLevelCount = 1
+//                 BaseArrayLayer = 0
+//                 ArrayLayerCount = 1
+//                 Aspect = TextureAspect.Undefined
+//                 Usage = cap.Usages
+//             }
+//         
+//         use depthView =
+//             depthTex.CreateView {
+//                 Next = null
+//                 Label = "Vernon2"
+//                 Format = TextureFormat.Depth24PlusStencil8
+//                 Dimension = TextureViewDimension.D2D
+//                 BaseMipLevel = 0
+//                 MipLevelCount = 1
+//                 BaseArrayLayer = 0
+//                 ArrayLayerCount = 1
+//                 Aspect = WebGPU.TextureAspect.All
+//                 Usage = TextureUsage.RenderAttachment
+//             }
+//        
+//         let fbo = new Aardvark.Rendering.WebGPU.Framebuffer(task.FramebufferSignature, V2i(viewport.X, viewport.Y), [| colorView |], Some depthView)
+//         task.Run(FSharp.Data.Adaptive.AdaptiveToken.Top, OutputDescription.ofFramebuffer fbo)
+//         
+//         surf.Present()
+//     )
+//     
     
     printfn "exit"
         

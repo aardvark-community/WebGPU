@@ -38,3 +38,4 @@ bin/
 **/Aardvark.log
 **/pub/
 src/WebGPUNative/build
+src/WebGPUNative/tmp

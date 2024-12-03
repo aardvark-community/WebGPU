@@ -1,0 +1,10 @@
+FSharp.Core
+FSharp.Data.Adaptive
+Aardvark.Base
+Aardvark.Base.FSharp
+Aardvark.Base.Tensors
+Aardvark.Build
+Silk.NET.GLFW
+FShade.Core
+FShade.Imperative
+Aardvark.Rendering

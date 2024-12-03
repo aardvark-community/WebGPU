@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="paket.references" />
+    <Compile Include="Translations.fs" />
+    <Compile Include="Resources\FramebufferSignature.fs" />
+    <Compile Include="Resources\Sampler.fs" />
+    <Compile Include="Resources\PipelineLayout.fs" />
+    <Compile Include="Resources\Shader.fs" />
+    <Compile Include="Resources\Buffer.fs" />
+    <Compile Include="Resources\Texture.fs" />
+    <Compile Include="Resources\Framebuffer.fs" />
+    <Compile Include="UniformWriters.fs" />
+    <Compile Include="ResourceManager.fs" />
+    <Compile Include="PreparedRenderObject.fs" />
+    <Compile Include="RenderTask.fs" />
+    <Compile Include="Runtime.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FShade.WGSL\FShade.WGSL.fsproj" />
+    <ProjectReference Include="..\WebGPU\WebGPU.fsproj" />
+  </ItemGroup>
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
+</Project>

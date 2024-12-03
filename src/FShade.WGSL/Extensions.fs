@@ -37,8 +37,8 @@ module Backends =
                     cfg
 
             module_ 
-                |> ModuleCompiler.compile cfg 
-                |> Assembler.assemble cfg
+            |> ModuleCompiler.compile cfg 
+            |> Assembler.assemble cfg
                 
         let compileWGSL (module_ : Module) =
             compileWGSLInternal wgsl module_

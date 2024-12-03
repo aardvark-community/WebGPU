@@ -3,16 +3,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
-#include "webgpu.h"
+#include "webgpu/webgpu.h"
  
-#include "webgpu_glfw.h"
-DllExport(WGPUSurface) gpuInstanceCreateGLFWSurface(WGPUInstance self, const void* window) {
-    auto instance = wgpu::Instance(self);
-    auto surf = wgpu::glfw::CreateSurfaceForWindow(instance, (GLFWwindow*)window);
-    auto handle = surf.Get();
-    wgpuSurfaceAddRef(handle);
-    return handle;
-}
 DllExport(WGPUInstance) gpuCreateInstance(const WGPUInstanceDescriptor* descriptor) {
     return wgpuCreateInstance(descriptor);
 }
@@ -52,17 +44,26 @@ DllExport(WGPUStatus) gpuAdapterGetFormatCapabilities(WGPUAdapter self, WGPUText
 DllExport(void) gpuAdapterRelease(WGPUAdapter self) {
     return wgpuAdapterRelease(self);
 }
+DllExport(void) gpuAdapterAddRef(WGPUAdapter self) {
+    return wgpuAdapterAddRef(self);
+}
 DllExport(void) gpuBindGroupSetLabel(WGPUBindGroup self, WGPUStringView label) {
     return wgpuBindGroupSetLabel(self, label);
 }
 DllExport(void) gpuBindGroupRelease(WGPUBindGroup self) {
     return wgpuBindGroupRelease(self);
 }
+DllExport(void) gpuBindGroupAddRef(WGPUBindGroup self) {
+    return wgpuBindGroupAddRef(self);
+}
 DllExport(void) gpuBindGroupLayoutSetLabel(WGPUBindGroupLayout self, WGPUStringView label) {
     return wgpuBindGroupLayoutSetLabel(self, label);
 }
 DllExport(void) gpuBindGroupLayoutRelease(WGPUBindGroupLayout self) {
     return wgpuBindGroupLayoutRelease(self);
+}
+DllExport(void) gpuBindGroupLayoutAddRef(WGPUBindGroupLayout self) {
+    return wgpuBindGroupLayoutAddRef(self);
 }
 typedef struct { 
    WGPUBuffer Self;
@@ -108,11 +109,17 @@ DllExport(void) gpuBufferDestroy(WGPUBuffer self) {
 DllExport(void) gpuBufferRelease(WGPUBuffer self) {
     return wgpuBufferRelease(self);
 }
+DllExport(void) gpuBufferAddRef(WGPUBuffer self) {
+    return wgpuBufferAddRef(self);
+}
 DllExport(void) gpuCommandBufferSetLabel(WGPUCommandBuffer self, WGPUStringView label) {
     return wgpuCommandBufferSetLabel(self, label);
 }
 DllExport(void) gpuCommandBufferRelease(WGPUCommandBuffer self) {
     return wgpuCommandBufferRelease(self);
+}
+DllExport(void) gpuCommandBufferAddRef(WGPUCommandBuffer self) {
+    return wgpuCommandBufferAddRef(self);
 }
 DllExport(WGPUCommandBuffer) gpuCommandEncoderFinish(WGPUCommandEncoder self, const WGPUCommandBufferDescriptor* descriptor) {
     return wgpuCommandEncoderFinish(self, descriptor);
@@ -194,6 +201,9 @@ DllExport(void) gpuCommandEncoderSetLabel(WGPUCommandEncoder self, WGPUStringVie
 DllExport(void) gpuCommandEncoderRelease(WGPUCommandEncoder self) {
     return wgpuCommandEncoderRelease(self);
 }
+DllExport(void) gpuCommandEncoderAddRef(WGPUCommandEncoder self) {
+    return wgpuCommandEncoderAddRef(self);
+}
 DllExport(void) gpuComputePassEncoderInsertDebugMarker(WGPUComputePassEncoder self, WGPUStringView markerLabel) {
     return wgpuComputePassEncoderInsertDebugMarker(self, markerLabel);
 }
@@ -232,6 +242,9 @@ DllExport(void) gpuComputePassEncoderSetLabel(WGPUComputePassEncoder self, WGPUS
 DllExport(void) gpuComputePassEncoderRelease(WGPUComputePassEncoder self) {
     return wgpuComputePassEncoderRelease(self);
 }
+DllExport(void) gpuComputePassEncoderAddRef(WGPUComputePassEncoder self) {
+    return wgpuComputePassEncoderAddRef(self);
+}
 DllExport(WGPUBindGroupLayout) gpuComputePipelineGetBindGroupLayout(WGPUComputePipeline self, uint32_t groupIndex) {
     return wgpuComputePipelineGetBindGroupLayout(self, groupIndex);
 }
@@ -240,6 +253,9 @@ DllExport(void) gpuComputePipelineSetLabel(WGPUComputePipeline self, WGPUStringV
 }
 DllExport(void) gpuComputePipelineRelease(WGPUComputePipeline self) {
     return wgpuComputePipelineRelease(self);
+}
+DllExport(void) gpuComputePipelineAddRef(WGPUComputePipeline self) {
+    return wgpuComputePipelineAddRef(self);
 }
 DllExport(WGPUBindGroup) gpuDeviceCreateBindGroup(WGPUDevice self, const WGPUBindGroupDescriptor* descriptor) {
     return wgpuDeviceCreateBindGroup(self, descriptor);
@@ -352,9 +368,6 @@ DllExport(void) gpuDeviceForceLoss(WGPUDevice self, WGPUDeviceLostReason typ, WG
 DllExport(void) gpuDeviceTick(WGPUDevice self) {
     return wgpuDeviceTick(self);
 }
-DllExport(void) gpuDeviceSetUncapturedErrorCallback(WGPUDevice self, WGPUErrorCallback callback, void * userdata) {
-    return wgpuDeviceSetUncapturedErrorCallback(self, callback, userdata);
-}
 DllExport(void) gpuDeviceSetLoggingCallback(WGPUDevice self, WGPULoggingCallback callback, void * userdata) {
     return wgpuDeviceSetLoggingCallback(self, callback, userdata);
 }
@@ -379,6 +392,9 @@ DllExport(void) gpuDeviceValidateTextureDescriptor(WGPUDevice self, const WGPUTe
 DllExport(void) gpuDeviceRelease(WGPUDevice self) {
     return wgpuDeviceRelease(self);
 }
+DllExport(void) gpuDeviceAddRef(WGPUDevice self) {
+    return wgpuDeviceAddRef(self);
+}
 DllExport(void) gpuExternalTextureSetLabel(WGPUExternalTexture self, WGPUStringView label) {
     return wgpuExternalTextureSetLabel(self, label);
 }
@@ -393,6 +409,9 @@ DllExport(void) gpuExternalTextureRefresh(WGPUExternalTexture self) {
 }
 DllExport(void) gpuExternalTextureRelease(WGPUExternalTexture self) {
     return wgpuExternalTextureRelease(self);
+}
+DllExport(void) gpuExternalTextureAddRef(WGPUExternalTexture self) {
+    return wgpuExternalTextureAddRef(self);
 }
 DllExport(void) gpuSharedBufferMemorySetLabel(WGPUSharedBufferMemory self, WGPUStringView label) {
     return wgpuSharedBufferMemorySetLabel(self, label);
@@ -415,6 +434,9 @@ DllExport(bool) gpuSharedBufferMemoryIsDeviceLost(WGPUSharedBufferMemory self) {
 DllExport(void) gpuSharedBufferMemoryRelease(WGPUSharedBufferMemory self) {
     return wgpuSharedBufferMemoryRelease(self);
 }
+DllExport(void) gpuSharedBufferMemoryAddRef(WGPUSharedBufferMemory self) {
+    return wgpuSharedBufferMemoryAddRef(self);
+}
 DllExport(void) gpuSharedTextureMemorySetLabel(WGPUSharedTextureMemory self, WGPUStringView label) {
     return wgpuSharedTextureMemorySetLabel(self, label);
 }
@@ -436,11 +458,17 @@ DllExport(bool) gpuSharedTextureMemoryIsDeviceLost(WGPUSharedTextureMemory self)
 DllExport(void) gpuSharedTextureMemoryRelease(WGPUSharedTextureMemory self) {
     return wgpuSharedTextureMemoryRelease(self);
 }
+DllExport(void) gpuSharedTextureMemoryAddRef(WGPUSharedTextureMemory self) {
+    return wgpuSharedTextureMemoryAddRef(self);
+}
 DllExport(void) gpuSharedFenceExportInfo(WGPUSharedFence self, WGPUSharedFenceExportInfo* info) {
     return wgpuSharedFenceExportInfo(self, info);
 }
 DllExport(void) gpuSharedFenceRelease(WGPUSharedFence self) {
     return wgpuSharedFenceRelease(self);
+}
+DllExport(void) gpuSharedFenceAddRef(WGPUSharedFence self) {
+    return wgpuSharedFenceAddRef(self);
 }
 DllExport(WGPUSurface) gpuInstanceCreateSurface(WGPUInstance self, const WGPUSurfaceDescriptor* descriptor) {
     return wgpuInstanceCreateSurface(self, descriptor);
@@ -475,6 +503,9 @@ DllExport(size_t) gpuInstanceEnumerateWGSLLanguageFeatures(WGPUInstance self, WG
 DllExport(void) gpuInstanceRelease(WGPUInstance self) {
     return wgpuInstanceRelease(self);
 }
+DllExport(void) gpuInstanceAddRef(WGPUInstance self) {
+    return wgpuInstanceAddRef(self);
+}
 DllExport(WGPUStatus) gpuGetInstanceFeatures(WGPUInstanceFeatures* features) {
     return wgpuGetInstanceFeatures(features);
 }
@@ -483,6 +514,9 @@ DllExport(void) gpuPipelineLayoutSetLabel(WGPUPipelineLayout self, WGPUStringVie
 }
 DllExport(void) gpuPipelineLayoutRelease(WGPUPipelineLayout self) {
     return wgpuPipelineLayoutRelease(self);
+}
+DllExport(void) gpuPipelineLayoutAddRef(WGPUPipelineLayout self) {
+    return wgpuPipelineLayoutAddRef(self);
 }
 DllExport(void) gpuQuerySetSetLabel(WGPUQuerySet self, WGPUStringView label) {
     return wgpuQuerySetSetLabel(self, label);
@@ -498,6 +532,9 @@ DllExport(void) gpuQuerySetDestroy(WGPUQuerySet self) {
 }
 DllExport(void) gpuQuerySetRelease(WGPUQuerySet self) {
     return wgpuQuerySetRelease(self);
+}
+DllExport(void) gpuQuerySetAddRef(WGPUQuerySet self) {
+    return wgpuQuerySetAddRef(self);
 }
 DllExport(void) gpuQueueSubmit(WGPUQueue self, size_t commandCount, const WGPUCommandBuffer* commands) {
     return wgpuQueueSubmit(self, commandCount, commands);
@@ -544,11 +581,17 @@ DllExport(void) gpuQueueSetLabel(WGPUQueue self, WGPUStringView label) {
 DllExport(void) gpuQueueRelease(WGPUQueue self) {
     return wgpuQueueRelease(self);
 }
+DllExport(void) gpuQueueAddRef(WGPUQueue self) {
+    return wgpuQueueAddRef(self);
+}
 DllExport(void) gpuRenderBundleSetLabel(WGPURenderBundle self, WGPUStringView label) {
     return wgpuRenderBundleSetLabel(self, label);
 }
 DllExport(void) gpuRenderBundleRelease(WGPURenderBundle self) {
     return wgpuRenderBundleRelease(self);
+}
+DllExport(void) gpuRenderBundleAddRef(WGPURenderBundle self) {
+    return wgpuRenderBundleAddRef(self);
 }
 DllExport(void) gpuRenderBundleEncoderSetPipeline(WGPURenderBundleEncoder self, WGPURenderPipeline pipeline) {
     return wgpuRenderBundleEncoderSetPipeline(self, pipeline);
@@ -623,6 +666,9 @@ DllExport(void) gpuRenderBundleEncoderSetLabel(WGPURenderBundleEncoder self, WGP
 }
 DllExport(void) gpuRenderBundleEncoderRelease(WGPURenderBundleEncoder self) {
     return wgpuRenderBundleEncoderRelease(self);
+}
+DllExport(void) gpuRenderBundleEncoderAddRef(WGPURenderBundleEncoder self) {
+    return wgpuRenderBundleEncoderAddRef(self);
 }
 DllExport(void) gpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder self, WGPURenderPipeline pipeline) {
     return wgpuRenderPassEncoderSetPipeline(self, pipeline);
@@ -756,6 +802,9 @@ DllExport(void) gpuRenderPassEncoderSetLabel(WGPURenderPassEncoder self, WGPUStr
 DllExport(void) gpuRenderPassEncoderRelease(WGPURenderPassEncoder self) {
     return wgpuRenderPassEncoderRelease(self);
 }
+DllExport(void) gpuRenderPassEncoderAddRef(WGPURenderPassEncoder self) {
+    return wgpuRenderPassEncoderAddRef(self);
+}
 DllExport(WGPUBindGroupLayout) gpuRenderPipelineGetBindGroupLayout(WGPURenderPipeline self, uint32_t groupIndex) {
     return wgpuRenderPipelineGetBindGroupLayout(self, groupIndex);
 }
@@ -765,11 +814,17 @@ DllExport(void) gpuRenderPipelineSetLabel(WGPURenderPipeline self, WGPUStringVie
 DllExport(void) gpuRenderPipelineRelease(WGPURenderPipeline self) {
     return wgpuRenderPipelineRelease(self);
 }
+DllExport(void) gpuRenderPipelineAddRef(WGPURenderPipeline self) {
+    return wgpuRenderPipelineAddRef(self);
+}
 DllExport(void) gpuSamplerSetLabel(WGPUSampler self, WGPUStringView label) {
     return wgpuSamplerSetLabel(self, label);
 }
 DllExport(void) gpuSamplerRelease(WGPUSampler self) {
     return wgpuSamplerRelease(self);
+}
+DllExport(void) gpuSamplerAddRef(WGPUSampler self) {
+    return wgpuSamplerAddRef(self);
 }
 DllExport(void) gpuShaderModuleGetCompilationInfo(WGPUShaderModule self, WGPUCompilationInfoCallback callback, void * userdata) {
     return wgpuShaderModuleGetCompilationInfo(self, callback, userdata);
@@ -785,6 +840,9 @@ DllExport(void) gpuShaderModuleSetLabel(WGPUShaderModule self, WGPUStringView la
 }
 DllExport(void) gpuShaderModuleRelease(WGPUShaderModule self) {
     return wgpuShaderModuleRelease(self);
+}
+DllExport(void) gpuShaderModuleAddRef(WGPUShaderModule self) {
+    return wgpuShaderModuleAddRef(self);
 }
 DllExport(void) gpuSurfaceConfigure(WGPUSurface self, const WGPUSurfaceConfiguration* config) {
     return wgpuSurfaceConfigure(self, config);
@@ -806,6 +864,9 @@ DllExport(void) gpuSurfaceSetLabel(WGPUSurface self, WGPUStringView label) {
 }
 DllExport(void) gpuSurfaceRelease(WGPUSurface self) {
     return wgpuSurfaceRelease(self);
+}
+DllExport(void) gpuSurfaceAddRef(WGPUSurface self) {
+    return wgpuSurfaceAddRef(self);
 }
 DllExport(WGPUTextureView) gpuTextureCreateView(WGPUTexture self, const WGPUTextureViewDescriptor* descriptor) {
     return wgpuTextureCreateView(self, descriptor);
@@ -846,9 +907,15 @@ DllExport(void) gpuTextureDestroy(WGPUTexture self) {
 DllExport(void) gpuTextureRelease(WGPUTexture self) {
     return wgpuTextureRelease(self);
 }
+DllExport(void) gpuTextureAddRef(WGPUTexture self) {
+    return wgpuTextureAddRef(self);
+}
 DllExport(void) gpuTextureViewSetLabel(WGPUTextureView self, WGPUStringView label) {
     return wgpuTextureViewSetLabel(self, label);
 }
 DllExport(void) gpuTextureViewRelease(WGPUTextureView self) {
     return wgpuTextureViewRelease(self);
+}
+DllExport(void) gpuTextureViewAddRef(WGPUTextureView self) {
+    return wgpuTextureViewAddRef(self);
 }

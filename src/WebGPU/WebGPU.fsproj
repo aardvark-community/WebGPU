@@ -9,6 +9,8 @@
     <Compile Include="Enums.fs" />
     <Compile Include="Wrapper.fs" />
     <Compile Include="Frontend.fs" />
+    <Compile Include="BufferExtensions.fs" />
+    <Compile Include="TextureExtensions.fs" />
     <Compile Include="FrontendExtensions.fs" />
     <Content Include="paket.references" />
   </ItemGroup>
