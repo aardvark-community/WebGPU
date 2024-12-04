@@ -420,9 +420,9 @@ type ComputePipelineDescriptor =
         val mutable public NextInChain : nativeint
         val mutable public Label : StringView
         val mutable public Layout : nativeint
-        val mutable public Compute : ProgrammableStageDescriptor
-        new(nextInChain : nativeint, label : StringView, layout : nativeint, compute : ProgrammableStageDescriptor) = { NextInChain = nextInChain; Label = label; Layout = layout; Compute = compute }
-        new(label : StringView, layout : nativeint, compute : ProgrammableStageDescriptor) = ComputePipelineDescriptor(0n, label, layout, compute)
+        val mutable public Compute : ComputeState
+        new(nextInChain : nativeint, label : StringView, layout : nativeint, compute : ComputeState) = { NextInChain = nextInChain; Label = label; Layout = layout; Compute = compute }
+        new(label : StringView, layout : nativeint, compute : ComputeState) = ComputePipelineDescriptor(0n, label, layout, compute)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type CopyTextureForBrowserOptions = 
@@ -602,10 +602,10 @@ type AdapterPropertiesSubgroups =
     struct
         val mutable public NextInChain : nativeint
         val mutable public SType : SType
-        val mutable public MinSubgroupSize : uint32
-        val mutable public MaxSubgroupSize : uint32
-        new(nextInChain : nativeint, sType : SType, minSubgroupSize : uint32, maxSubgroupSize : uint32) = { NextInChain = nextInChain; SType = sType; MinSubgroupSize = minSubgroupSize; MaxSubgroupSize = maxSubgroupSize }
-        new(minSubgroupSize : uint32, maxSubgroupSize : uint32) = AdapterPropertiesSubgroups(0n, Unchecked.defaultof<SType>, minSubgroupSize, maxSubgroupSize)
+        val mutable public SubgroupMinSize : uint32
+        val mutable public SubgroupMaxSize : uint32
+        new(nextInChain : nativeint, sType : SType, subgroupMinSize : uint32, subgroupMaxSize : uint32) = { NextInChain = nextInChain; SType = sType; SubgroupMinSize = subgroupMinSize; SubgroupMaxSize = subgroupMaxSize }
+        new(subgroupMinSize : uint32, subgroupMaxSize : uint32) = AdapterPropertiesSubgroups(0n, Unchecked.defaultof<SType>, subgroupMinSize, subgroupMaxSize)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnExperimentalSubgroupLimits = 
@@ -1162,8 +1162,9 @@ type PipelineLayoutStorageAttachment =
         new(nextInChain : nativeint, offset : uint64, format : TextureFormat) = { NextInChain = nextInChain; Offset = offset; Format = format }
         new(offset : uint64, format : TextureFormat) = PipelineLayoutStorageAttachment(0n, offset, format)
     end
+type ProgrammableStageDescriptor = ComputeState
 [<Struct; StructLayout(LayoutKind.Sequential)>]
-type ProgrammableStageDescriptor = 
+type ComputeState = 
     struct
         val mutable public NextInChain : nativeint
         val mutable public Module : nativeint
@@ -1171,7 +1172,7 @@ type ProgrammableStageDescriptor =
         val mutable public ConstantCount : unativeint
         val mutable public Constants : nativeptr<ConstantEntry>
         new(nextInChain : nativeint, moodule : nativeint, entryPoint : StringView, constantCount : unativeint, constants : nativeptr<ConstantEntry>) = { NextInChain = nextInChain; Module = moodule; EntryPoint = entryPoint; ConstantCount = constantCount; Constants = constants }
-        new(moodule : nativeint, entryPoint : StringView, constantCount : unativeint, constants : nativeptr<ConstantEntry>) = ProgrammableStageDescriptor(0n, moodule, entryPoint, constantCount, constants)
+        new(moodule : nativeint, entryPoint : StringView, constantCount : unativeint, constants : nativeptr<ConstantEntry>) = ComputeState(0n, moodule, entryPoint, constantCount, constants)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type QuerySetDescriptor = 

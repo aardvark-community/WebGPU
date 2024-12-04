@@ -8,6 +8,7 @@ cd tmp
 
 git clone https://github.com/google/dawn.git
 cd dawn
+git checkout 2d08f945c77094a754bed83d2821cd60dbf81c6c
 
 python tools/fetch_dawn_dependencies.py --use-test-deps
 
@@ -18,11 +19,11 @@ cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
 make -j
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
+  mkdir -p ../../../../../../libs/Native/WebGPU/mac/ARM64/
   cp ./src/dawn/native/libwebgpu_dawn.dylib ../../../../../../libs/Native/WebGPU/mac/ARM64/
-  cp ./src/dawn/glfw/libdawn_glfw.a ../../../../../../libs/Native/WebGPU/mac/ARM64/
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-  cp ./src/dawn/native/libwebgpu_dawn.so ../../../../../../libs/Native/WebGPU/linux/x64/
-  cp ./src/dawn/glfw/libdawn_glfw.a ../../../../../../libs/Native/WebGPU/linux/x64/
+  mkdir -p ../../../../../../libs/Native/WebGPU/linux/AMD64/
+  cp ./src/dawn/native/libwebgpu_dawn.so ../../../../../../libs/Native/WebGPU/linux/AMD64/
 fi
 cp ./gen/include/dawn/webgpu.h ../../../../../../include/dawn/webgpu
 cp ./gen/include/dawn/webgpu_cpp.h ../../../../../../include/dawn

@@ -344,6 +344,9 @@ DllExport(WGPUStatus) gpuDeviceGetAHardwareBufferProperties(WGPUDevice self, voi
 DllExport(WGPUStatus) gpuDeviceGetLimits(WGPUDevice self, WGPUSupportedLimits* limits) {
     return wgpuDeviceGetLimits(self, limits);
 }
+DllExport(WGPUFuture) gpuDeviceGetLostFuture(WGPUDevice self) {
+    return wgpuDeviceGetLostFuture(self);
+}
 DllExport(bool) gpuDeviceHasFeature(WGPUDevice self, WGPUFeatureName feature) {
     return wgpuDeviceHasFeature(self, feature);
 }

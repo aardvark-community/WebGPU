@@ -1178,7 +1178,7 @@
         "members": [
             {"name": "label", "type": "string view", "optional": true},
             {"name": "layout", "type": "pipeline layout", "optional": true},
-            {"name": "compute", "type": "programmable stage descriptor"}
+            {"name": "compute", "type": "compute state"}
         ]
     },
     "alpha mode": {
@@ -1535,8 +1535,7 @@
             },
             {
                 "name": "get lost future",
-                "returns": "future",
-                "tags": ["emscripten"]
+                "returns": "future"
             },
             {
                 "name": "has feature",
@@ -1816,8 +1815,8 @@
         "chained": "out",
         "chain roots": ["adapter info"],
         "members": [
-            {"name": "min subgroup size", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
-            {"name": "max subgroup size", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"}
+            {"name": "subgroup min size", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"},
+            {"name": "subgroup max size", "type": "uint32_t", "default": "WGPU_LIMIT_U32_UNDEFINED"}
         ]
     },
     "dawn experimental subgroup limits": {
@@ -2865,6 +2864,10 @@
         ]
     },
     "programmable stage descriptor": {
+        "category": "typedef",
+        "type": "compute state"
+    },
+    "compute state": {
         "category": "structure",
         "extensible": "in",
         "members": [

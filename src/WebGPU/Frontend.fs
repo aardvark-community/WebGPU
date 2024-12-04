@@ -2306,7 +2306,7 @@ type ComputePipelineDescriptor =
     {
         Label : string
         Layout : PipelineLayout
-        Compute : ProgrammableStageDescriptor
+        Compute : ComputeState
     }
     static member Null = Unchecked.defaultof<ComputePipelineDescriptor>
     [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
@@ -2335,7 +2335,7 @@ type ComputePipelineDescriptor =
         {
             Label = let _labelPtr = NativePtr.toNativeInt(backend.Label.Data) in if _labelPtr = 0n then null else Marshal.PtrToStringUTF8(_labelPtr, int(backend.Label.Length))
             Layout = new PipelineLayout(device, backend.Layout)
-            Compute = ProgrammableStageDescriptor.Read(device, &backend.Compute)
+            Compute = ComputeState.Read(device, &backend.Compute)
         }
 type CopyTextureForBrowserOptions = 
     {
@@ -3271,8 +3271,8 @@ type Limits =
 type AdapterPropertiesSubgroups = 
     {
         Next : IAdapterInfoExtension
-        MinSubgroupSize : int
-        MaxSubgroupSize : int
+        SubgroupMinSize : int
+        SubgroupMaxSize : int
     }
     static member Null = Unchecked.defaultof<AdapterPropertiesSubgroups>
     [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
@@ -3286,8 +3286,8 @@ type AdapterPropertiesSubgroups =
                     new WebGPU.Raw.AdapterPropertiesSubgroups(
                         nextInChain,
                         sType,
-                        uint32(this.MinSubgroupSize),
-                        uint32(this.MaxSubgroupSize)
+                        uint32(this.SubgroupMinSize),
+                        uint32(this.SubgroupMaxSize)
                     )
                 use ptr = fixed &value
                 action ptr
@@ -3300,8 +3300,8 @@ type AdapterPropertiesSubgroups =
     static member Read(device : Device, backend : inref<WebGPU.Raw.AdapterPropertiesSubgroups>) = 
         {
             Next = ExtensionDecoder.decode<IAdapterInfoExtension> device backend.NextInChain
-            MinSubgroupSize = int(backend.MinSubgroupSize)
-            MaxSubgroupSize = int(backend.MaxSubgroupSize)
+            SubgroupMinSize = int(backend.SubgroupMinSize)
+            SubgroupMaxSize = int(backend.SubgroupMaxSize)
         }
 type DawnExperimentalSubgroupLimits = 
     {
@@ -5587,15 +5587,16 @@ type PipelineLayoutStorageAttachment =
             Offset = int64(backend.Offset)
             Format = backend.Format
         }
-type ProgrammableStageDescriptor = 
+type ProgrammableStageDescriptor = ComputeState
+type ComputeState = 
     {
         Module : ShaderModule
         EntryPoint : string
         Constants : array<ConstantEntry>
     }
-    static member Null = Unchecked.defaultof<ProgrammableStageDescriptor>
+    static member Null = Unchecked.defaultof<ComputeState>
     [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
-    member this.Pin<'r>(device : Device, action : nativeptr<WebGPU.Raw.ProgrammableStageDescriptor> -> 'r) : 'r = 
+    member this.Pin<'r>(device : Device, action : nativeptr<WebGPU.Raw.ComputeState> -> 'r) : 'r = 
         if isNull (this :> obj) then
             action (NativePtr.ofNativeInt 0n)
         else
@@ -5606,7 +5607,7 @@ type ProgrammableStageDescriptor =
             WebGPU.Raw.Pinnable.pinArray device this.Constants (fun constantsPtr ->
                 let constantsLen = unativeint this.Constants.Length
                 let mutable value =
-                    new WebGPU.Raw.ProgrammableStageDescriptor(
+                    new WebGPU.Raw.ComputeState(
                         nextInChain,
                         this.Module.Handle,
                         _entryPointLen,
@@ -5616,9 +5617,9 @@ type ProgrammableStageDescriptor =
                 use ptr = fixed &value
                 action ptr
             )
-    interface WebGPU.Raw.IPinnable<Device, WebGPU.Raw.ProgrammableStageDescriptor> with
+    interface WebGPU.Raw.IPinnable<Device, WebGPU.Raw.ComputeState> with
         member x.Pin(device, action) = x.Pin(device, action)
-    static member Read(device : Device, backend : inref<WebGPU.Raw.ProgrammableStageDescriptor>) = 
+    static member Read(device : Device, backend : inref<WebGPU.Raw.ComputeState>) = 
         {
             Module = new ShaderModule(device, backend.Module)
             EntryPoint = let _entryPointPtr = NativePtr.toNativeInt(backend.EntryPoint.Data) in if _entryPointPtr = 0n then null else Marshal.PtrToStringUTF8(_entryPointPtr, int(backend.EntryPoint.Length))

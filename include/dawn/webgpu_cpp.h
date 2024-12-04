@@ -1306,8 +1306,8 @@ struct VertexBufferLayout;
 struct BindGroupLayoutDescriptor;
 struct ColorTargetState;
 struct CompilationInfo;
+struct ComputeState;
 struct DeviceDescriptor;
-struct ProgrammableStageDescriptor;
 struct RenderPassDescriptor;
 struct RenderPassPixelLocalStorage;
 struct VertexState;
@@ -2125,8 +2125,8 @@ struct AdapterPropertiesSubgroups : ChainedStructOut {
     inline operator const WGPUAdapterPropertiesSubgroups&() const noexcept;
 
     static constexpr size_t kFirstMemberAlignment = detail::ConstexprMax(alignof(ChainedStruct), alignof(uint32_t ));
-    alignas(kFirstMemberAlignment) uint32_t minSubgroupSize = WGPU_LIMIT_U32_UNDEFINED;
-    uint32_t maxSubgroupSize = WGPU_LIMIT_U32_UNDEFINED;
+    alignas(kFirstMemberAlignment) uint32_t subgroupMinSize = WGPU_LIMIT_U32_UNDEFINED;
+    uint32_t subgroupMaxSize = WGPU_LIMIT_U32_UNDEFINED;
 };
 
 // Can be chained in AdapterInfo
@@ -3825,8 +3825,8 @@ struct CompilationInfo {
     CompilationMessage const * messages;
 };
 
-struct ProgrammableStageDescriptor {
-    inline operator const WGPUProgrammableStageDescriptor&() const noexcept;
+struct ComputeState {
+    inline operator const WGPUComputeState&() const noexcept;
 
     ChainedStruct const * nextInChain = nullptr;
     ShaderModule module;
@@ -3879,7 +3879,7 @@ struct ComputePipelineDescriptor {
     ChainedStruct const * nextInChain = nullptr;
     StringView label = {};
     PipelineLayout layout = nullptr;
-    ProgrammableStageDescriptor compute = {};
+    ComputeState compute = {};
 };
 
 struct FragmentState {
@@ -3999,13 +3999,13 @@ AdapterPropertiesSubgroups::AdapterPropertiesSubgroups()
   : ChainedStructOut { nullptr, SType::AdapterPropertiesSubgroups } {}
 struct AdapterPropertiesSubgroups::Init {
     ChainedStructOut *  nextInChain;
-    uint32_t minSubgroupSize = WGPU_LIMIT_U32_UNDEFINED;
-    uint32_t maxSubgroupSize = WGPU_LIMIT_U32_UNDEFINED;
+    uint32_t subgroupMinSize = WGPU_LIMIT_U32_UNDEFINED;
+    uint32_t subgroupMaxSize = WGPU_LIMIT_U32_UNDEFINED;
 };
 AdapterPropertiesSubgroups::AdapterPropertiesSubgroups(AdapterPropertiesSubgroups::Init&& init)
   : ChainedStructOut { init.nextInChain, SType::AdapterPropertiesSubgroups }, 
-    minSubgroupSize(std::move(init.minSubgroupSize)), 
-    maxSubgroupSize(std::move(init.maxSubgroupSize)){}
+    subgroupMinSize(std::move(init.subgroupMinSize)), 
+    subgroupMaxSize(std::move(init.subgroupMaxSize)){}
 
 AdapterPropertiesSubgroups::operator const WGPUAdapterPropertiesSubgroups&() const noexcept {
     return *reinterpret_cast<const WGPUAdapterPropertiesSubgroups*>(this);
@@ -4013,10 +4013,10 @@ AdapterPropertiesSubgroups::operator const WGPUAdapterPropertiesSubgroups&() con
 
 static_assert(sizeof(AdapterPropertiesSubgroups) == sizeof(WGPUAdapterPropertiesSubgroups), "sizeof mismatch for AdapterPropertiesSubgroups");
 static_assert(alignof(AdapterPropertiesSubgroups) == alignof(WGPUAdapterPropertiesSubgroups), "alignof mismatch for AdapterPropertiesSubgroups");
-static_assert(offsetof(AdapterPropertiesSubgroups, minSubgroupSize) == offsetof(WGPUAdapterPropertiesSubgroups, minSubgroupSize),
-        "offsetof mismatch for AdapterPropertiesSubgroups::minSubgroupSize");
-static_assert(offsetof(AdapterPropertiesSubgroups, maxSubgroupSize) == offsetof(WGPUAdapterPropertiesSubgroups, maxSubgroupSize),
-        "offsetof mismatch for AdapterPropertiesSubgroups::maxSubgroupSize");
+static_assert(offsetof(AdapterPropertiesSubgroups, subgroupMinSize) == offsetof(WGPUAdapterPropertiesSubgroups, subgroupMinSize),
+        "offsetof mismatch for AdapterPropertiesSubgroups::subgroupMinSize");
+static_assert(offsetof(AdapterPropertiesSubgroups, subgroupMaxSize) == offsetof(WGPUAdapterPropertiesSubgroups, subgroupMaxSize),
+        "offsetof mismatch for AdapterPropertiesSubgroups::subgroupMaxSize");
 
 // AdapterPropertiesVk implementation
 AdapterPropertiesVk::AdapterPropertiesVk()
@@ -7328,24 +7328,24 @@ static_assert(offsetof(CompilationInfo, messageCount) == offsetof(WGPUCompilatio
 static_assert(offsetof(CompilationInfo, messages) == offsetof(WGPUCompilationInfo, messages),
         "offsetof mismatch for CompilationInfo::messages");
 
-// ProgrammableStageDescriptor implementation
+// ComputeState implementation
 
-ProgrammableStageDescriptor::operator const WGPUProgrammableStageDescriptor&() const noexcept {
-    return *reinterpret_cast<const WGPUProgrammableStageDescriptor*>(this);
+ComputeState::operator const WGPUComputeState&() const noexcept {
+    return *reinterpret_cast<const WGPUComputeState*>(this);
 }
 
-static_assert(sizeof(ProgrammableStageDescriptor) == sizeof(WGPUProgrammableStageDescriptor), "sizeof mismatch for ProgrammableStageDescriptor");
-static_assert(alignof(ProgrammableStageDescriptor) == alignof(WGPUProgrammableStageDescriptor), "alignof mismatch for ProgrammableStageDescriptor");
-static_assert(offsetof(ProgrammableStageDescriptor, nextInChain) == offsetof(WGPUProgrammableStageDescriptor, nextInChain),
-        "offsetof mismatch for ProgrammableStageDescriptor::nextInChain");
-static_assert(offsetof(ProgrammableStageDescriptor, module) == offsetof(WGPUProgrammableStageDescriptor, module),
-        "offsetof mismatch for ProgrammableStageDescriptor::module");
-static_assert(offsetof(ProgrammableStageDescriptor, entryPoint) == offsetof(WGPUProgrammableStageDescriptor, entryPoint),
-        "offsetof mismatch for ProgrammableStageDescriptor::entryPoint");
-static_assert(offsetof(ProgrammableStageDescriptor, constantCount) == offsetof(WGPUProgrammableStageDescriptor, constantCount),
-        "offsetof mismatch for ProgrammableStageDescriptor::constantCount");
-static_assert(offsetof(ProgrammableStageDescriptor, constants) == offsetof(WGPUProgrammableStageDescriptor, constants),
-        "offsetof mismatch for ProgrammableStageDescriptor::constants");
+static_assert(sizeof(ComputeState) == sizeof(WGPUComputeState), "sizeof mismatch for ComputeState");
+static_assert(alignof(ComputeState) == alignof(WGPUComputeState), "alignof mismatch for ComputeState");
+static_assert(offsetof(ComputeState, nextInChain) == offsetof(WGPUComputeState, nextInChain),
+        "offsetof mismatch for ComputeState::nextInChain");
+static_assert(offsetof(ComputeState, module) == offsetof(WGPUComputeState, module),
+        "offsetof mismatch for ComputeState::module");
+static_assert(offsetof(ComputeState, entryPoint) == offsetof(WGPUComputeState, entryPoint),
+        "offsetof mismatch for ComputeState::entryPoint");
+static_assert(offsetof(ComputeState, constantCount) == offsetof(WGPUComputeState, constantCount),
+        "offsetof mismatch for ComputeState::constantCount");
+static_assert(offsetof(ComputeState, constants) == offsetof(WGPUComputeState, constants),
+        "offsetof mismatch for ComputeState::constants");
 
 // RenderPassDescriptor implementation
 
@@ -9277,6 +9277,9 @@ static_assert(alignof(TextureView) == alignof(WGPUTextureView), "alignof mismatc
 
 
 
+// ProgrammableStageDescriptor is deprecated.
+// Use ComputeState instead.
+using ProgrammableStageDescriptor = ComputeState;
 // RenderPassDescriptorMaxDrawCount is deprecated.
 // Use RenderPassMaxDrawCount instead.
 using RenderPassDescriptorMaxDrawCount = RenderPassMaxDrawCount;
