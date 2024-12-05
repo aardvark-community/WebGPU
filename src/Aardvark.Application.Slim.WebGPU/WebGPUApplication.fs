@@ -11,6 +11,13 @@ open System.Runtime.CompilerServices
 
 type private GetSurfaceDescriptorNSWindowDelegate = delegate of nativeint -> nativeint
 
+type GLFWSurfaceDescriptor = 
+    {
+        Glfw : Glfw
+        Label : string
+        Window : nativeptr<Silk.NET.GLFW.WindowHandle>
+    }
+
 [<AbstractClass; Sealed>]
 type WebGPUGlfwExtensions private() =
     
@@ -22,8 +29,8 @@ type WebGPUGlfwExtensions private() =
         )
     
     [<Extension>]
-    static member CreateGLFWSurface(this : Instance, glfw : Glfw, descriptor : GLFWSurfaceDescriptor) =
-        let win = Silk.NET.GLFW.GlfwNativeWindow(glfw, descriptor.Window)
+    static member CreateGLFWSurface(this : Instance, descriptor : GLFWSurfaceDescriptor) =
+        let win = Silk.NET.GLFW.GlfwNativeWindow(descriptor.Glfw, descriptor.Window)
         let next = 
             if win.Win32.HasValue then
                 let struct(adapter, monitor, hwnd) = win.Win32.Value
@@ -48,13 +55,7 @@ type WebGPUGlfwExtensions private() =
             }
         
         this.CreateSurface surfaceDesc
-                
-        //         
-        // let handle = WebGPU.Raw.WebGPU.InstanceCreateGLFWSurface(this.Handle, NativePtr.toNativeInt descriptor.Window)
-        // let surf = new Surface(handle)
-        // if not (isNull descriptor.Label) then surf.SetLabel descriptor.Label
-        // surf
-
+             
 
 type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, device : Device, runtime : Runtime) =
     inherit Aardvark.Application.Slim.Application(runtime, WebGPUApplication.Interop(instance, adapter, device), false)
@@ -71,29 +72,63 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
                 ()
                 
             member this.CreateSurface(runtime,config,glfw,window) =
-                
                 let surf = 
-                    instance.CreateGLFWSurface(glfw, {
+                    instance.CreateGLFWSurface {
+                        Glfw = glfw
                         Label = null
                         Window = window
-                    })
+                    }
                     
                 let cap = surf.GetCapabilities(adapter)
                 let (w, h) = glfw.GetWindowSize(window)
                 
-                let format = cap.Formats.[0]
+                let format =
+                    let formats = 
+                        cap.Formats |> Array.sortBy (fun f ->
+                            match f with
+                            | TextureFormat.BGRA8Unorm
+                            | TextureFormat.RGBA8Unorm -> 0
+                            | _ -> 1
+                        )
+                    formats.[0]
                 
+                let alphaMode =
+                    let modes = 
+                        cap.AlphaModes |> Array.sortBy (fun m ->
+                            if m = CompositeAlphaMode.Opaque then 0 else 1
+                        )
+                    modes.[0]
+                
+                let presentMode =
+                    let modes = 
+                        cap.PresentModes |> Array.sortBy (function
+                            | PresentMode.Fifo -> if config.vsync then 0 else 5
+                            | PresentMode.FifoRelaxed -> if config.vsync then 1 else 6
+                            | PresentMode.Mailbox -> 2
+                            | PresentMode.Immediate -> if config.vsync then 3 else 0
+                            | _ -> 4
+                        )
+                    modes.[0]
+                    
+                Log.start "Creating surface"
+                
+                Log.line "Format: %A" format
+                Log.line "Usage: %A" cap.Usages
+                Log.line "AlphaMode: %A" alphaMode
+                Log.line "PresentMode: %A" presentMode
+                Log.stop()
+                    
                 let aardFormat = Translations.TextureFormat.toAardvark format
                 
                 surf.Configure {
                     SurfaceConfiguration.Device = device
-                    Format =format
+                    Format = format
                     Usage = cap.Usages
                     ViewFormats = [| format |]
-                    AlphaMode = cap.AlphaModes.[0]
+                    AlphaMode = alphaMode
                     Width = w
                     Height = h
-                    PresentMode = PresentMode.Fifo
+                    PresentMode = presentMode
                 }
                 
                 
@@ -167,6 +202,7 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
                                 
                                 let fbo =
                                     new Framebuffer(signature, size, [| colorView |], Some depthView)
+                                
                                 
                                 task.Run(fbo)
                                 surf.Present()

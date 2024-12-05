@@ -21,11 +21,6 @@ type FrontendDeviceDescriptor =
         DefaultQueue : QueueDescriptor
     }
 
-type GLFWSurfaceDescriptor = 
-    {
-        Label : string
-        Window : nativeptr<Silk.NET.GLFW.WindowHandle>
-    }
 
 #nowarn "9"
 [<AbstractClass; Sealed>]
