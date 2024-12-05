@@ -29,8 +29,9 @@ type WebGPU private() =
         match RuntimeInformation.ProcessArchitecture with
         | Architecture.Wasm -> ()
         | _ ->
-            if RuntimeInformation.IsOSPlatform OSPlatform.OSX then
-                Aardvark.LoadLibrary(typeof<WebGPU>.Assembly, "libwebgpu_dawn.dylib") |> ignore
+            ()
+            // if RuntimeInformation.IsOSPlatform OSPlatform.OSX then
+            //     Aardvark.LoadLibrary(typeof<WebGPU>.Assembly, "libwebgpu_dawn.dylib") |> ignore
             // elif RuntimeInformation.IsOSPlatform OSPlatform.Linux then
             //     Aardvark.LoadLibrary(typeof<WebGPU>.Assembly, "libwebgpu_dawn.so") |> ignore
             // elif RuntimeInformation.IsOSPlatform OSPlatform.Windows then

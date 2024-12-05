@@ -11,6 +11,7 @@ open FShade.WGSL
 open Aardvark.Rendering
 
 #nowarn "9"
+#nowarn "44"
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module WGSLType =

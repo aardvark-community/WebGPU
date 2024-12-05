@@ -4,6 +4,8 @@ open Aardvark.Base
 open Aardvark.Rendering
 open global.WebGPU
 
+#nowarn "44"
+
 module Translations =
     //
     // module BufferUsage =
@@ -345,7 +347,7 @@ module Translations =
         open PrimitiveValueConverter.Interop
 
         let toType =
-            LookupTable.lookupTable [
+            LookupTable.lookup [
                 Bool, typeof<int>
                 Void, typeof<unit>
 

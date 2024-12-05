@@ -211,7 +211,7 @@ type ClearTask(device : Device, signature : IFramebufferSignature, values : aval
     interface IRenderTask with
         member this.Dispose() = ()
         member this.FrameId = frameId
-        member this.FramebufferSignature = Some (signature :> IFramebufferSignature)
+        member this.FramebufferSignature = Some signature
         member this.Id = id
         member this.Run(var0,var1,var2) = this.Run(var0, var2)
         member this.Runtime = Some device.Runtime
