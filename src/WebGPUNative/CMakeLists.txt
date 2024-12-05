@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.9)
 include("cmake/Aardvark.cmake")
 
-project(WebGPU)
+project(WebGPUNative)
 
 
 # set(CMAKE_PLATFORM_TOOLSET "v141")
@@ -31,19 +31,19 @@ add_definitions(-D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR )
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../libs/Native/WebGPU/${OS}/${ARCH}/)
 
 
-add_library(WebGPU SHARED ${FILES})
+add_library(WebGPUNative SHARED ${FILES})
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 if(APPLE)
     set(CMAKE_INSTALL_RPATH "@loader_path")
-    set_target_properties(WebGPU PROPERTIES INSTALL_RPATH "@loader_path")
+    set_target_properties(WebGPUNative PROPERTIES INSTALL_RPATH "@loader_path")
 elseif(UNIX)
     set(CMAKE_INSTALL_RPATH "$ORIGIN")
-    set_target_properties(WebGPU PROPERTIES INSTALL_RPATH "$ORIGIN")
+    set_target_properties(WebGPUNative PROPERTIES INSTALL_RPATH "$ORIGIN")
 endif()
 
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../include/dawn)
-target_link_libraries(WebGPU PRIVATE  ${DAWN_LIBRARY_NAME})
+target_link_libraries(WebGPUNative PRIVATE  ${DAWN_LIBRARY_NAME})
 
 SET(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/Native/WebGPU/") 
-install(TARGETS WebGPU DESTINATION ${OS}/${ARCH})
+install(TARGETS WebGPUNative DESTINATION ${OS}/${ARCH})

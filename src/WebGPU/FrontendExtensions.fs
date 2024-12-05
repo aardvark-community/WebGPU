@@ -25,20 +25,6 @@ type FrontendDeviceDescriptor =
 #nowarn "9"
 [<AbstractClass; Sealed>]
 type WebGPU private() =
-    static do
-        match RuntimeInformation.ProcessArchitecture with
-        | Architecture.Wasm -> ()
-        | _ ->
-            ()
-            // if RuntimeInformation.IsOSPlatform OSPlatform.OSX then
-            //     Aardvark.LoadLibrary(typeof<WebGPU>.Assembly, "libwebgpu_dawn.dylib") |> ignore
-            // elif RuntimeInformation.IsOSPlatform OSPlatform.Linux then
-            //     Aardvark.LoadLibrary(typeof<WebGPU>.Assembly, "libwebgpu_dawn.so") |> ignore
-            // elif RuntimeInformation.IsOSPlatform OSPlatform.Windows then
-            //     Aardvark.LoadLibrary(typeof<WebGPU>.Assembly, "webgpu_dawn.dll") |> ignore
-            //     
-        
-    
     static let instanceFeatures =
         lazy (
             match RuntimeInformation.ProcessArchitecture with

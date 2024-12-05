@@ -1032,7 +1032,7 @@ module RawWrapper =
                     printfn "            %s : %s" (pascalCase a.Name) (fsharpName a.Type)
                 printfn "        }"
                 printfn ""
-                printfn $"    [<DllImport(\"WebGPU\", EntryPoint=\"gpu{pascalCase m.Name}\")>]"
+                printfn $"    [<DllImport(\"WebGPUNative\", EntryPoint=\"gpu{pascalCase m.Name}\")>]"
                 printfn $"    extern {externName m.Return} _{pascalCase m.Name}({(pascalCase m.Name)}Args& args)"
             
                 let argdef = m.Args |> Seq.map (fun a -> $"{camelCase a.Name} : {fsharpName a.Type}") |> String.concat ", "
@@ -1045,7 +1045,7 @@ module RawWrapper =
                 printfn $"        _{pascalCase m.Name}(&args)"
             else
                 let args = m.Args |> Seq.map (fun a -> $"{externName a.Type} {camelCase a.Name}") |> String.concat ", "
-                printfn $"    [<DllImport(\"WebGPU\", EntryPoint=\"gpu{pascalCase m.Name}\")>]"
+                printfn $"    [<DllImport(\"WebGPUNative\", EntryPoint=\"gpu{pascalCase m.Name}\")>]"
                 printfn $"    extern {externName m.Return} {pascalCase m.Name}({args})"
         
         let delegates =

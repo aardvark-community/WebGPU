@@ -1793,45 +1793,45 @@ type DawnBufferDescriptorErrorInfoFromWireClient =
     end
 module WebGPU = 
 
-    [<DllImport("WebGPU", EntryPoint="gpuCreateInstance")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCreateInstance")>]
     extern nativeint CreateInstance(InstanceDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuGetProcAddress")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuGetProcAddress")>]
     extern nativeint GetProcAddress(StringView procName)
-    [<DllImport("WebGPU", EntryPoint="gpuAdapterGetInstance")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuAdapterGetInstance")>]
     extern nativeint AdapterGetInstance(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuAdapterGetLimits")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuAdapterGetLimits")>]
     extern Status AdapterGetLimits(nativeint self, SupportedLimits* limits)
-    [<DllImport("WebGPU", EntryPoint="gpuAdapterGetInfo")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuAdapterGetInfo")>]
     extern Status AdapterGetInfo(nativeint self, AdapterInfo* info)
-    [<DllImport("WebGPU", EntryPoint="gpuAdapterHasFeature")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuAdapterHasFeature")>]
     extern int AdapterHasFeature(nativeint self, FeatureName feature)
-    [<DllImport("WebGPU", EntryPoint="gpuAdapterGetFeatures")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuAdapterGetFeatures")>]
     extern void AdapterGetFeatures(nativeint self, SupportedFeatures* features)
-    [<DllImport("WebGPU", EntryPoint="gpuAdapterRequestDevice")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuAdapterRequestDevice")>]
     extern void AdapterRequestDevice(nativeint self, DeviceDescriptor* descriptor, nativeint callback, nativeint userdata)
-    [<DllImport("WebGPU", EntryPoint="gpuAdapterRequestDeviceF")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuAdapterRequestDeviceF")>]
     extern Future AdapterRequestDeviceF(nativeint self, DeviceDescriptor* options, RequestDeviceCallbackInfo callbackInfo)
-    [<DllImport("WebGPU", EntryPoint="gpuAdapterRequestDevice2")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuAdapterRequestDevice2")>]
     extern Future AdapterRequestDevice2(nativeint self, DeviceDescriptor* options, RequestDeviceCallbackInfo2 callbackInfo)
-    [<DllImport("WebGPU", EntryPoint="gpuAdapterCreateDevice")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuAdapterCreateDevice")>]
     extern nativeint AdapterCreateDevice(nativeint self, DeviceDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuAdapterGetFormatCapabilities")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuAdapterGetFormatCapabilities")>]
     extern Status AdapterGetFormatCapabilities(nativeint self, TextureFormat format, FormatCapabilities* capabilities)
-    [<DllImport("WebGPU", EntryPoint="gpuAdapterRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuAdapterRelease")>]
     extern void AdapterRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuAdapterAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuAdapterAddRef")>]
     extern void AdapterAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuBindGroupSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBindGroupSetLabel")>]
     extern void BindGroupSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuBindGroupRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBindGroupRelease")>]
     extern void BindGroupRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuBindGroupAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBindGroupAddRef")>]
     extern void BindGroupAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuBindGroupLayoutSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBindGroupLayoutSetLabel")>]
     extern void BindGroupLayoutSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuBindGroupLayoutRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBindGroupLayoutRelease")>]
     extern void BindGroupLayoutRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuBindGroupLayoutAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBindGroupLayoutAddRef")>]
     extern void BindGroupLayoutAddRef(nativeint self)
     [<Struct; StructLayout(LayoutKind.Sequential)>]
     type BufferMapAsyncArgs = 
@@ -1844,7 +1844,7 @@ module WebGPU =
             Userdata : nativeint
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuBufferMapAsync")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBufferMapAsync")>]
     extern void _BufferMapAsync(BufferMapAsyncArgs& args)
     let BufferMapAsync(self : nativeint, mode : MapMode, offset : unativeint, size : unativeint, callback : nativeint, userdata : nativeint) =
         let mutable args = {
@@ -1856,41 +1856,41 @@ module WebGPU =
             BufferMapAsyncArgs.Userdata = userdata;
         }
         _BufferMapAsync(&args)
-    [<DllImport("WebGPU", EntryPoint="gpuBufferMapAsyncF")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBufferMapAsyncF")>]
     extern Future BufferMapAsyncF(nativeint self, MapMode mode, unativeint offset, unativeint size, BufferMapCallbackInfo callbackInfo)
-    [<DllImport("WebGPU", EntryPoint="gpuBufferMapAsync2")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBufferMapAsync2")>]
     extern Future BufferMapAsync2(nativeint self, MapMode mode, unativeint offset, unativeint size, BufferMapCallbackInfo2 callbackInfo)
-    [<DllImport("WebGPU", EntryPoint="gpuBufferGetMappedRange")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBufferGetMappedRange")>]
     extern nativeint BufferGetMappedRange(nativeint self, unativeint offset, unativeint size)
-    [<DllImport("WebGPU", EntryPoint="gpuBufferGetConstMappedRange")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBufferGetConstMappedRange")>]
     extern nativeint BufferGetConstMappedRange(nativeint self, unativeint offset, unativeint size)
-    [<DllImport("WebGPU", EntryPoint="gpuBufferSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBufferSetLabel")>]
     extern void BufferSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuBufferGetUsage")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBufferGetUsage")>]
     extern BufferUsage BufferGetUsage(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuBufferGetSize")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBufferGetSize")>]
     extern uint64 BufferGetSize(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuBufferGetMapState")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBufferGetMapState")>]
     extern BufferMapState BufferGetMapState(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuBufferUnmap")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBufferUnmap")>]
     extern void BufferUnmap(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuBufferDestroy")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBufferDestroy")>]
     extern void BufferDestroy(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuBufferRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBufferRelease")>]
     extern void BufferRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuBufferAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuBufferAddRef")>]
     extern void BufferAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuCommandBufferSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandBufferSetLabel")>]
     extern void CommandBufferSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuCommandBufferRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandBufferRelease")>]
     extern void CommandBufferRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuCommandBufferAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandBufferAddRef")>]
     extern void CommandBufferAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderFinish")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderFinish")>]
     extern nativeint CommandEncoderFinish(nativeint self, CommandBufferDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderBeginComputePass")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderBeginComputePass")>]
     extern nativeint CommandEncoderBeginComputePass(nativeint self, ComputePassDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderBeginRenderPass")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderBeginRenderPass")>]
     extern nativeint CommandEncoderBeginRenderPass(nativeint self, RenderPassDescriptor* descriptor)
     [<Struct; StructLayout(LayoutKind.Sequential)>]
     type CommandEncoderCopyBufferToBufferArgs = 
@@ -1903,7 +1903,7 @@ module WebGPU =
             Size : uint64
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderCopyBufferToBuffer")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderCopyBufferToBuffer")>]
     extern void _CommandEncoderCopyBufferToBuffer(CommandEncoderCopyBufferToBufferArgs& args)
     let CommandEncoderCopyBufferToBuffer(self : nativeint, source : nativeint, sourceOffset : uint64, destination : nativeint, destinationOffset : uint64, size : uint64) =
         let mutable args = {
@@ -1915,11 +1915,11 @@ module WebGPU =
             CommandEncoderCopyBufferToBufferArgs.Size = size;
         }
         _CommandEncoderCopyBufferToBuffer(&args)
-    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderCopyBufferToTexture")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderCopyBufferToTexture")>]
     extern void CommandEncoderCopyBufferToTexture(nativeint self, ImageCopyBuffer* source, ImageCopyTexture* destination, Extent3D* copySize)
-    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderCopyTextureToBuffer")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderCopyTextureToBuffer")>]
     extern void CommandEncoderCopyTextureToBuffer(nativeint self, ImageCopyTexture* source, ImageCopyBuffer* destination, Extent3D* copySize)
-    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderCopyTextureToTexture")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderCopyTextureToTexture")>]
     extern void CommandEncoderCopyTextureToTexture(nativeint self, ImageCopyTexture* source, ImageCopyTexture* destination, Extent3D* copySize)
     [<Struct; StructLayout(LayoutKind.Sequential)>]
     type CommandEncoderClearBufferArgs = 
@@ -1930,7 +1930,7 @@ module WebGPU =
             Size : uint64
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderClearBuffer")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderClearBuffer")>]
     extern void _CommandEncoderClearBuffer(CommandEncoderClearBufferArgs& args)
     let CommandEncoderClearBuffer(self : nativeint, buffer : nativeint, offset : uint64, size : uint64) =
         let mutable args = {
@@ -1940,13 +1940,13 @@ module WebGPU =
             CommandEncoderClearBufferArgs.Size = size;
         }
         _CommandEncoderClearBuffer(&args)
-    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderInjectValidationError")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderInjectValidationError")>]
     extern void CommandEncoderInjectValidationError(nativeint self, StringView message)
-    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderInsertDebugMarker")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderInsertDebugMarker")>]
     extern void CommandEncoderInsertDebugMarker(nativeint self, StringView markerLabel)
-    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderPopDebugGroup")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderPopDebugGroup")>]
     extern void CommandEncoderPopDebugGroup(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderPushDebugGroup")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderPushDebugGroup")>]
     extern void CommandEncoderPushDebugGroup(nativeint self, StringView groupLabel)
     [<Struct; StructLayout(LayoutKind.Sequential)>]
     type CommandEncoderResolveQuerySetArgs = 
@@ -1959,7 +1959,7 @@ module WebGPU =
             DestinationOffset : uint64
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderResolveQuerySet")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderResolveQuerySet")>]
     extern void _CommandEncoderResolveQuerySet(CommandEncoderResolveQuerySetArgs& args)
     let CommandEncoderResolveQuerySet(self : nativeint, querySet : nativeint, firstQuery : uint32, queryCount : uint32, destination : nativeint, destinationOffset : uint64) =
         let mutable args = {
@@ -1981,7 +1981,7 @@ module WebGPU =
             Size : uint64
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderWriteBuffer")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderWriteBuffer")>]
     extern void _CommandEncoderWriteBuffer(CommandEncoderWriteBufferArgs& args)
     let CommandEncoderWriteBuffer(self : nativeint, buffer : nativeint, bufferOffset : uint64, data : nativeptr<uint8>, size : uint64) =
         let mutable args = {
@@ -1992,27 +1992,27 @@ module WebGPU =
             CommandEncoderWriteBufferArgs.Size = size;
         }
         _CommandEncoderWriteBuffer(&args)
-    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderWriteTimestamp")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderWriteTimestamp")>]
     extern void CommandEncoderWriteTimestamp(nativeint self, nativeint querySet, uint32 queryIndex)
-    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderSetLabel")>]
     extern void CommandEncoderSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderRelease")>]
     extern void CommandEncoderRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuCommandEncoderAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderAddRef")>]
     extern void CommandEncoderAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuComputePassEncoderInsertDebugMarker")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuComputePassEncoderInsertDebugMarker")>]
     extern void ComputePassEncoderInsertDebugMarker(nativeint self, StringView markerLabel)
-    [<DllImport("WebGPU", EntryPoint="gpuComputePassEncoderPopDebugGroup")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuComputePassEncoderPopDebugGroup")>]
     extern void ComputePassEncoderPopDebugGroup(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuComputePassEncoderPushDebugGroup")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuComputePassEncoderPushDebugGroup")>]
     extern void ComputePassEncoderPushDebugGroup(nativeint self, StringView groupLabel)
-    [<DllImport("WebGPU", EntryPoint="gpuComputePassEncoderSetPipeline")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuComputePassEncoderSetPipeline")>]
     extern void ComputePassEncoderSetPipeline(nativeint self, nativeint pipeline)
-    [<DllImport("WebGPU", EntryPoint="gpuComputePassEncoderSetBindGroup")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuComputePassEncoderSetBindGroup")>]
     extern void ComputePassEncoderSetBindGroup(nativeint self, uint32 groupIndex, nativeint group, unativeint dynamicOffsetCount, uint32* dynamicOffsets)
-    [<DllImport("WebGPU", EntryPoint="gpuComputePassEncoderWriteTimestamp")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuComputePassEncoderWriteTimestamp")>]
     extern void ComputePassEncoderWriteTimestamp(nativeint self, nativeint querySet, uint32 queryIndex)
-    [<DllImport("WebGPU", EntryPoint="gpuComputePassEncoderDispatchWorkgroups")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuComputePassEncoderDispatchWorkgroups")>]
     extern void ComputePassEncoderDispatchWorkgroups(nativeint self, uint32 workgroupCountX, uint32 workgroupCountY, uint32 workgroupCountZ)
     [<Struct; StructLayout(LayoutKind.Sequential)>]
     type ComputePassEncoderDispatchWorkgroupsIndirectArgs = 
@@ -2022,7 +2022,7 @@ module WebGPU =
             IndirectOffset : uint64
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuComputePassEncoderDispatchWorkgroupsIndirect")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuComputePassEncoderDispatchWorkgroupsIndirect")>]
     extern void _ComputePassEncoderDispatchWorkgroupsIndirect(ComputePassEncoderDispatchWorkgroupsIndirectArgs& args)
     let ComputePassEncoderDispatchWorkgroupsIndirect(self : nativeint, indirectBuffer : nativeint, indirectOffset : uint64) =
         let mutable args = {
@@ -2031,169 +2031,169 @@ module WebGPU =
             ComputePassEncoderDispatchWorkgroupsIndirectArgs.IndirectOffset = indirectOffset;
         }
         _ComputePassEncoderDispatchWorkgroupsIndirect(&args)
-    [<DllImport("WebGPU", EntryPoint="gpuComputePassEncoderEnd")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuComputePassEncoderEnd")>]
     extern void ComputePassEncoderEnd(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuComputePassEncoderSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuComputePassEncoderSetLabel")>]
     extern void ComputePassEncoderSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuComputePassEncoderRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuComputePassEncoderRelease")>]
     extern void ComputePassEncoderRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuComputePassEncoderAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuComputePassEncoderAddRef")>]
     extern void ComputePassEncoderAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuComputePipelineGetBindGroupLayout")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuComputePipelineGetBindGroupLayout")>]
     extern nativeint ComputePipelineGetBindGroupLayout(nativeint self, uint32 groupIndex)
-    [<DllImport("WebGPU", EntryPoint="gpuComputePipelineSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuComputePipelineSetLabel")>]
     extern void ComputePipelineSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuComputePipelineRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuComputePipelineRelease")>]
     extern void ComputePipelineRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuComputePipelineAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuComputePipelineAddRef")>]
     extern void ComputePipelineAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateBindGroup")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateBindGroup")>]
     extern nativeint DeviceCreateBindGroup(nativeint self, BindGroupDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateBindGroupLayout")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateBindGroupLayout")>]
     extern nativeint DeviceCreateBindGroupLayout(nativeint self, BindGroupLayoutDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateBuffer")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateBuffer")>]
     extern nativeint DeviceCreateBuffer(nativeint self, BufferDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateErrorBuffer")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateErrorBuffer")>]
     extern nativeint DeviceCreateErrorBuffer(nativeint self, BufferDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateCommandEncoder")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateCommandEncoder")>]
     extern nativeint DeviceCreateCommandEncoder(nativeint self, CommandEncoderDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateComputePipeline")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateComputePipeline")>]
     extern nativeint DeviceCreateComputePipeline(nativeint self, ComputePipelineDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateComputePipelineAsync")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateComputePipelineAsync")>]
     extern void DeviceCreateComputePipelineAsync(nativeint self, ComputePipelineDescriptor* descriptor, nativeint callback, nativeint userdata)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateComputePipelineAsyncF")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateComputePipelineAsyncF")>]
     extern Future DeviceCreateComputePipelineAsyncF(nativeint self, ComputePipelineDescriptor* descriptor, CreateComputePipelineAsyncCallbackInfo callbackInfo)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateComputePipelineAsync2")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateComputePipelineAsync2")>]
     extern Future DeviceCreateComputePipelineAsync2(nativeint self, ComputePipelineDescriptor* descriptor, CreateComputePipelineAsyncCallbackInfo2 callbackInfo)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateExternalTexture")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateExternalTexture")>]
     extern nativeint DeviceCreateExternalTexture(nativeint self, ExternalTextureDescriptor* externalTextureDescriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateErrorExternalTexture")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateErrorExternalTexture")>]
     extern nativeint DeviceCreateErrorExternalTexture(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreatePipelineLayout")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreatePipelineLayout")>]
     extern nativeint DeviceCreatePipelineLayout(nativeint self, PipelineLayoutDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateQuerySet")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateQuerySet")>]
     extern nativeint DeviceCreateQuerySet(nativeint self, QuerySetDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateRenderPipelineAsync")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateRenderPipelineAsync")>]
     extern void DeviceCreateRenderPipelineAsync(nativeint self, RenderPipelineDescriptor* descriptor, nativeint callback, nativeint userdata)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateRenderPipelineAsyncF")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateRenderPipelineAsyncF")>]
     extern Future DeviceCreateRenderPipelineAsyncF(nativeint self, RenderPipelineDescriptor* descriptor, CreateRenderPipelineAsyncCallbackInfo callbackInfo)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateRenderPipelineAsync2")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateRenderPipelineAsync2")>]
     extern Future DeviceCreateRenderPipelineAsync2(nativeint self, RenderPipelineDescriptor* descriptor, CreateRenderPipelineAsyncCallbackInfo2 callbackInfo)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateRenderBundleEncoder")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateRenderBundleEncoder")>]
     extern nativeint DeviceCreateRenderBundleEncoder(nativeint self, RenderBundleEncoderDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateRenderPipeline")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateRenderPipeline")>]
     extern nativeint DeviceCreateRenderPipeline(nativeint self, RenderPipelineDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateSampler")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateSampler")>]
     extern nativeint DeviceCreateSampler(nativeint self, SamplerDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateShaderModule")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateShaderModule")>]
     extern nativeint DeviceCreateShaderModule(nativeint self, ShaderModuleDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateErrorShaderModule")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateErrorShaderModule")>]
     extern nativeint DeviceCreateErrorShaderModule(nativeint self, ShaderModuleDescriptor* descriptor, StringView errorMessage)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateTexture")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateTexture")>]
     extern nativeint DeviceCreateTexture(nativeint self, TextureDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceImportSharedBufferMemory")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceImportSharedBufferMemory")>]
     extern nativeint DeviceImportSharedBufferMemory(nativeint self, SharedBufferMemoryDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceImportSharedTextureMemory")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceImportSharedTextureMemory")>]
     extern nativeint DeviceImportSharedTextureMemory(nativeint self, SharedTextureMemoryDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceImportSharedFence")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceImportSharedFence")>]
     extern nativeint DeviceImportSharedFence(nativeint self, SharedFenceDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceCreateErrorTexture")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateErrorTexture")>]
     extern nativeint DeviceCreateErrorTexture(nativeint self, TextureDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceDestroy")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceDestroy")>]
     extern void DeviceDestroy(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceGetAHardwareBufferProperties")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceGetAHardwareBufferProperties")>]
     extern Status DeviceGetAHardwareBufferProperties(nativeint self, nativeint handle, AHardwareBufferProperties* properties)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceGetLimits")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceGetLimits")>]
     extern Status DeviceGetLimits(nativeint self, SupportedLimits* limits)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceGetLostFuture")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceGetLostFuture")>]
     extern Future DeviceGetLostFuture(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceHasFeature")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceHasFeature")>]
     extern int DeviceHasFeature(nativeint self, FeatureName feature)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceGetFeatures")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceGetFeatures")>]
     extern void DeviceGetFeatures(nativeint self, SupportedFeatures* features)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceGetAdapterInfo")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceGetAdapterInfo")>]
     extern Status DeviceGetAdapterInfo(nativeint self, AdapterInfo* adapterInfo)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceGetAdapter")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceGetAdapter")>]
     extern nativeint DeviceGetAdapter(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceGetQueue")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceGetQueue")>]
     extern nativeint DeviceGetQueue(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceInjectError")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceInjectError")>]
     extern void DeviceInjectError(nativeint self, ErrorType typ, StringView message)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceForceLoss")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceForceLoss")>]
     extern void DeviceForceLoss(nativeint self, DeviceLostReason typ, StringView message)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceTick")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceTick")>]
     extern void DeviceTick(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceSetLoggingCallback")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceSetLoggingCallback")>]
     extern void DeviceSetLoggingCallback(nativeint self, nativeint callback, nativeint userdata)
-    [<DllImport("WebGPU", EntryPoint="gpuDevicePushErrorScope")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDevicePushErrorScope")>]
     extern void DevicePushErrorScope(nativeint self, ErrorFilter filter)
-    [<DllImport("WebGPU", EntryPoint="gpuDevicePopErrorScope")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDevicePopErrorScope")>]
     extern void DevicePopErrorScope(nativeint self, nativeint oldCallback, nativeint userdata)
-    [<DllImport("WebGPU", EntryPoint="gpuDevicePopErrorScopeF")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDevicePopErrorScopeF")>]
     extern Future DevicePopErrorScopeF(nativeint self, PopErrorScopeCallbackInfo callbackInfo)
-    [<DllImport("WebGPU", EntryPoint="gpuDevicePopErrorScope2")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDevicePopErrorScope2")>]
     extern Future DevicePopErrorScope2(nativeint self, PopErrorScopeCallbackInfo2 callbackInfo)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceSetLabel")>]
     extern void DeviceSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceValidateTextureDescriptor")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceValidateTextureDescriptor")>]
     extern void DeviceValidateTextureDescriptor(nativeint self, TextureDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceRelease")>]
     extern void DeviceRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuDeviceAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceAddRef")>]
     extern void DeviceAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuExternalTextureSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuExternalTextureSetLabel")>]
     extern void ExternalTextureSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuExternalTextureDestroy")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuExternalTextureDestroy")>]
     extern void ExternalTextureDestroy(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuExternalTextureExpire")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuExternalTextureExpire")>]
     extern void ExternalTextureExpire(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuExternalTextureRefresh")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuExternalTextureRefresh")>]
     extern void ExternalTextureRefresh(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuExternalTextureRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuExternalTextureRelease")>]
     extern void ExternalTextureRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuExternalTextureAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuExternalTextureAddRef")>]
     extern void ExternalTextureAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedBufferMemorySetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedBufferMemorySetLabel")>]
     extern void SharedBufferMemorySetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedBufferMemoryGetProperties")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedBufferMemoryGetProperties")>]
     extern Status SharedBufferMemoryGetProperties(nativeint self, SharedBufferMemoryProperties* properties)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedBufferMemoryCreateBuffer")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedBufferMemoryCreateBuffer")>]
     extern nativeint SharedBufferMemoryCreateBuffer(nativeint self, BufferDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedBufferMemoryBeginAccess")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedBufferMemoryBeginAccess")>]
     extern Status SharedBufferMemoryBeginAccess(nativeint self, nativeint buffer, SharedBufferMemoryBeginAccessDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedBufferMemoryEndAccess")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedBufferMemoryEndAccess")>]
     extern Status SharedBufferMemoryEndAccess(nativeint self, nativeint buffer, SharedBufferMemoryEndAccessState* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedBufferMemoryIsDeviceLost")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedBufferMemoryIsDeviceLost")>]
     extern int SharedBufferMemoryIsDeviceLost(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedBufferMemoryRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedBufferMemoryRelease")>]
     extern void SharedBufferMemoryRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedBufferMemoryAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedBufferMemoryAddRef")>]
     extern void SharedBufferMemoryAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedTextureMemorySetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedTextureMemorySetLabel")>]
     extern void SharedTextureMemorySetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedTextureMemoryGetProperties")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedTextureMemoryGetProperties")>]
     extern Status SharedTextureMemoryGetProperties(nativeint self, SharedTextureMemoryProperties* properties)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedTextureMemoryCreateTexture")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedTextureMemoryCreateTexture")>]
     extern nativeint SharedTextureMemoryCreateTexture(nativeint self, TextureDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedTextureMemoryBeginAccess")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedTextureMemoryBeginAccess")>]
     extern Status SharedTextureMemoryBeginAccess(nativeint self, nativeint texture, SharedTextureMemoryBeginAccessDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedTextureMemoryEndAccess")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedTextureMemoryEndAccess")>]
     extern Status SharedTextureMemoryEndAccess(nativeint self, nativeint texture, SharedTextureMemoryEndAccessState* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedTextureMemoryIsDeviceLost")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedTextureMemoryIsDeviceLost")>]
     extern int SharedTextureMemoryIsDeviceLost(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedTextureMemoryRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedTextureMemoryRelease")>]
     extern void SharedTextureMemoryRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedTextureMemoryAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedTextureMemoryAddRef")>]
     extern void SharedTextureMemoryAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedFenceExportInfo")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedFenceExportInfo")>]
     extern void SharedFenceExportInfo(nativeint self, SharedFenceExportInfo* info)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedFenceRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedFenceRelease")>]
     extern void SharedFenceRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuSharedFenceAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSharedFenceAddRef")>]
     extern void SharedFenceAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuInstanceCreateSurface")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuInstanceCreateSurface")>]
     extern nativeint InstanceCreateSurface(nativeint self, SurfaceDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuInstanceProcessEvents")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuInstanceProcessEvents")>]
     extern void InstanceProcessEvents(nativeint self)
     [<Struct; StructLayout(LayoutKind.Sequential)>]
     type InstanceWaitAnyArgs = 
@@ -2204,7 +2204,7 @@ module WebGPU =
             TimeoutNS : uint64
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuInstanceWaitAny")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuInstanceWaitAny")>]
     extern WaitStatus _InstanceWaitAny(InstanceWaitAnyArgs& args)
     let InstanceWaitAny(self : nativeint, futureCount : unativeint, futures : nativeptr<FutureWaitInfo>, timeoutNS : uint64) =
         let mutable args = {
@@ -2214,47 +2214,47 @@ module WebGPU =
             InstanceWaitAnyArgs.TimeoutNS = timeoutNS;
         }
         _InstanceWaitAny(&args)
-    [<DllImport("WebGPU", EntryPoint="gpuInstanceRequestAdapter")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuInstanceRequestAdapter")>]
     extern void InstanceRequestAdapter(nativeint self, RequestAdapterOptions* options, nativeint callback, nativeint userdata)
-    [<DllImport("WebGPU", EntryPoint="gpuInstanceRequestAdapterF")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuInstanceRequestAdapterF")>]
     extern Future InstanceRequestAdapterF(nativeint self, RequestAdapterOptions* options, RequestAdapterCallbackInfo callbackInfo)
-    [<DllImport("WebGPU", EntryPoint="gpuInstanceRequestAdapter2")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuInstanceRequestAdapter2")>]
     extern Future InstanceRequestAdapter2(nativeint self, RequestAdapterOptions* options, RequestAdapterCallbackInfo2 callbackInfo)
-    [<DllImport("WebGPU", EntryPoint="gpuInstanceHasWGSLLanguageFeature")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuInstanceHasWGSLLanguageFeature")>]
     extern int InstanceHasWGSLLanguageFeature(nativeint self, WGSLFeatureName feature)
-    [<DllImport("WebGPU", EntryPoint="gpuInstanceEnumerateWGSLLanguageFeatures")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuInstanceEnumerateWGSLLanguageFeatures")>]
     extern unativeint InstanceEnumerateWGSLLanguageFeatures(nativeint self, WGSLFeatureName* features)
-    [<DllImport("WebGPU", EntryPoint="gpuInstanceRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuInstanceRelease")>]
     extern void InstanceRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuInstanceAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuInstanceAddRef")>]
     extern void InstanceAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuGetInstanceFeatures")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuGetInstanceFeatures")>]
     extern Status GetInstanceFeatures(InstanceFeatures* features)
-    [<DllImport("WebGPU", EntryPoint="gpuPipelineLayoutSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuPipelineLayoutSetLabel")>]
     extern void PipelineLayoutSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuPipelineLayoutRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuPipelineLayoutRelease")>]
     extern void PipelineLayoutRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuPipelineLayoutAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuPipelineLayoutAddRef")>]
     extern void PipelineLayoutAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuQuerySetSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuQuerySetSetLabel")>]
     extern void QuerySetSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuQuerySetGetType")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuQuerySetGetType")>]
     extern QueryType QuerySetGetType(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuQuerySetGetCount")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuQuerySetGetCount")>]
     extern uint32 QuerySetGetCount(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuQuerySetDestroy")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuQuerySetDestroy")>]
     extern void QuerySetDestroy(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuQuerySetRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuQuerySetRelease")>]
     extern void QuerySetRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuQuerySetAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuQuerySetAddRef")>]
     extern void QuerySetAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuQueueSubmit")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuQueueSubmit")>]
     extern void QueueSubmit(nativeint self, unativeint commandCount, nativeint* commands)
-    [<DllImport("WebGPU", EntryPoint="gpuQueueOnSubmittedWorkDone")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuQueueOnSubmittedWorkDone")>]
     extern void QueueOnSubmittedWorkDone(nativeint self, nativeint callback, nativeint userdata)
-    [<DllImport("WebGPU", EntryPoint="gpuQueueOnSubmittedWorkDoneF")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuQueueOnSubmittedWorkDoneF")>]
     extern Future QueueOnSubmittedWorkDoneF(nativeint self, QueueWorkDoneCallbackInfo callbackInfo)
-    [<DllImport("WebGPU", EntryPoint="gpuQueueOnSubmittedWorkDone2")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuQueueOnSubmittedWorkDone2")>]
     extern Future QueueOnSubmittedWorkDone2(nativeint self, QueueWorkDoneCallbackInfo2 callbackInfo)
     [<Struct; StructLayout(LayoutKind.Sequential)>]
     type QueueWriteBufferArgs = 
@@ -2266,7 +2266,7 @@ module WebGPU =
             Size : unativeint
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuQueueWriteBuffer")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuQueueWriteBuffer")>]
     extern void _QueueWriteBuffer(QueueWriteBufferArgs& args)
     let QueueWriteBuffer(self : nativeint, buffer : nativeint, bufferOffset : uint64, data : nativeint, size : unativeint) =
         let mutable args = {
@@ -2288,7 +2288,7 @@ module WebGPU =
             WriteSize : nativeptr<Extent3D>
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuQueueWriteTexture")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuQueueWriteTexture")>]
     extern void _QueueWriteTexture(QueueWriteTextureArgs& args)
     let QueueWriteTexture(self : nativeint, destination : nativeptr<ImageCopyTexture>, data : nativeint, dataSize : unativeint, dataLayout : nativeptr<TextureDataLayout>, writeSize : nativeptr<Extent3D>) =
         let mutable args = {
@@ -2300,27 +2300,27 @@ module WebGPU =
             QueueWriteTextureArgs.WriteSize = writeSize;
         }
         _QueueWriteTexture(&args)
-    [<DllImport("WebGPU", EntryPoint="gpuQueueCopyTextureForBrowser")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuQueueCopyTextureForBrowser")>]
     extern void QueueCopyTextureForBrowser(nativeint self, ImageCopyTexture* source, ImageCopyTexture* destination, Extent3D* copySize, CopyTextureForBrowserOptions* options)
-    [<DllImport("WebGPU", EntryPoint="gpuQueueCopyExternalTextureForBrowser")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuQueueCopyExternalTextureForBrowser")>]
     extern void QueueCopyExternalTextureForBrowser(nativeint self, ImageCopyExternalTexture* source, ImageCopyTexture* destination, Extent3D* copySize, CopyTextureForBrowserOptions* options)
-    [<DllImport("WebGPU", EntryPoint="gpuQueueSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuQueueSetLabel")>]
     extern void QueueSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuQueueRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuQueueRelease")>]
     extern void QueueRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuQueueAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuQueueAddRef")>]
     extern void QueueAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleSetLabel")>]
     extern void RenderBundleSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleRelease")>]
     extern void RenderBundleRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleAddRef")>]
     extern void RenderBundleAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderSetPipeline")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderSetPipeline")>]
     extern void RenderBundleEncoderSetPipeline(nativeint self, nativeint pipeline)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderSetBindGroup")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderSetBindGroup")>]
     extern void RenderBundleEncoderSetBindGroup(nativeint self, uint32 groupIndex, nativeint group, unativeint dynamicOffsetCount, uint32* dynamicOffsets)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderDraw")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderDraw")>]
     extern void RenderBundleEncoderDraw(nativeint self, uint32 vertexCount, uint32 instanceCount, uint32 firstVertex, uint32 firstInstance)
     [<Struct; StructLayout(LayoutKind.Sequential)>]
     type RenderBundleEncoderDrawIndexedArgs = 
@@ -2333,7 +2333,7 @@ module WebGPU =
             FirstInstance : uint32
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderDrawIndexed")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderDrawIndexed")>]
     extern void _RenderBundleEncoderDrawIndexed(RenderBundleEncoderDrawIndexedArgs& args)
     let RenderBundleEncoderDrawIndexed(self : nativeint, indexCount : uint32, instanceCount : uint32, firstIndex : uint32, baseVertex : int, firstInstance : uint32) =
         let mutable args = {
@@ -2353,7 +2353,7 @@ module WebGPU =
             IndirectOffset : uint64
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderDrawIndirect")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderDrawIndirect")>]
     extern void _RenderBundleEncoderDrawIndirect(RenderBundleEncoderDrawIndirectArgs& args)
     let RenderBundleEncoderDrawIndirect(self : nativeint, indirectBuffer : nativeint, indirectOffset : uint64) =
         let mutable args = {
@@ -2370,7 +2370,7 @@ module WebGPU =
             IndirectOffset : uint64
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderDrawIndexedIndirect")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderDrawIndexedIndirect")>]
     extern void _RenderBundleEncoderDrawIndexedIndirect(RenderBundleEncoderDrawIndexedIndirectArgs& args)
     let RenderBundleEncoderDrawIndexedIndirect(self : nativeint, indirectBuffer : nativeint, indirectOffset : uint64) =
         let mutable args = {
@@ -2379,11 +2379,11 @@ module WebGPU =
             RenderBundleEncoderDrawIndexedIndirectArgs.IndirectOffset = indirectOffset;
         }
         _RenderBundleEncoderDrawIndexedIndirect(&args)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderInsertDebugMarker")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderInsertDebugMarker")>]
     extern void RenderBundleEncoderInsertDebugMarker(nativeint self, StringView markerLabel)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderPopDebugGroup")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderPopDebugGroup")>]
     extern void RenderBundleEncoderPopDebugGroup(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderPushDebugGroup")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderPushDebugGroup")>]
     extern void RenderBundleEncoderPushDebugGroup(nativeint self, StringView groupLabel)
     [<Struct; StructLayout(LayoutKind.Sequential)>]
     type RenderBundleEncoderSetVertexBufferArgs = 
@@ -2395,7 +2395,7 @@ module WebGPU =
             Size : uint64
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderSetVertexBuffer")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderSetVertexBuffer")>]
     extern void _RenderBundleEncoderSetVertexBuffer(RenderBundleEncoderSetVertexBufferArgs& args)
     let RenderBundleEncoderSetVertexBuffer(self : nativeint, slot : uint32, buffer : nativeint, offset : uint64, size : uint64) =
         let mutable args = {
@@ -2416,7 +2416,7 @@ module WebGPU =
             Size : uint64
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderSetIndexBuffer")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderSetIndexBuffer")>]
     extern void _RenderBundleEncoderSetIndexBuffer(RenderBundleEncoderSetIndexBufferArgs& args)
     let RenderBundleEncoderSetIndexBuffer(self : nativeint, buffer : nativeint, format : IndexFormat, offset : uint64, size : uint64) =
         let mutable args = {
@@ -2427,19 +2427,19 @@ module WebGPU =
             RenderBundleEncoderSetIndexBufferArgs.Size = size;
         }
         _RenderBundleEncoderSetIndexBuffer(&args)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderFinish")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderFinish")>]
     extern nativeint RenderBundleEncoderFinish(nativeint self, RenderBundleDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderSetLabel")>]
     extern void RenderBundleEncoderSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderRelease")>]
     extern void RenderBundleEncoderRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderBundleEncoderAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderAddRef")>]
     extern void RenderBundleEncoderAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderSetPipeline")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderSetPipeline")>]
     extern void RenderPassEncoderSetPipeline(nativeint self, nativeint pipeline)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderSetBindGroup")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderSetBindGroup")>]
     extern void RenderPassEncoderSetBindGroup(nativeint self, uint32 groupIndex, nativeint group, unativeint dynamicOffsetCount, uint32* dynamicOffsets)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderDraw")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderDraw")>]
     extern void RenderPassEncoderDraw(nativeint self, uint32 vertexCount, uint32 instanceCount, uint32 firstVertex, uint32 firstInstance)
     [<Struct; StructLayout(LayoutKind.Sequential)>]
     type RenderPassEncoderDrawIndexedArgs = 
@@ -2452,7 +2452,7 @@ module WebGPU =
             FirstInstance : uint32
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderDrawIndexed")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderDrawIndexed")>]
     extern void _RenderPassEncoderDrawIndexed(RenderPassEncoderDrawIndexedArgs& args)
     let RenderPassEncoderDrawIndexed(self : nativeint, indexCount : uint32, instanceCount : uint32, firstIndex : uint32, baseVertex : int, firstInstance : uint32) =
         let mutable args = {
@@ -2472,7 +2472,7 @@ module WebGPU =
             IndirectOffset : uint64
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderDrawIndirect")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderDrawIndirect")>]
     extern void _RenderPassEncoderDrawIndirect(RenderPassEncoderDrawIndirectArgs& args)
     let RenderPassEncoderDrawIndirect(self : nativeint, indirectBuffer : nativeint, indirectOffset : uint64) =
         let mutable args = {
@@ -2489,7 +2489,7 @@ module WebGPU =
             IndirectOffset : uint64
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderDrawIndexedIndirect")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderDrawIndexedIndirect")>]
     extern void _RenderPassEncoderDrawIndexedIndirect(RenderPassEncoderDrawIndexedIndirectArgs& args)
     let RenderPassEncoderDrawIndexedIndirect(self : nativeint, indirectBuffer : nativeint, indirectOffset : uint64) =
         let mutable args = {
@@ -2509,7 +2509,7 @@ module WebGPU =
             DrawCountBufferOffset : uint64
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderMultiDrawIndirect")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderMultiDrawIndirect")>]
     extern void _RenderPassEncoderMultiDrawIndirect(RenderPassEncoderMultiDrawIndirectArgs& args)
     let RenderPassEncoderMultiDrawIndirect(self : nativeint, indirectBuffer : nativeint, indirectOffset : uint64, maxDrawCount : uint32, drawCountBuffer : nativeint, drawCountBufferOffset : uint64) =
         let mutable args = {
@@ -2532,7 +2532,7 @@ module WebGPU =
             DrawCountBufferOffset : uint64
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderMultiDrawIndexedIndirect")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderMultiDrawIndexedIndirect")>]
     extern void _RenderPassEncoderMultiDrawIndexedIndirect(RenderPassEncoderMultiDrawIndexedIndirectArgs& args)
     let RenderPassEncoderMultiDrawIndexedIndirect(self : nativeint, indirectBuffer : nativeint, indirectOffset : uint64, maxDrawCount : uint32, drawCountBuffer : nativeint, drawCountBufferOffset : uint64) =
         let mutable args = {
@@ -2544,17 +2544,17 @@ module WebGPU =
             RenderPassEncoderMultiDrawIndexedIndirectArgs.DrawCountBufferOffset = drawCountBufferOffset;
         }
         _RenderPassEncoderMultiDrawIndexedIndirect(&args)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderExecuteBundles")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderExecuteBundles")>]
     extern void RenderPassEncoderExecuteBundles(nativeint self, unativeint bundleCount, nativeint* bundles)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderInsertDebugMarker")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderInsertDebugMarker")>]
     extern void RenderPassEncoderInsertDebugMarker(nativeint self, StringView markerLabel)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderPopDebugGroup")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderPopDebugGroup")>]
     extern void RenderPassEncoderPopDebugGroup(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderPushDebugGroup")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderPushDebugGroup")>]
     extern void RenderPassEncoderPushDebugGroup(nativeint self, StringView groupLabel)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderSetStencilReference")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderSetStencilReference")>]
     extern void RenderPassEncoderSetStencilReference(nativeint self, uint32 reference)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderSetBlendConstant")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderSetBlendConstant")>]
     extern void RenderPassEncoderSetBlendConstant(nativeint self, Color* color)
     [<Struct; StructLayout(LayoutKind.Sequential)>]
     type RenderPassEncoderSetViewportArgs = 
@@ -2568,7 +2568,7 @@ module WebGPU =
             MaxDepth : float32
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderSetViewport")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderSetViewport")>]
     extern void _RenderPassEncoderSetViewport(RenderPassEncoderSetViewportArgs& args)
     let RenderPassEncoderSetViewport(self : nativeint, x : float32, y : float32, width : float32, height : float32, minDepth : float32, maxDepth : float32) =
         let mutable args = {
@@ -2581,7 +2581,7 @@ module WebGPU =
             RenderPassEncoderSetViewportArgs.MaxDepth = maxDepth;
         }
         _RenderPassEncoderSetViewport(&args)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderSetScissorRect")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderSetScissorRect")>]
     extern void RenderPassEncoderSetScissorRect(nativeint self, uint32 x, uint32 y, uint32 width, uint32 height)
     [<Struct; StructLayout(LayoutKind.Sequential)>]
     type RenderPassEncoderSetVertexBufferArgs = 
@@ -2593,7 +2593,7 @@ module WebGPU =
             Size : uint64
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderSetVertexBuffer")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderSetVertexBuffer")>]
     extern void _RenderPassEncoderSetVertexBuffer(RenderPassEncoderSetVertexBufferArgs& args)
     let RenderPassEncoderSetVertexBuffer(self : nativeint, slot : uint32, buffer : nativeint, offset : uint64, size : uint64) =
         let mutable args = {
@@ -2614,7 +2614,7 @@ module WebGPU =
             Size : uint64
         }
 
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderSetIndexBuffer")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderSetIndexBuffer")>]
     extern void _RenderPassEncoderSetIndexBuffer(RenderPassEncoderSetIndexBufferArgs& args)
     let RenderPassEncoderSetIndexBuffer(self : nativeint, buffer : nativeint, format : IndexFormat, offset : uint64, size : uint64) =
         let mutable args = {
@@ -2625,97 +2625,97 @@ module WebGPU =
             RenderPassEncoderSetIndexBufferArgs.Size = size;
         }
         _RenderPassEncoderSetIndexBuffer(&args)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderBeginOcclusionQuery")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderBeginOcclusionQuery")>]
     extern void RenderPassEncoderBeginOcclusionQuery(nativeint self, uint32 queryIndex)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderEndOcclusionQuery")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderEndOcclusionQuery")>]
     extern void RenderPassEncoderEndOcclusionQuery(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderWriteTimestamp")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderWriteTimestamp")>]
     extern void RenderPassEncoderWriteTimestamp(nativeint self, nativeint querySet, uint32 queryIndex)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderPixelLocalStorageBarrier")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderPixelLocalStorageBarrier")>]
     extern void RenderPassEncoderPixelLocalStorageBarrier(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderEnd")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderEnd")>]
     extern void RenderPassEncoderEnd(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderSetLabel")>]
     extern void RenderPassEncoderSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderRelease")>]
     extern void RenderPassEncoderRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPassEncoderAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderAddRef")>]
     extern void RenderPassEncoderAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPipelineGetBindGroupLayout")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPipelineGetBindGroupLayout")>]
     extern nativeint RenderPipelineGetBindGroupLayout(nativeint self, uint32 groupIndex)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPipelineSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPipelineSetLabel")>]
     extern void RenderPipelineSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPipelineRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPipelineRelease")>]
     extern void RenderPipelineRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuRenderPipelineAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPipelineAddRef")>]
     extern void RenderPipelineAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuSamplerSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSamplerSetLabel")>]
     extern void SamplerSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuSamplerRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSamplerRelease")>]
     extern void SamplerRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuSamplerAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSamplerAddRef")>]
     extern void SamplerAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuShaderModuleGetCompilationInfo")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuShaderModuleGetCompilationInfo")>]
     extern void ShaderModuleGetCompilationInfo(nativeint self, nativeint callback, nativeint userdata)
-    [<DllImport("WebGPU", EntryPoint="gpuShaderModuleGetCompilationInfoF")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuShaderModuleGetCompilationInfoF")>]
     extern Future ShaderModuleGetCompilationInfoF(nativeint self, CompilationInfoCallbackInfo callbackInfo)
-    [<DllImport("WebGPU", EntryPoint="gpuShaderModuleGetCompilationInfo2")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuShaderModuleGetCompilationInfo2")>]
     extern Future ShaderModuleGetCompilationInfo2(nativeint self, CompilationInfoCallbackInfo2 callbackInfo)
-    [<DllImport("WebGPU", EntryPoint="gpuShaderModuleSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuShaderModuleSetLabel")>]
     extern void ShaderModuleSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuShaderModuleRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuShaderModuleRelease")>]
     extern void ShaderModuleRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuShaderModuleAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuShaderModuleAddRef")>]
     extern void ShaderModuleAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuSurfaceConfigure")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSurfaceConfigure")>]
     extern void SurfaceConfigure(nativeint self, SurfaceConfiguration* config)
-    [<DllImport("WebGPU", EntryPoint="gpuSurfaceGetCapabilities")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSurfaceGetCapabilities")>]
     extern Status SurfaceGetCapabilities(nativeint self, nativeint adapter, SurfaceCapabilities* capabilities)
-    [<DllImport("WebGPU", EntryPoint="gpuSurfaceGetCurrentTexture")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSurfaceGetCurrentTexture")>]
     extern void SurfaceGetCurrentTexture(nativeint self, SurfaceTexture* surfaceTexture)
-    [<DllImport("WebGPU", EntryPoint="gpuSurfacePresent")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSurfacePresent")>]
     extern void SurfacePresent(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuSurfaceUnconfigure")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSurfaceUnconfigure")>]
     extern void SurfaceUnconfigure(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuSurfaceSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSurfaceSetLabel")>]
     extern void SurfaceSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuSurfaceRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSurfaceRelease")>]
     extern void SurfaceRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuSurfaceAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuSurfaceAddRef")>]
     extern void SurfaceAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuTextureCreateView")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuTextureCreateView")>]
     extern nativeint TextureCreateView(nativeint self, TextureViewDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuTextureCreateErrorView")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuTextureCreateErrorView")>]
     extern nativeint TextureCreateErrorView(nativeint self, TextureViewDescriptor* descriptor)
-    [<DllImport("WebGPU", EntryPoint="gpuTextureSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuTextureSetLabel")>]
     extern void TextureSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuTextureGetWidth")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuTextureGetWidth")>]
     extern uint32 TextureGetWidth(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuTextureGetHeight")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuTextureGetHeight")>]
     extern uint32 TextureGetHeight(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuTextureGetDepthOrArrayLayers")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuTextureGetDepthOrArrayLayers")>]
     extern uint32 TextureGetDepthOrArrayLayers(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuTextureGetMipLevelCount")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuTextureGetMipLevelCount")>]
     extern uint32 TextureGetMipLevelCount(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuTextureGetSampleCount")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuTextureGetSampleCount")>]
     extern uint32 TextureGetSampleCount(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuTextureGetDimension")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuTextureGetDimension")>]
     extern TextureDimension TextureGetDimension(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuTextureGetFormat")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuTextureGetFormat")>]
     extern TextureFormat TextureGetFormat(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuTextureGetUsage")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuTextureGetUsage")>]
     extern TextureUsage TextureGetUsage(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuTextureDestroy")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuTextureDestroy")>]
     extern void TextureDestroy(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuTextureRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuTextureRelease")>]
     extern void TextureRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuTextureAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuTextureAddRef")>]
     extern void TextureAddRef(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuTextureViewSetLabel")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuTextureViewSetLabel")>]
     extern void TextureViewSetLabel(nativeint self, StringView label)
-    [<DllImport("WebGPU", EntryPoint="gpuTextureViewRelease")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuTextureViewRelease")>]
     extern void TextureViewRelease(nativeint self)
-    [<DllImport("WebGPU", EntryPoint="gpuTextureViewAddRef")>]
+    [<DllImport("WebGPUNative", EntryPoint="gpuTextureViewAddRef")>]
     extern void TextureViewAddRef(nativeint self)
 type WebGPUCallbacks() =
     static let requestAdapterCallbackCallbacks = Dictionary<nativeint, RequestAdapterCallback>()

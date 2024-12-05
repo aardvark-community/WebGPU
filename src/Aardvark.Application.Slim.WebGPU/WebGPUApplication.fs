@@ -23,7 +23,7 @@ type WebGPUGlfwExtensions private() =
     
     static let GetSurfaceDescriptorNSWindow =
         lazy (
-            let lib = Aardvark.LoadLibrary(typeof<WebGPU>.Assembly, "libWebGPU.dylib")
+            let lib = Aardvark.LoadLibrary(typeof<WebGPU>.Assembly, "libWebGPUNative.dylib")
             let ptr = Aardvark.GetProcAddress(lib, "GetSurfaceDescriptorNSWindow")
             Marshal.GetDelegateForFunctionPointer<GetSurfaceDescriptorNSWindowDelegate> ptr
         )
