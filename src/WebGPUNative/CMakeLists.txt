@@ -28,11 +28,13 @@ elseif(WIN32)
 endif()
 
 add_definitions(-D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR )
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../libs/Native/WebGPU/${OS}/${ARCH}/)
+
 
 add_library(WebGPU SHARED ${FILES})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../include/dawn)
-target_link_libraries(WebGPU PRIVATE  ${CMAKE_CURRENT_SOURCE_DIR}/../../libs/Native/WebGPU/${OS}/${ARCH}/${DAWN_LIBRARY_NAME})
+target_link_libraries(WebGPU PRIVATE  ${DAWN_LIBRARY_NAME})
 
 SET(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/Native/WebGPU/") 
 install(TARGETS WebGPU DESTINATION ${OS}/${ARCH})

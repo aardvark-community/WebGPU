@@ -34,15 +34,13 @@ type WebGPU private() =
         match RuntimeInformation.ProcessArchitecture with
         | Architecture.Wasm -> ()
         | _ ->
-            //let t = Type.GetType("Aardvark.Application.Slim.Application, Aardvark.Application.Slim")
-            //if not (isNull t) then
-            //Aardvark.LoadLibrary(typeof<WebGPU>.Assembly, "libglfw.dylib") |> ignore
-            Aardvark.LoadLibrary(typeof<WebGPU>.Assembly, "libwebgpu_dawn.dylib") |> ignore
-            Aardvark.LoadLibrary(typeof<WebGPU>.Assembly, "libWebGPU.dylib") |> ignore
-            
-            
-  
-            ()
+            if RuntimeInformation.IsOSPlatform OSPlatform.OSX then
+                Aardvark.LoadLibrary(typeof<WebGPU>.Assembly, "libwebgpu_dawn.dylib") |> ignore
+            elif RuntimeInformation.IsOSPlatform OSPlatform.Linux then
+                Aardvark.LoadLibrary(typeof<WebGPU>.Assembly, "libwebgpu_dawn.so") |> ignore
+            elif RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+                Aardvark.LoadLibrary(typeof<WebGPU>.Assembly, "webgpu_dawn.dll") |> ignore
+                
         
     
     static let instanceFeatures =
