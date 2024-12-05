@@ -33,9 +33,10 @@ type WebGPUGlfwExtensions private() =
         let win = Silk.NET.GLFW.GlfwNativeWindow(descriptor.Glfw, descriptor.Window)
         let next = 
             if win.Win32.HasValue then
-                let struct(adapter, monitor, hwnd) = win.Win32.Value
-                let hInstance = Marshal.GetHINSTANCE null
-                { Next = null; Hinstance = hInstance; Hwnd = hwnd } :> ISurfaceDescriptorExtension
+                let struct(hwnd, _, hinstance) = win.Win32.Value
+                //let m = System.Reflection.Assembly.GetEntryAssembly().Modules |> Seq.head
+                //let hInstance = Marshal.GetHINSTANCE m
+                { Next = null; Hinstance = hinstance; Hwnd = hwnd } :> ISurfaceDescriptorExtension
             elif win.Cocoa.HasValue then
                 let layer = GetSurfaceDescriptorNSWindow.Value.Invoke(win.Cocoa.Value)
                 { Next = null; Layer = layer } :> ISurfaceDescriptorExtension
