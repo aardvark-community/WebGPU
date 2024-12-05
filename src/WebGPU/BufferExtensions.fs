@@ -145,12 +145,13 @@ type WebGPUBufferExtensions private() =
     
     [<Extension>]
     static member Upload<'a when 'a : unmanaged>(this : CommandEncoder, src : System.ReadOnlySpan<'a>, dst : Buffer, dstOffset : int64) =
-        use tmp = dst.Device.CreateBuffer { Next = null; Label = null; Size = int64 src.Length; Usage = BufferUsage.MapWrite ||| BufferUsage.CopySrc; MappedAtCreation = true }
-        let dstPtr = tmp.GetMappedRange(0L, int64 src.Length)
+        let size = int64 src.Length * int64 sizeof<'a>
+        use tmp = dst.Device.CreateBuffer { Next = null; Label = null; Size = size; Usage = BufferUsage.MapWrite ||| BufferUsage.CopySrc; MappedAtCreation = true }
+        let dstPtr = tmp.GetMappedRange(0L, size)
         let dstSpan = System.Span<'a>(NativePtr.toVoidPtr (NativePtr.ofNativeInt<byte> dstPtr), src.Length)
         src.CopyTo(dstSpan)
         tmp.Unmap()
-        this.CopyBufferToBuffer(tmp, 0L, dst, dstOffset, int64 src.Length)
+        this.CopyBufferToBuffer(tmp, 0L, dst, dstOffset, size)
  
     [<Extension>]
     static member Upload<'a when 'a : unmanaged>(this : CommandEncoder, src : System.ReadOnlySpan<'a>, dst : Buffer) =

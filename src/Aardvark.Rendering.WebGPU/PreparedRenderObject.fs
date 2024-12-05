@@ -10,7 +10,7 @@ type PreparedRenderObject =
     {
         Original        : RenderObject
         Pipeline        : AdaptiveResource<RenderPipeline>
-        VertexBuffers   : array<int * AdaptiveResource<Buffer>>
+        VertexBuffers   : array<int * int64 * AdaptiveResource<Buffer>>
         IndexBuffer     : option<AdaptiveResource<Buffer> * IndexFormat * int64>
         BindGroups      : AdaptiveResource<array<BindGroup>>
         Draw            : aval<list<DrawCallInfo>>
@@ -34,13 +34,13 @@ type PreparedRenderObject =
     
     member x.Acquire() =
         x.Pipeline.Acquire()
-        for _, vbo in x.VertexBuffers do vbo.Acquire()
+        for _, _, vbo in x.VertexBuffers do vbo.Acquire()
         x.BindGroups.Acquire()
         x.IndexBuffer |> Option.iter (fun (ib, _, _) -> ib.Acquire())
         
     member x.Release() =
         x.Pipeline.Release()
-        for _, vbo in x.VertexBuffers do vbo.Release()
+        for _, _, vbo in x.VertexBuffers do vbo.Release()
         x.BindGroups.Release()
         x.IndexBuffer |> Option.iter (fun (ib, _, _) -> ib.Release())
         x.Activation.Dispose()
@@ -136,9 +136,9 @@ type PreparedRenderObjectExtensions private() =
                 this.SetBindGroup(i, groups.[i], [||])
             
             for i in 0 .. o.VertexBuffers.Length - 1 do
-                let slot, vbo = o.VertexBuffers.[i]
+                let slot, offset, vbo = o.VertexBuffers.[i]
                 let buffer = vbo.GetHandle(cmd, token)
-                this.SetVertexBuffer(slot, buffer, 0L, buffer.Size)
+                this.SetVertexBuffer(slot, buffer, offset, buffer.Size)
 
             match o.IndexBuffer with
             | Some (index, format, offset) ->

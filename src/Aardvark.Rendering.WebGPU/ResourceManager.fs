@@ -132,12 +132,12 @@ module AdaptiveRenderPipelineDescription =
                     match att.SingleValue with
                     | Some singleValue ->
                         let elemType = singleValue.ContentType
-                        Some (p.paramLocation, { Type = elemType; Stride = 0; PerInstance = true })
+                        Some (p.paramLocation, { Type = elemType; Stride = 0; PerInstance = false })
                     | None ->
-                        let stride =
-                            if att.Stride = 0 then att.ElementType.GetCLRSize()
-                            else att.Stride
                         let t = att.ElementType
+                        let stride =
+                            if att.Stride = 0 then t.GetCLRSize()
+                            else att.Stride
                         Some (p.paramLocation, { Type = t; Stride = stride; PerInstance = perInstance })
                 
                 match o.VertexAttributes.TryGetAttribute (Symbol.Create p.paramSemantic) with
@@ -185,31 +185,34 @@ type ResourceManager(device : Device) =
         | _ -> ()
     
     member private x.CreateSingleValueBuffer(usage : BufferUsage, value : IAdaptiveValue) =
-        bufferCache.GetOrCreate((usage, value), fun (usage, value) ->
+        bufferCache.GetOrCreate((usage, value), fun (usage, adaptiveValue) ->
+            let usage = usage ||| BufferUsage.CopyDst ||| BufferUsage.CopySrc
             { new AdaptiveResource<Buffer>() with
                 override x.Create(cmd, token) =
-                    let value = value.GetValueUntyped token
+                    let value = adaptiveValue.GetValueUntyped token
                     
                     let res =
                         device.CreateBuffer {
                             Label = null
                             Next = null
-                            Size = sizeof<V4f>
+                            Size = adaptiveValue.ContentType.GetCLRSize()
                             Usage = usage
                             MappedAtCreation = false
                         }
                     
                     match value with
                     | :? V4f as value -> cmd.Upload([|value|], res)
+                    | :? C4f as value -> cmd.Upload([|value|], res)
                     | :? V4i as value -> cmd.Upload([|value|], res)
-                    | _ -> failwith $"bad singlevalue: {value}"
+                    | :? C4b as value -> cmd.Upload([|value|], res)
+                    | _ -> failwith $"bad singlevalue: {value.GetType().FullName}"
                     res
                     
                 override x.Destroy b =
                     b.Dispose()
                     
                 override x.TryUpdate(buffer, cmd, token) =
-                    let value = value.GetValueUntyped token
+                    let value = adaptiveValue.GetValueUntyped token
                     match value with
                     | :? V4f as value -> cmd.Upload([|value|], buffer)
                     | :? V4i as value -> cmd.Upload([|value|], buffer)
@@ -710,10 +713,10 @@ type ResourceManager(device : Device) =
                     match att.SingleValue with
                     | Some singleValue ->
                         let buffer = x.CreateSingleValueBuffer(BufferUsage.Vertex, singleValue)
-                        Some (p.paramLocation, buffer)
+                        Some (p.paramLocation, int64 att.Offset, buffer)
                     | None ->
                         let buffer = x.CreateBuffer(BufferUsage.Vertex, att.Buffer)
-                        Some (p.paramLocation, buffer)
+                        Some (p.paramLocation, int64 att.Offset, buffer)
                 
                 match vertexAttributes.TryGetAttribute (Symbol.Create p.paramSemantic) with
                 | Some att -> ofBufferView false att
