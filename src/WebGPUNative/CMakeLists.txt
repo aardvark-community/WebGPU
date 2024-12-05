@@ -32,6 +32,10 @@ link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../libs/Native/WebGPU/${OS}/${AR
 
 
 add_library(WebGPU SHARED ${FILES})
+set(CMAKE_INSTALL_RPATH "$ORIGIN")
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+set_target_properties(WebGPU PROPERTIES INSTALL_RPATH "$ORIGIN")
+
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../include/dawn)
 target_link_libraries(WebGPU PRIVATE  ${DAWN_LIBRARY_NAME})
