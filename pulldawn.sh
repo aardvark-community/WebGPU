@@ -1,5 +1,22 @@
 #!/bin/sh
 
+OS=`uname -s`
+ARCH_FLAGS=""
+if [ "$OS" = "Darwin" ];
+then
+    if [ "$1" = "x86_64" ]; then
+        ARCH="x86_64"
+    elif [ "$1" = "arm64" ]; then
+        ARCH="arm64"
+    else
+        ARCH=`uname -m | tail -1`
+    fi
+
+    ARCH_FLAGS="-DCMAKE_OSX_ARCHITECTURES=$ARCH"
+
+fi
+echo "$OS $ARCH"
+
 cd src/WebGPUNative
 
 rm -dfr tmp
@@ -15,7 +32,7 @@ python tools/fetch_dawn_dependencies.py --use-test-deps
 mkdir -p out/Release
 cd out/Release
 
-cmake -S ../.. -B . -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_INSTALL_PREFIX=./blabber
+cmake -S ../.. -B . -DCMAKE_BUILD_TYPE=Release $ARCH_FLAGS -DCMAKE_INSTALL_PREFIX=./blabber
 make -j
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -32,4 +49,4 @@ cd ../../../../../../
 
 dotnet fsi Generator.fsx
 
-./buildnative.sh
+./buildnative.sh $ARCH

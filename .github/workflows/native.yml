@@ -1,0 +1,181 @@
+name: Native Build 
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - Generator.fsx
+      - .github/workflows/native.yml
+      - pulldawn.sh
+      - pulldawn.cmd
+      - buildnative.sh
+      - buildnative.cmd
+jobs:
+  mac_x64:
+    name: MacOS (x64)
+    runs-on: macos-13
+    steps:  
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build Dawn & Native Libraries
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+        run: ./pulldawn.sh x86_64
+      - name: Install Dotnet 
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Restore Tools
+        run: dotnet tool restore
+      - name: Restore
+        run: dotnet paket restore
+      - name: Test
+        run: dotnet run --project src/Test/Test.fsproj
+      - name: Upload MacOS native libs
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac_x64
+          path: libs/Native/WebGPU/mac/AMD64/
+  mac_arm64:
+    name: MacOS (arm64)
+    runs-on: macos-13
+    steps:  
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build Dawn & Native Libraries
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+        run: ./pulldawn.sh arm64
+      - name: Install Dotnet 
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Restore Tools
+        run: dotnet tool restore
+      - name: Restore
+        run: dotnet paket restore
+      - name: Test
+        run: dotnet run --project src/Test/Test.fsproj
+      - name: Upload MacOS native libs
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac_arm64
+          path: libs/Native/WebGPU/mac/ARM64/
+  linux_x64:
+    name: Linux (x64)
+    runs-on: ubuntu-20.04
+    steps:  
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build Dawn & Native Libraries
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+        run: ./pulldawn.sh
+      - name: Install Dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Restore Tools
+        run: dotnet tool restore
+      - name: Restore
+        run: dotnet paket restore
+      - name: Test
+        run: dotnet run --project src/Test/Test.fsproj
+      - name: Upload Linux native libs
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux_x64
+          path: |
+            libs/Native/WebGPU/linux/AMD64/
+            include/
+            dawn.json
+  windows_x64:
+    name: Windows (x64)
+    runs-on: windows-latest 
+    steps:  
+      - name: Checkout
+        uses: actions/checkout@v2 
+      - name: Build Dawn & Native Libraries
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+        shell: cmd
+        run: pulldawn.cmd
+      - name: Install Dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Restore Tools
+        shell: cmd
+        run: dotnet tool restore 
+      - name: Restore
+        shell: cmd
+        run: dotnet paket restore
+      - name: Test
+        shell: cmd
+        run: dotnet run --project src\Test\Test.fsproj
+      - name: Upload Windows native libs
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows_x64
+          path: libs/Native/WebGPU/windows/AMD64/
+
+  final:
+    name: "Pack"
+    needs: 
+      - mac_x64
+      - windows_x64
+      - linux_x64
+      - mac_arm64
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Download MacOS dependencies (x64)
+        uses: actions/download-artifact@v4
+        with:
+          name: mac_x64
+          merge-multiple: true
+      - name: Download MacOS dependencies (arm64)
+        uses: actions/download-artifact@v4
+        with:
+          name: mac_arm64
+          merge-multiple: true
+      - name: Download Linux dependencies 
+        uses: actions/download-artifact@v4
+        with:
+          name: linux_x64
+          merge-multiple: true
+      - name: Download Windows dependencies
+        uses: actions/download-artifact@v4
+        with:
+          name: windows_x64
+          merge-multiple: true
+      - name: Install Dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Restore Tools
+        run: dotnet tool restore
+      - name: Restore
+        run: dotnet paket restore
+      - name: Build
+        run: dotnet build GPU.sln -c Release
+#      - name: Pack
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        run: dotnet aardpack GPU.sln --notag
+#      - name: Upload Package
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: packages
+#          path: bin\pack
+#      - name: GitHub Packages
+#        env:
+#          NUGET_KEY: ${{ secrets.GITHUB_TOKEN }} 
+#        shell: cmd
+#        run: dotnet nuget push "bin\pack\*.nupkg" -k %NUGET_KEY% -s "https://nuget.pkg.github.com/aardvark-community/index.json" --skip-duplicate
+#      - name: NuGet
+#        env:
+#          NUGET_KEY: ${{ secrets.NUGET_KEY }} 
+#        shell: cmd
+#        run: dotnet nuget push "bin\pack\*.nupkg" -k %NUGET_KEY% -s "https://api.nuget.org/v3/index.json" --skip-duplicate

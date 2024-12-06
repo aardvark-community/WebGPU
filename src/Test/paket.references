@@ -1,0 +1,10 @@
+FSharp.Core
+FSharp.Data.Adaptive
+Aardvark.Base
+Aardvark.Rendering
+Aardvark.PixImage.ImageSharp
+Aardvark.SceneGraph
+Aardvark.Build
+Silk.NET.GLFW
+Aardvark.Application
+Aardvark.Application.Slim
