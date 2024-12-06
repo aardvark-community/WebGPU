@@ -665,11 +665,30 @@ module Native =
         printfn "#include <stdlib.h>"
         printfn "#include <stdio.h>"
         printfn "#include <stdint.h>"
-        printfn "#include \"webgpu/webgpu.h\""
-        printfn " "
-        // if not emscripten then
-        //     printfn "#include \"webgpu_glfw.h\""
-
+        
+        if emscripten then
+        
+            printfn "#include \"webgpu/webgpu.h\""
+        else
+            printfn "#include \"dawn/webgpu_cpp.h\""
+            printfn "#include \"dawn/webgpu.h\""
+            printfn "#include \"dawn/native/DawnNative.h\""
+            
+            printfn "DllExport(int) gpuEnumerateAdapters(const WGPURequestAdapterOptions* options, int adaptersLen, WGPUAdapter* adapters, WGPUInstance* inst) {"
+            printfn "    auto instance = std::make_unique<dawn::native::Instance>();"
+            printfn "    auto i = instance->Get();"
+            printfn "    *inst = i;"
+            printfn "    wgpuInstanceAddRef(i);"
+            printfn "    std::vector<dawn::native::Adapter> res = instance->EnumerateAdapters(options);"
+            printfn "    if(adapters && adaptersLen >= res.size()) {"
+            printfn "        for(int i = 0; i < res.size(); i++) {"
+            printfn "            "
+            printfn "            adapters[i] = res[i].Get();"
+            printfn "            wgpuAdapterAddRef(adapters[i]);"
+            printfn "        }"
+            printfn "    }"
+            printfn "    return res.size();"
+            printfn "}"
 
         //     printfn "DllExport(WGPUSurface) gpuInstanceCreateGLFWSurface(WGPUInstance self, const void* window) {"
         //     printfn "    auto instance = wgpu::Instance(self);"

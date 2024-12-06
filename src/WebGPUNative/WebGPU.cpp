@@ -6,7 +6,6 @@
 #include "dawn/webgpu_cpp.h"
 #include "dawn/webgpu.h"
 #include "dawn/native/DawnNative.h"
-
 DllExport(int) gpuEnumerateAdapters(const WGPURequestAdapterOptions* options, int adaptersLen, WGPUAdapter* adapters, WGPUInstance* inst) {
     auto instance = std::make_unique<dawn::native::Instance>();
     auto i = instance->Get();
@@ -19,11 +18,9 @@ DllExport(int) gpuEnumerateAdapters(const WGPURequestAdapterOptions* options, in
             adapters[i] = res[i].Get();
             wgpuAdapterAddRef(adapters[i]);
         }
-
     }
     return res.size();
 }
-
 DllExport(WGPUInstance) gpuCreateInstance(const WGPUInstanceDescriptor* descriptor) {
     return wgpuCreateInstance(descriptor);
 }

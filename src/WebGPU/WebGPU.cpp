@@ -7,7 +7,6 @@ typedef void* WGPUExternalTexture;
 #include <stdio.h>
 #include <stdint.h>
 #include "webgpu/webgpu.h"
- 
 EMSCRIPTEN_KEEPALIVE WGPUInstance gpuCreateInstance(const WGPUInstanceDescriptor* descriptor) {
     return wgpuCreateInstance(descriptor);
 }

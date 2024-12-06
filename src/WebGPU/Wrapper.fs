@@ -1793,9 +1793,6 @@ type DawnBufferDescriptorErrorInfoFromWireClient =
     end
 module WebGPU = 
 
-    [<DllImport("WebGPUNative")>]
-    extern int gpuEnumerateAdapters(RequestAdapterOptions* options, int adaptersLen, nativeint* adapters, nativeint* instance)
-    
     [<DllImport("WebGPUNative", EntryPoint="gpuCreateInstance")>]
     extern nativeint CreateInstance(InstanceDescriptor* descriptor)
     [<DllImport("WebGPUNative", EntryPoint="gpuGetProcAddress")>]

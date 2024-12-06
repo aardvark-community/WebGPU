@@ -23,6 +23,9 @@ type FrontendDeviceDescriptor =
 
 
 #nowarn "9"
+
+type private GpuEnumerateAdaptersDelegate = delegate of nativeptr<WebGPU.Raw.RequestAdapterOptions> * int32 * nativeptr<nativeint> * nativeptr<nativeint> -> int
+
 [<AbstractClass; Sealed>]
 type WebGPU private() =
     // static let instanceFeatures =
@@ -45,6 +48,12 @@ type WebGPU private() =
             | Architecture.Wasm ->
                 [||], new Instance(0n)
             | _ ->
+                
+                let gpuEnumerateAdapters =
+                    let lib = Aardvark.LoadLibrary(typeof<WebGPU>.Assembly, "WebGPUNative")
+                    let sym = Aardvark.GetProcAddress(lib, "gpuEnumerateAdapters")
+                    Marshal.GetDelegateForFunctionPointer<GpuEnumerateAdaptersDelegate>(sym)
+                    
                 let opt =
                     {
                         Next = null
@@ -61,12 +70,12 @@ type WebGPU private() =
                     use pAdapters = fixed arr
                     let mutable instance = 0n
                     use pInstance = fixed &instance
-                    let cnt = WebGPU.Raw.WebGPU.gpuEnumerateAdapters(pOpt, arr.Length, pAdapters, pInstance)
+                    let cnt = gpuEnumerateAdapters.Invoke(pOpt, arr.Length, pAdapters, pInstance)
                     if cnt > arr.Length then
                         WebGPU.Raw.WebGPU.InstanceRelease(instance)
                         arr <- Array.zeroCreate cnt
                         use pAdapters = fixed arr
-                        WebGPU.Raw.WebGPU.gpuEnumerateAdapters(pOpt, arr.Length, pAdapters, pInstance) |> ignore
+                        gpuEnumerateAdapters.Invoke(pOpt, arr.Length, pAdapters, pInstance) |> ignore
                         
                     
                     let adapters = arr |> Array.truncate cnt |> Array.map (fun h -> new Adapter(h))
