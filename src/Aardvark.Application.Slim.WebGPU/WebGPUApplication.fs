@@ -34,8 +34,6 @@ type WebGPUGlfwExtensions private() =
         let next = 
             if win.Win32.HasValue then
                 let struct(hwnd, _, hinstance) = win.Win32.Value
-                //let m = System.Reflection.Assembly.GetEntryAssembly().Modules |> Seq.head
-                //let hInstance = Marshal.GetHINSTANCE m
                 { Next = null; Hinstance = hinstance; Hwnd = hwnd } :> ISurfaceDescriptorExtension
             elif win.Cocoa.HasValue then
                 let layer = GetSurfaceDescriptorNSWindow.Value.Invoke(win.Cocoa.Value)
@@ -223,16 +221,9 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
     static member Create(debug : bool) =
         task {
             let instance = WebGPU.CreateInstance()
-            
-            let! adapter =
-                instance.RequestAdapterAsync {
-                    Next = null
-                    CompatibleSurface = Surface.Null
-                    PowerPreference = PowerPreference.HighPerformance
-                    BackendType = BackendType.Undefined
-                    ForceFallbackAdapter = false
-                    CompatibilityMode = false
-                }
+            let! adapter = instance.CreateAdapter()
+                
+            printfn "%A" adapter.Info
                 
             let! device =
                 adapter.RequestDeviceAsync {

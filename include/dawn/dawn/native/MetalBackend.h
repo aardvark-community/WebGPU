@@ -1,4 +1,4 @@
-// Copyright 2023 The Dawn & Tint Authors
+// Copyright 2018 The Dawn & Tint Authors
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -25,33 +25,31 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef __EMSCRIPTEN__
-#error "Do not include this header. Emscripten already provides headers needed for WebGPU."
+#ifndef INCLUDE_DAWN_NATIVE_METALBACKEND_H_
+#define INCLUDE_DAWN_NATIVE_METALBACKEND_H_
+
+#include <webgpu/webgpu.h>
+
+#include "dawn/native/dawn_native_export.h"
+
+#if defined(__OBJC__)
+#import <Metal/Metal.h>
 #endif
 
-#ifndef WEBGPU_CPP_CHAINED_STRUCT_H_
-#define WEBGPU_CPP_CHAINED_STRUCT_H_
+namespace dawn::native::metal {
 
-#include <cstddef>
-#include <cstdint>
+// When making Metal interop with other APIs, we need to be careful that QueueSubmit doesn't
+// mean that the operations will be visible to other APIs/Metal devices right away. macOS
+// does have a global queue of graphics operations, but the command buffers are inserted there
+// when they are "scheduled". Submitting other operations before the command buffer is
+// scheduled could lead to races in who gets scheduled first and incorrect rendering.
+DAWN_NATIVE_EXPORT void WaitForCommandsToBeScheduled(WGPUDevice device);
 
-// This header file declares the ChainedStruct structures separately from the WebGPU
-// headers so that dependencies can directly extend structures without including the larger header
-// which exposes capabilities that may require correctly set proc tables.
-namespace wgpu {
+#if defined(__OBJC__)
+// Return the MTLDevice corresponding to the WGPUDevice.
+DAWN_NATIVE_EXPORT id<MTLDevice> GetMTLDevice(WGPUDevice device);
+#endif
 
-    enum class SType : uint32_t;
+}  // namespace dawn::native::metal
 
-    struct ChainedStruct {
-        ChainedStruct const * nextInChain = nullptr;
-        SType sType = SType(0u);
-    };
-
-    struct ChainedStructOut {
-        ChainedStructOut * nextInChain = nullptr;
-        SType sType = SType(0u);
-    };
-
-}  // namespace wgpu}
-
-#endif // WEBGPU_CPP_CHAINED_STRUCT_H_
+#endif  // INCLUDE_DAWN_NATIVE_METALBACKEND_H_

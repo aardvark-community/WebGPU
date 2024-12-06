@@ -261,10 +261,7 @@ module Shader =
     let withDevice (action : Device -> 'r) =
         let mutable running = true
         use instance =
-            WebGPU.CreateInstance {
-                Next = null
-                Features = WebGPU.InstanceFeatures
-            }
+            WebGPU.CreateInstance()
             
         let start =
             ThreadStart(fun () ->
@@ -275,14 +272,7 @@ module Shader =
         thread.Start()
 
         use adapter = 
-            instance.RequestAdapterAsync({
-                Next = null
-                CompatibleSurface = Surface.Null
-                PowerPreference = PowerPreference.HighPerformance
-                BackendType = BackendType.Undefined
-                ForceFallbackAdapter = false
-                CompatibilityMode = false
-            }).Result
+            instance.CreateAdapter().Result
      
         use device = 
             adapter.RequestDeviceAsync({
@@ -529,6 +519,7 @@ module Scene =
 [<EntryPoint>]
 let main _argv =
     Aardvark.Init()
+    
     let app = WebGPUApplication.Create(true).Result
     let win = app.CreateGameWindow(vsync = true)
     

@@ -15,7 +15,7 @@ python tools/fetch_dawn_dependencies.py --use-test-deps
 mkdir -p out/Release
 cd out/Release
 
-cmake ../.. -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
+cmake -S ../.. -B . -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_INSTALL_PREFIX=./blabber
 make -j
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -25,13 +25,9 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
   mkdir -p ../../../../../../libs/Native/WebGPU/linux/AMD64/
   cp ./src/dawn/native/libwebgpu_dawn.so ../../../../../../libs/Native/WebGPU/linux/AMD64/
 fi
-cp ./gen/include/dawn/webgpu.h ../../../../../../include/dawn/webgpu
-cp ./gen/include/dawn/webgpu_cpp.h ../../../../../../include/dawn
-cp ./gen/src/emdawnwebgpu/include/webgpu/webgpu_cpp_chained_struct.h ../../../../../../include/dawn/webgpu
-cp ../../include/webgpu/webgpu_enum_class_bitmasks.h ../../../../../../include/dawn/webgpu
-cp ./gen/webgpu-headers/webgpu.h ../../../../../../include/webgpu.h
+cp -r ./gen/include/ ../../../../../../include/dawn
+cp -r ../../include/ ../../../../../../include/dawn
 cp ../../src/dawn/dawn.json ../../../../../../
-
 cd ../../../../../../
 
 dotnet fsi Generator.fsx

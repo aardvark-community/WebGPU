@@ -25,33 +25,40 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef __EMSCRIPTEN__
-#error "Do not include this header. Emscripten already provides headers needed for WebGPU."
-#endif
+#ifndef INCLUDE_DAWN_NATIVE_D3D11BACKEND_H_
+#define INCLUDE_DAWN_NATIVE_D3D11BACKEND_H_
 
-#ifndef WEBGPU_CPP_CHAINED_STRUCT_H_
-#define WEBGPU_CPP_CHAINED_STRUCT_H_
+#include <d3d11_1.h>
+#include <wrl/client.h>
 
-#include <cstddef>
-#include <cstdint>
+#include <memory>
 
-// This header file declares the ChainedStruct structures separately from the WebGPU
-// headers so that dependencies can directly extend structures without including the larger header
-// which exposes capabilities that may require correctly set proc tables.
-namespace wgpu {
+#include "dawn/native/D3DBackend.h"
 
-    enum class SType : uint32_t;
+namespace dawn::native::d3d11 {
 
-    struct ChainedStruct {
-        ChainedStruct const * nextInChain = nullptr;
-        SType sType = SType(0u);
-    };
+DAWN_NATIVE_EXPORT Microsoft::WRL::ComPtr<ID3D11Device> GetD3D11Device(WGPUDevice device);
 
-    struct ChainedStructOut {
-        ChainedStructOut * nextInChain = nullptr;
-        SType sType = SType(0u);
-    };
+// May be chained on RequestAdapterOptions
+struct DAWN_NATIVE_EXPORT RequestAdapterOptionsD3D11Device : wgpu::ChainedStruct {
+    RequestAdapterOptionsD3D11Device() {
+        sType = static_cast<wgpu::SType>(WGPUSType_RequestAdapterOptionsD3D11Device);
+    }
 
-}  // namespace wgpu}
+    Microsoft::WRL::ComPtr<ID3D11Device> device;
+};
 
-#endif // WEBGPU_CPP_CHAINED_STRUCT_H_
+// May be chained on SharedTextureMemoryDescriptor
+struct DAWN_NATIVE_EXPORT SharedTextureMemoryD3D11Texture2DDescriptor : wgpu::ChainedStruct {
+    SharedTextureMemoryD3D11Texture2DDescriptor() {
+        sType = static_cast<wgpu::SType>(WGPUSType_SharedTextureMemoryD3D11Texture2DDescriptor);
+    }
+
+    // This ID3D11Texture2D object must be created from the same ID3D11Device used in the
+    // WGPUDevice.
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+};
+
+}  // namespace dawn::native::d3d11
+
+#endif  // INCLUDE_DAWN_NATIVE_D3D11BACKEND_H_

@@ -493,7 +493,7 @@ type RequestAdapterCallbackInfo2 =
             Mode = backend.Mode
             Callback = failwith "cannot read callbacks"//TODO2 map [(callback, backend.Callback); (mode, backend.Mode); (next in chain, backend.NextInChain); ... ]
         }
-type Adapter internal(handle : nativeint) =
+type Adapter (handle : nativeint) =
     static let device = Unchecked.defaultof<Device>
     static let nullptr = new Adapter(Unchecked.defaultof<_>)
     let instance =

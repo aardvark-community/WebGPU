@@ -1,4 +1,4 @@
-// Copyright 2023 The Dawn & Tint Authors
+// Copyright 2020 The Dawn & Tint Authors
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -25,33 +25,23 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef __EMSCRIPTEN__
-#error "Do not include this header. Emscripten already provides headers needed for WebGPU."
+#ifndef INCLUDE_DAWN_DAWN_THREAD_DISPATCH_PROC_H_
+#define INCLUDE_DAWN_DAWN_THREAD_DISPATCH_PROC_H_
+
+#include "dawn/dawn_proc.h"
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-#ifndef WEBGPU_CPP_CHAINED_STRUCT_H_
-#define WEBGPU_CPP_CHAINED_STRUCT_H_
+// Call dawnProcSetProcs(&dawnThreadDispatchProcTable) and then use dawnProcSetPerThreadProcs
+// to set per-thread procs.
+WGPU_EXPORT extern DawnProcTable dawnThreadDispatchProcTable;
+WGPU_EXPORT void dawnProcSetDefaultThreadProcs(const DawnProcTable* procs);
+WGPU_EXPORT void dawnProcSetPerThreadProcs(const DawnProcTable* procs);
 
-#include <cstddef>
-#include <cstdint>
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
-// This header file declares the ChainedStruct structures separately from the WebGPU
-// headers so that dependencies can directly extend structures without including the larger header
-// which exposes capabilities that may require correctly set proc tables.
-namespace wgpu {
-
-    enum class SType : uint32_t;
-
-    struct ChainedStruct {
-        ChainedStruct const * nextInChain = nullptr;
-        SType sType = SType(0u);
-    };
-
-    struct ChainedStructOut {
-        ChainedStructOut * nextInChain = nullptr;
-        SType sType = SType(0u);
-    };
-
-}  // namespace wgpu}
-
-#endif // WEBGPU_CPP_CHAINED_STRUCT_H_
+#endif  // INCLUDE_DAWN_DAWN_THREAD_DISPATCH_PROC_H_

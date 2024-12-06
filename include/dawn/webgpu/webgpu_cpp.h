@@ -1,4 +1,4 @@
-// Copyright 2023 The Dawn & Tint Authors
+// Copyright 2022 The Dawn & Tint Authors
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -25,33 +25,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef __EMSCRIPTEN__
-#error "Do not include this header. Emscripten already provides headers needed for WebGPU."
-#endif
+#ifndef INCLUDE_WEBGPU_WEBGPU_CPP_H_
+#define INCLUDE_WEBGPU_WEBGPU_CPP_H_
 
-#ifndef WEBGPU_CPP_CHAINED_STRUCT_H_
-#define WEBGPU_CPP_CHAINED_STRUCT_H_
+#include "dawn/webgpu_cpp.h"
 
-#include <cstddef>
-#include <cstdint>
-
-// This header file declares the ChainedStruct structures separately from the WebGPU
-// headers so that dependencies can directly extend structures without including the larger header
-// which exposes capabilities that may require correctly set proc tables.
-namespace wgpu {
-
-    enum class SType : uint32_t;
-
-    struct ChainedStruct {
-        ChainedStruct const * nextInChain = nullptr;
-        SType sType = SType(0u);
-    };
-
-    struct ChainedStructOut {
-        ChainedStructOut * nextInChain = nullptr;
-        SType sType = SType(0u);
-    };
-
-}  // namespace wgpu}
-
-#endif // WEBGPU_CPP_CHAINED_STRUCT_H_
+#endif  // INCLUDE_WEBGPU_WEBGPU_CPP_H_

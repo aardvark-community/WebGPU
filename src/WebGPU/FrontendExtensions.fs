@@ -25,37 +25,119 @@ type FrontendDeviceDescriptor =
 #nowarn "9"
 [<AbstractClass; Sealed>]
 type WebGPU private() =
-    static let instanceFeatures =
+    // static let instanceFeatures =
+    //     lazy (
+    //         match RuntimeInformation.ProcessArchitecture with
+    //         | Architecture.Wasm ->
+    //             { TimedWaitAnyEnable = false; TimedWaitAnyMaxCount = 0L }
+    //         | _ -> 
+    //             let mutable ftrs = Unchecked.defaultof<WebGPU.Raw.InstanceFeatures>
+    //             use ptr = fixed &ftrs
+    //             let status = WebGPU.Raw.WebGPU.GetInstanceFeatures(ptr)
+    //             if status <> Status.Success then
+    //                 failwith $"could not get instance features: {status}"
+    //             InstanceFeatures.Read(Unchecked.defaultof<_>, &ftrs)
+    //     )
+    //
+    static let adaptersAndInstance =
         lazy (
             match RuntimeInformation.ProcessArchitecture with
             | Architecture.Wasm ->
-                { TimedWaitAnyEnable = false; TimedWaitAnyMaxCount = 0L }
-            | _ -> 
-                let mutable ftrs = Unchecked.defaultof<WebGPU.Raw.InstanceFeatures>
-                use ptr = fixed &ftrs
-                let status = WebGPU.Raw.WebGPU.GetInstanceFeatures(ptr)
-                if status <> Status.Success then
-                    failwith $"could not get instance features: {status}"
-                InstanceFeatures.Read(Unchecked.defaultof<_>, &ftrs)
-        )
+                [||], new Instance(0n)
+            | _ ->
+                let opt =
+                    {
+                        Next = null
+                        CompatibleSurface = Surface.Null
+                        PowerPreference = PowerPreference.Undefined
+                        BackendType = BackendType.Undefined
+                        ForceFallbackAdapter = false
+                        CompatibilityMode = false
+                    }
+                
+                opt.Pin (Unchecked.defaultof<_>, fun pOpt ->
+                    
+                    let mutable arr = Array.zeroCreate 128
+                    use pAdapters = fixed arr
+                    let mutable instance = 0n
+                    use pInstance = fixed &instance
+                    let cnt = WebGPU.Raw.WebGPU.gpuEnumerateAdapters(pOpt, arr.Length, pAdapters, pInstance)
+                    if cnt > arr.Length then
+                        WebGPU.Raw.WebGPU.InstanceRelease(instance)
+                        arr <- Array.zeroCreate cnt
+                        use pAdapters = fixed arr
+                        WebGPU.Raw.WebGPU.gpuEnumerateAdapters(pOpt, arr.Length, pAdapters, pInstance) |> ignore
+                        
+                    
+                    let adapters = arr |> Array.truncate cnt |> Array.map (fun h -> new Adapter(h))
+                    let instance = new Instance(instance)
+                    adapters, instance
+                )
+    )
     
-    static member InstanceFeatures = instanceFeatures.Value
+    //static member InstanceFeatures = instanceFeatures.Value
 
-    static member CreateInstance(descriptor : InstanceDescriptor) =
-        match RuntimeInformation.ProcessArchitecture with
-        | Architecture.Wasm ->
-            new Instance(0n)
-        | _ ->
-            descriptor.Pin(Unchecked.defaultof<_>, fun ptr ->
-                let handle = WebGPU.Raw.WebGPU.CreateInstance(ptr)
-                new Instance(handle)
-            )
-    
     static member CreateInstance() =
-        WebGPU.CreateInstance {
-            Next = null
-            Features = WebGPU.InstanceFeatures
+        let a, i = adaptersAndInstance.Value
+        i.AddRef()
+        i
+    
+    [<Extension>]
+    static member private RequestAdapterAsync(this : Instance, options : RequestAdapterOptions) =
+        let tcs = TaskCompletionSource<Adapter>()
+        this.RequestAdapter(options, RequestAdapterCallback(fun disp status adapter message ->
+            disp.Dispose()
+            match status with
+            | RequestAdapterStatus.Success -> tcs.SetResult adapter
+            | _ -> tcs.SetException(Exception $"could not create adapter: {message}")
+        ))
+        tcs.Task
+        
+    [<Extension>]
+    static member CreateAdapter (_instance : Instance, choose : Adapter[] -> Adapter) =
+     
+        let adapters, instance = adaptersAndInstance.Value
+        
+        task {
+            if adapters.Length = 0 then
+                return!
+                    instance.RequestAdapterAsync {
+                        Next = null
+                        CompatibleSurface = Surface.Null
+                        PowerPreference = PowerPreference.Undefined
+                        BackendType = BackendType.Undefined
+                        ForceFallbackAdapter = false
+                        CompatibilityMode = false
+                    } 
+            else
+                let res = choose adapters
+                res.AddRef()
+                return res
         }
+    
+    [<Extension>]
+    static member CreateAdapter (instance : Instance) =
+        WebGPU.CreateAdapter (instance, Array.minBy (fun a -> int a.Info.AdapterType))
+    
+    //
+    // static member CreateInstance(descriptor : InstanceDescriptor) =
+    //         
+    //     match RuntimeInformation.ProcessArchitecture with
+    //     | Architecture.Wasm ->
+    //         new Instance(0n)
+    //     | _ ->
+    //         let (_, instance) = adaptersAndInstance.Value
+    //         instance
+    //         // descriptor.Pin(Unchecked.defaultof<_>, fun ptr ->
+    //         //     let handle = WebGPU.Raw.WebGPU.CreateInstance(ptr)
+    //         //     new Instance(handle)
+    //         // )
+    //
+    // static member CreateInstance() =
+    //     WebGPU.CreateInstance {
+    //         Next = null
+    //         Features = WebGPU.InstanceFeatures
+    //     }
 
 [<AbstractClass; Sealed>]
 type WebGPUExtensions private() =
@@ -138,16 +220,6 @@ type WebGPUExtensions private() =
             failwith $"could not get surface capabilities: {status}"
         SurfaceCapabilities.Read(Unchecked.defaultof<_>, &res)
     
-    [<Extension>]
-    static member RequestAdapterAsync(this : Instance, options : RequestAdapterOptions) =
-        let tcs = TaskCompletionSource<Adapter>()
-        this.RequestAdapter(options, RequestAdapterCallback(fun disp status adapter message ->
-            disp.Dispose()
-            match status with
-            | RequestAdapterStatus.Success -> tcs.SetResult adapter
-            | _ -> tcs.SetException(Exception $"could not create adapter: {message}")
-        ))
-        tcs.Task
    
     [<Extension>]
     static member GetWGSLLanguageFeatures(this : Instance) =

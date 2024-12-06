@@ -25,33 +25,35 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef __EMSCRIPTEN__
-#error "Do not include this header. Emscripten already provides headers needed for WebGPU."
-#endif
+#ifndef INCLUDE_DAWN_NATIVE_D3DBACKEND_H_
+#define INCLUDE_DAWN_NATIVE_D3DBACKEND_H_
 
-#ifndef WEBGPU_CPP_CHAINED_STRUCT_H_
-#define WEBGPU_CPP_CHAINED_STRUCT_H_
+#include <dxgi1_4.h>
+#include <webgpu/webgpu_cpp_chained_struct.h>
+#include <windows.h>
+#include <wrl/client.h>
 
-#include <cstddef>
-#include <cstdint>
+#include <memory>
+#include <vector>
 
-// This header file declares the ChainedStruct structures separately from the WebGPU
-// headers so that dependencies can directly extend structures without including the larger header
-// which exposes capabilities that may require correctly set proc tables.
-namespace wgpu {
+#include "dawn/native/DawnNative.h"
 
-    enum class SType : uint32_t;
+namespace dawn::native::d3d {
 
-    struct ChainedStruct {
-        ChainedStruct const * nextInChain = nullptr;
-        SType sType = SType(0u);
-    };
+class ExternalImageDXGIImpl;
 
-    struct ChainedStructOut {
-        ChainedStructOut * nextInChain = nullptr;
-        SType sType = SType(0u);
-    };
+DAWN_NATIVE_EXPORT Microsoft::WRL::ComPtr<IDXGIAdapter> GetDXGIAdapter(WGPUAdapter adapter);
 
-}  // namespace wgpu}
+// Can be chained in WGPURequestAdapterOptions
+struct DAWN_NATIVE_EXPORT RequestAdapterOptionsLUID : wgpu::ChainedStruct {
+    RequestAdapterOptionsLUID();
 
-#endif // WEBGPU_CPP_CHAINED_STRUCT_H_
+    ::LUID adapterLUID;
+};
+
+// Chrome uses 0 as acquire key.
+static constexpr uint64_t kDXGIKeyedMutexAcquireKey = 0;
+
+}  // namespace dawn::native::d3d
+
+#endif  // INCLUDE_DAWN_NATIVE_D3DBACKEND_H_

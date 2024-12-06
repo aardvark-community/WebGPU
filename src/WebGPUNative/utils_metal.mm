@@ -26,7 +26,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "dllexport.h"
-#include "webgpu_cpp.h"
+#include "dawn/webgpu_cpp.h"
 #import <AppKit/NSApplication.h>
 #import <AppKit/NSWindow.h>
 #import <QuartzCore/CAMetalLayer.h>
