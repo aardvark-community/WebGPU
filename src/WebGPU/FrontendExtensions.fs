@@ -117,17 +117,35 @@ type WebGPU private() =
     
     [<Extension>]
     static member CreateAdapter (instance : Instance) =
-        let choose (adapters : Adapter[]) =
-            let mutable res = None
-            while Option.isNone res do
-                printfn "choose adapter"
-                for i, a in Array.indexed adapters do
-                    printfn "  % 2d: %s %A %A" i a.Info.Device a.Info.AdapterType a.Info.BackendType
-                match Int32.TryParse(Console.ReadLine().Trim()) with
-                | true, i when i >= 0 && i < adapters.Length -> res <- Some adapters.[i]
-                | _ -> printfn "invalid choice"
-            res.Value
-        WebGPU.CreateAdapter (instance, choose)
+        
+        let score (a : AdapterInfo) =
+            let typeScore = 
+                match a.AdapterType with
+                | AdapterType.DiscreteGPU -> 3
+                | AdapterType.IntegratedGPU -> 2
+                | AdapterType.CPU -> 1
+                | _ -> 0
+            let backendScore =
+                if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+                    match a.BackendType with
+                    | BackendType.D3D12 -> 3
+                    | BackendType.D3D11 -> 2
+                    | BackendType.Vulkan -> 1
+                    | _ -> 0
+                elif RuntimeInformation.IsOSPlatform OSPlatform.OSX then
+                    match a.BackendType with
+                    | BackendType.Metal -> 3
+                    | _ -> 0
+                elif RuntimeInformation.IsOSPlatform OSPlatform.Linux then
+                    match a.BackendType with
+                    | BackendType.Vulkan -> 3
+                    | _ -> 0
+                else
+                    0
+            
+            typeScore * 100 + backendScore
+        
+        WebGPU.CreateAdapter (instance, Array.maxBy (fun a -> score a.Info))
     
     //
     // static member CreateInstance(descriptor : InstanceDescriptor) =
