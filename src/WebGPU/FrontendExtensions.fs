@@ -117,7 +117,17 @@ type WebGPU private() =
     
     [<Extension>]
     static member CreateAdapter (instance : Instance) =
-        WebGPU.CreateAdapter (instance, Array.minBy (fun a -> int a.Info.AdapterType))
+        let choose (adapters : Adapter[]) =
+            let mutable res = None
+            while Option.isNone res do
+                printfn "choose adapter"
+                for i, a in Array.indexed adapters do
+                    printfn "  % 2d: %s %A %A" i a.Info.Device a.Info.AdapterType a.Info.BackendType
+                match Int32.TryParse(Console.ReadLine().Trim()) with
+                | true, i when i >= 0 && i < adapters.Length -> res <- Some adapters.[i]
+                | _ -> printfn "invalid choice"
+            res.Value
+        WebGPU.CreateAdapter (instance, choose)
     
     //
     // static member CreateInstance(descriptor : InstanceDescriptor) =
