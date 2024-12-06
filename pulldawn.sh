@@ -2,12 +2,14 @@
 
 OS=`uname -s`
 ARCH_FLAGS=""
+ARCH_NAME="AMD64"
 if [ "$OS" = "Darwin" ];
 then
     if [ "$1" = "x86_64" ]; then
         ARCH="x86_64"
     elif [ "$1" = "arm64" ]; then
         ARCH="arm64"
+        ARCH_NAME="ARM64"
     else
         ARCH=`uname -m | tail -1`
     fi
@@ -35,12 +37,12 @@ cd out/Release
 cmake -S ../.. -B . -DCMAKE_BUILD_TYPE=Release $ARCH_FLAGS -DCMAKE_INSTALL_PREFIX=./blabber
 make -j
 
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  mkdir -p ../../../../../../libs/Native/WebGPU/mac/ARM64/
-  cp ./src/dawn/native/libwebgpu_dawn.dylib ../../../../../../libs/Native/WebGPU/mac/ARM64/
-elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-  mkdir -p ../../../../../../libs/Native/WebGPU/linux/AMD64/
-  cp ./src/dawn/native/libwebgpu_dawn.so ../../../../../../libs/Native/WebGPU/linux/AMD64/
+if [ "$OS" = "Darwin" ]; then
+  mkdir -p ../../../../../../libs/Native/WebGPU/mac/$ARCH_NAME/
+  cp ./src/dawn/native/libwebgpu_dawn.dylib ../../../../../../libs/Native/WebGPU/mac/$ARCH_NAME/
+else
+  mkdir -p ../../../../../../libs/Native/WebGPU/linux/$ARCH_NAME/
+  cp ./src/dawn/native/libwebgpu_dawn.so ../../../../../../libs/Native/WebGPU/linux/$ARCH_NAME/
 fi
 cp -r ./gen/include/ ../../../../../../include/dawn
 cp -r ../../include/ ../../../../../../include/dawn
