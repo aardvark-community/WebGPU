@@ -67,6 +67,8 @@ jobs:
     steps:  
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Install Dependencies
+        run: sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
       - name: Build Dawn & Native Libraries
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
