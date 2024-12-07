@@ -17,7 +17,6 @@ then
 fi
 echo "$OS $ARCH"
 
-
 cd src/WebGPUNative
 rm -dfr build
 mkdir build
