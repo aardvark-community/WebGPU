@@ -41,7 +41,7 @@ mkdir -p out/Release
 cd out/Release
 
 cmake -S ../.. -B . -DCMAKE_BUILD_TYPE=Release $ARCH_FLAGS -DCMAKE_INSTALL_PREFIX=./blabber
-make -j webgpu_dawn
+make webgpu_dawn
 
 if [ "$OS" = "Darwin" ]; then
   mkdir -p ../../../../../../libs/Native/WebGPU/mac/$ARCH_NAME/
