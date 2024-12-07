@@ -98,7 +98,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2 
       - name: Install Windows SDK
-        uses: Lamparter/Install-WindowsSdk@1.0
+        uses: Lamparter/Install-WindowsSdk@v1.0.0
         with:
           buildNumber: '26100'
       - name: Build Dawn & Native Libraries
