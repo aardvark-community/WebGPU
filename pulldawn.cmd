@@ -24,7 +24,7 @@ mkdir Release
 pushd Release
 
 cmake ..\.. -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release --target webgpu_dawn || goto :error
+cmake --build . --config Release --target ALL_BUILD 
 xcopy /Y .\Release\webgpu_dawn.dll ..\..\..\..\..\..\libs\Native\WebGPU\windows\AMD64\
 xcopy /Y .\src\dawn\native\Release\webgpu_dawn.lib ..\..\..\..\..\..\libs\Native\WebGPU\windows\AMD64\
 xcopy /Y .\gen\include\dawn\webgpu.h ..\..\..\..\..\..\include\dawn\webgpu
