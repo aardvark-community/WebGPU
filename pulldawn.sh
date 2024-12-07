@@ -25,9 +25,15 @@ rm -dfr tmp
 mkdir -p tmp
 cd tmp
 
-git clone https://github.com/google/dawn.git
+# git clone https://github.com/google/dawn.git
+mkdir dawn
 cd dawn
-git checkout 2d08f945c77094a754bed83d2821cd60dbf81c6c
+git init
+git remote add origin https://github.com/google/dawn.git
+git fetch --depth 1 origin 2d08f945c77094a754bed83d2821cd60dbf81c6c
+git reset --hard FETCH_HEAD
+
+# git checkout 2d08f945c77094a754bed83d2821cd60dbf81c6c
 
 python tools/fetch_dawn_dependencies.py --use-test-deps
 
@@ -35,7 +41,7 @@ mkdir -p out/Release
 cd out/Release
 
 cmake -S ../.. -B . -DCMAKE_BUILD_TYPE=Release $ARCH_FLAGS -DCMAKE_INSTALL_PREFIX=./blabber
-make -j
+make -j webgpu_dawn
 
 if [ "$OS" = "Darwin" ]; then
   mkdir -p ../../../../../../libs/Native/WebGPU/mac/$ARCH_NAME/

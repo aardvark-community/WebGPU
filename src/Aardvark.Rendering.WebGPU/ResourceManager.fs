@@ -187,10 +187,18 @@ type ResourceManager(device : Device) =
     member private x.CreateSingleValueBuffer(usage : BufferUsage, value : IAdaptiveValue) =
         bufferCache.GetOrCreate((usage, value), fun (usage, adaptiveValue) ->
             let usage = usage ||| BufferUsage.CopyDst ||| BufferUsage.CopySrc
+            
+            let inline uploadSingleValue (cmd : CommandEncoder) (res : Buffer) (value : obj)=
+                match value with
+                | :? V4f as value -> cmd.Upload([|value|], res)
+                | :? C4f as value -> cmd.Upload([|value|], res)
+                | :? V4i as value -> cmd.Upload([|value|], res)
+                | :? C4b as value -> cmd.Upload([|value|], res)
+                | _ -> failwith $"bad singlevalue: {value.GetType().FullName}"
+            
             { new AdaptiveResource<Buffer>() with
                 override x.Create(cmd, token) =
                     let value = adaptiveValue.GetValueUntyped token
-                    
                     let res =
                         device.CreateBuffer {
                             Label = null
@@ -200,12 +208,7 @@ type ResourceManager(device : Device) =
                             MappedAtCreation = false
                         }
                     
-                    match value with
-                    | :? V4f as value -> cmd.Upload([|value|], res)
-                    | :? C4f as value -> cmd.Upload([|value|], res)
-                    | :? V4i as value -> cmd.Upload([|value|], res)
-                    | :? C4b as value -> cmd.Upload([|value|], res)
-                    | _ -> failwith $"bad singlevalue: {value.GetType().FullName}"
+                    uploadSingleValue cmd res value
                     res
                     
                 override x.Destroy b =
@@ -213,10 +216,7 @@ type ResourceManager(device : Device) =
                     
                 override x.TryUpdate(buffer, cmd, token) =
                     let value = adaptiveValue.GetValueUntyped token
-                    match value with
-                    | :? V4f as value -> cmd.Upload([|value|], buffer)
-                    | :? V4i as value -> cmd.Upload([|value|], buffer)
-                    | _ -> failwith $"bad singlevalue: {value}"
+                    uploadSingleValue cmd buffer value
                     true
             
             }
@@ -273,7 +273,11 @@ type ResourceManager(device : Device) =
                             else
                                 false
                     else
-                        false
+                        match value.GetValueUntyped token with
+                        | :? Buffer as b ->
+                            b = buffer
+                        | _ ->
+                            false
             }
         )
     
@@ -306,7 +310,11 @@ type ResourceManager(device : Device) =
                 | _ ->
                     failwith ""
             member x.TryUpdate(handle, cmd, token) =
-                false
+                match value.GetValueUntyped token with
+                | :? Texture as t ->
+                    t = handle
+                | _ ->
+                    false
             member x.Destroy(handle) =
                 handle.Dispose()
         }

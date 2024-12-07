@@ -22,7 +22,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.gitignore = .gitignore
 		dotnet-tools.json = .config/dotnet-tools.json
 		buildnative.sh = buildnative.sh
-		pulldawn.sh = pulldawn.sh
+		pulldawn.sh = pulldawn.sh 
+		native.yml = .github\workflows\native.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WebGPUNative", "WebGPUNative", "{5A7FC622-B393-4DFD-8789-503B04F22AFB}"
