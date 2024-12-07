@@ -101,6 +101,7 @@ jobs:
         uses: ChristopheLav/windows-sdk-install@v1
         with:
           version-sdk: 26100
+          features: 'OptionId.DesktopCPPx64'
       - name: Build Dawn & Native Libraries
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
