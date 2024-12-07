@@ -40,15 +40,15 @@ python tools/fetch_dawn_dependencies.py --use-test-deps
 mkdir -p out/Release
 cd out/Release
 
-cmake -S ../.. -B . -DCMAKE_BUILD_TYPE=Release $ARCH_FLAGS -DCMAKE_INSTALL_PREFIX=./blabber
+cmake -S ../.. -B . -DCMAKE_BUILD_TYPE=Release $ARCH_FLAGS -DCMAKE_INSTALL_PREFIX=./blabber || { echo 'cmake failed' ; exit 1; }
 make webgpu_dawn
 
 if [ "$OS" = "Darwin" ]; then
   mkdir -p ../../../../../../libs/Native/WebGPU/mac/$ARCH_NAME/
-  cp ./src/dawn/native/libwebgpu_dawn.dylib ../../../../../../libs/Native/WebGPU/mac/$ARCH_NAME/
+  cp ./src/dawn/native/libwebgpu_dawn.dylib ../../../../../../libs/Native/WebGPU/mac/$ARCH_NAME/ || { echo 'copy failed' ; exit 1; }
 else
   mkdir -p ../../../../../../libs/Native/WebGPU/linux/$ARCH_NAME/
-  cp ./src/dawn/native/libwebgpu_dawn.so ../../../../../../libs/Native/WebGPU/linux/$ARCH_NAME/
+  cp ./src/dawn/native/libwebgpu_dawn.so ../../../../../../libs/Native/WebGPU/linux/$ARCH_NAME/ || { echo 'copy failed' ; exit 1; }
 fi
 cp -r ./gen/include/ ../../../../../../include/dawn
 cp -r ../../include/ ../../../../../../include/dawn

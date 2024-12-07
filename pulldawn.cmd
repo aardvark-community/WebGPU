@@ -24,7 +24,7 @@ mkdir Release
 pushd Release
 
 cmake ..\.. -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release --target ALL_BUILD
+cmake --build . --config Release --target webgpu_dawn || goto :error
 xcopy /Y .\Release\webgpu_dawn.dll ..\..\..\..\..\..\libs\Native\WebGPU\windows\AMD64\
 xcopy /Y .\src\dawn\native\Release\webgpu_dawn.lib ..\..\..\..\..\..\libs\Native\WebGPU\windows\AMD64\
 xcopy /Y .\gen\include\dawn\webgpu.h ..\..\..\..\..\..\include\dawn\webgpu
@@ -43,4 +43,8 @@ popd
 dotnet fsi Generator.fsx
 
 CALL buildnative.cmd
+goto :EOF
 
+:error
+echo Failed with error #%errorlevel%.
+exit /b %errorlevel%
