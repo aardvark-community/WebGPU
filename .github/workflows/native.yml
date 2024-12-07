@@ -97,6 +97,10 @@ jobs:
     steps:  
       - name: Checkout
         uses: actions/checkout@v2 
+      - name: Install Windows SDK
+        uses: Lamparter/Install-WindowsSdk@latest
+        with:
+          buildNumber: '26100'
       - name: Build Dawn & Native Libraries
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
