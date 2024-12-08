@@ -103,13 +103,15 @@ jobs:
           vulkan-query-version: 1.3.204.0
           vulkan-components: Vulkan-Headers, Vulkan-Loader
           vulkan-use-cache: true
-
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: 3.11
-      - name: Set up Ninja
-        uses: seanmiddleditch/gha-setup-ninja@master
+      - name: Install Windows SDK
+        uses: ChristopheLav/windows-sdk-install@v1
+        with:
+          version-sdk: 26100
+          features: 'OptionId.UWPCPP,OptionId.DesktopCPParm64'
       - name: Setup VS DevEnv
         uses: seanmiddleditch/gha-setup-vsdevenv@master
       - name: Build Dawn & Native Libraries
