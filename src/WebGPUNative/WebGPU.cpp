@@ -30,7 +30,7 @@ DllExport(WGPUProc) gpuGetProcAddress(WGPUStringView procName) {
 DllExport(WGPUInstance) gpuAdapterGetInstance(WGPUAdapter self) {
     return wgpuAdapterGetInstance(self);
 }
-DllExport(WGPUStatus) gpuAdapterGetLimits(WGPUAdapter self, WGPUSupportedLimits* limits) {
+DllExport(WGPUStatus) gpuAdapterGetLimits(WGPUAdapter self, WGPULimits* limits) {
     return wgpuAdapterGetLimits(self, limits);
 }
 DllExport(WGPUStatus) gpuAdapterGetInfo(WGPUAdapter self, WGPUAdapterInfo* info) {
@@ -42,19 +42,13 @@ DllExport(bool) gpuAdapterHasFeature(WGPUAdapter self, WGPUFeatureName feature) 
 DllExport(void) gpuAdapterGetFeatures(WGPUAdapter self, WGPUSupportedFeatures* features) {
     return wgpuAdapterGetFeatures(self, features);
 }
-DllExport(void) gpuAdapterRequestDevice(WGPUAdapter self, const WGPUDeviceDescriptor* descriptor, WGPURequestDeviceCallback callback, void * userdata) {
-    return wgpuAdapterRequestDevice(self, descriptor, callback, userdata);
-}
-DllExport(WGPUFuture) gpuAdapterRequestDeviceF(WGPUAdapter self, const WGPUDeviceDescriptor* options, WGPURequestDeviceCallbackInfo callbackInfo) {
-    return wgpuAdapterRequestDeviceF(self, options, callbackInfo);
-}
-DllExport(WGPUFuture) gpuAdapterRequestDevice2(WGPUAdapter self, const WGPUDeviceDescriptor* options, WGPURequestDeviceCallbackInfo2 callbackInfo) {
-    return wgpuAdapterRequestDevice2(self, options, callbackInfo);
+DllExport(WGPUFuture) gpuAdapterRequestDevice(WGPUAdapter self, const WGPUDeviceDescriptor* options, WGPURequestDeviceCallbackInfo callbackInfo) {
+    return wgpuAdapterRequestDevice(self, options, callbackInfo);
 }
 DllExport(WGPUDevice) gpuAdapterCreateDevice(WGPUAdapter self, const WGPUDeviceDescriptor* descriptor) {
     return wgpuAdapterCreateDevice(self, descriptor);
 }
-DllExport(WGPUStatus) gpuAdapterGetFormatCapabilities(WGPUAdapter self, WGPUTextureFormat format, WGPUFormatCapabilities* capabilities) {
+DllExport(WGPUStatus) gpuAdapterGetFormatCapabilities(WGPUAdapter self, WGPUTextureFormat format, WGPUDawnFormatCapabilities* capabilities) {
     return wgpuAdapterGetFormatCapabilities(self, format, capabilities);
 }
 DllExport(void) gpuAdapterRelease(WGPUAdapter self) {
@@ -81,28 +75,20 @@ DllExport(void) gpuBindGroupLayoutRelease(WGPUBindGroupLayout self) {
 DllExport(void) gpuBindGroupLayoutAddRef(WGPUBindGroupLayout self) {
     return wgpuBindGroupLayoutAddRef(self);
 }
-typedef struct { 
-   WGPUBuffer Self;
-   WGPUMapMode Mode;
-   size_t Offset;
-   size_t Size;
-   WGPUBufferMapCallback Callback;
-   void * Userdata;
-} WGPUBufferMapAsyncArgs;
-DllExport(void) gpuBufferMapAsync(const WGPUBufferMapAsyncArgs* args) {
-    return wgpuBufferMapAsync(args->Self, args->Mode, args->Offset, args->Size, args->Callback, args->Userdata);
-}
-DllExport(WGPUFuture) gpuBufferMapAsyncF(WGPUBuffer self, WGPUMapMode mode, size_t offset, size_t size, WGPUBufferMapCallbackInfo callbackInfo) {
-    return wgpuBufferMapAsyncF(self, mode, offset, size, callbackInfo);
-}
-DllExport(WGPUFuture) gpuBufferMapAsync2(WGPUBuffer self, WGPUMapMode mode, size_t offset, size_t size, WGPUBufferMapCallbackInfo2 callbackInfo) {
-    return wgpuBufferMapAsync2(self, mode, offset, size, callbackInfo);
+DllExport(WGPUFuture) gpuBufferMapAsync(WGPUBuffer self, WGPUMapMode mode, size_t offset, size_t size, WGPUBufferMapCallbackInfo callbackInfo) {
+    return wgpuBufferMapAsync(self, mode, offset, size, callbackInfo);
 }
 DllExport(void *) gpuBufferGetMappedRange(WGPUBuffer self, size_t offset, size_t size) {
     return wgpuBufferGetMappedRange(self, offset, size);
 }
 DllExport(void const *) gpuBufferGetConstMappedRange(WGPUBuffer self, size_t offset, size_t size) {
     return wgpuBufferGetConstMappedRange(self, offset, size);
+}
+DllExport(WGPUStatus) gpuBufferWriteMappedRange(WGPUBuffer self, size_t offset, const void* data, size_t size) {
+    return wgpuBufferWriteMappedRange(self, offset, data, size);
+}
+DllExport(WGPUStatus) gpuBufferReadMappedRange(WGPUBuffer self, size_t offset, void* data, size_t size) {
+    return wgpuBufferReadMappedRange(self, offset, data, size);
 }
 DllExport(void) gpuBufferSetLabel(WGPUBuffer self, WGPUStringView label) {
     return wgpuBufferSetLabel(self, label);
@@ -157,13 +143,13 @@ typedef struct {
 DllExport(void) gpuCommandEncoderCopyBufferToBuffer(const WGPUCommandEncoderCopyBufferToBufferArgs* args) {
     return wgpuCommandEncoderCopyBufferToBuffer(args->Self, args->Source, args->SourceOffset, args->Destination, args->DestinationOffset, args->Size);
 }
-DllExport(void) gpuCommandEncoderCopyBufferToTexture(WGPUCommandEncoder self, const WGPUImageCopyBuffer* source, const WGPUImageCopyTexture* destination, const WGPUExtent3D* copySize) {
+DllExport(void) gpuCommandEncoderCopyBufferToTexture(WGPUCommandEncoder self, const WGPUTexelCopyBufferInfo* source, const WGPUTexelCopyTextureInfo* destination, const WGPUExtent3D* copySize) {
     return wgpuCommandEncoderCopyBufferToTexture(self, source, destination, copySize);
 }
-DllExport(void) gpuCommandEncoderCopyTextureToBuffer(WGPUCommandEncoder self, const WGPUImageCopyTexture* source, const WGPUImageCopyBuffer* destination, const WGPUExtent3D* copySize) {
+DllExport(void) gpuCommandEncoderCopyTextureToBuffer(WGPUCommandEncoder self, const WGPUTexelCopyTextureInfo* source, const WGPUTexelCopyBufferInfo* destination, const WGPUExtent3D* copySize) {
     return wgpuCommandEncoderCopyTextureToBuffer(self, source, destination, copySize);
 }
-DllExport(void) gpuCommandEncoderCopyTextureToTexture(WGPUCommandEncoder self, const WGPUImageCopyTexture* source, const WGPUImageCopyTexture* destination, const WGPUExtent3D* copySize) {
+DllExport(void) gpuCommandEncoderCopyTextureToTexture(WGPUCommandEncoder self, const WGPUTexelCopyTextureInfo* source, const WGPUTexelCopyTextureInfo* destination, const WGPUExtent3D* copySize) {
     return wgpuCommandEncoderCopyTextureToTexture(self, source, destination, copySize);
 }
 typedef struct { 
@@ -255,6 +241,9 @@ DllExport(void) gpuComputePassEncoderEnd(WGPUComputePassEncoder self) {
 DllExport(void) gpuComputePassEncoderSetLabel(WGPUComputePassEncoder self, WGPUStringView label) {
     return wgpuComputePassEncoderSetLabel(self, label);
 }
+DllExport(void) gpuComputePassEncoderSetImmediateData(WGPUComputePassEncoder self, uint32_t offset, const void* data, size_t size) {
+    return wgpuComputePassEncoderSetImmediateData(self, offset, data, size);
+}
 DllExport(void) gpuComputePassEncoderRelease(WGPUComputePassEncoder self) {
     return wgpuComputePassEncoderRelease(self);
 }
@@ -291,14 +280,8 @@ DllExport(WGPUCommandEncoder) gpuDeviceCreateCommandEncoder(WGPUDevice self, con
 DllExport(WGPUComputePipeline) gpuDeviceCreateComputePipeline(WGPUDevice self, const WGPUComputePipelineDescriptor* descriptor) {
     return wgpuDeviceCreateComputePipeline(self, descriptor);
 }
-DllExport(void) gpuDeviceCreateComputePipelineAsync(WGPUDevice self, const WGPUComputePipelineDescriptor* descriptor, WGPUCreateComputePipelineAsyncCallback callback, void * userdata) {
-    return wgpuDeviceCreateComputePipelineAsync(self, descriptor, callback, userdata);
-}
-DllExport(WGPUFuture) gpuDeviceCreateComputePipelineAsyncF(WGPUDevice self, const WGPUComputePipelineDescriptor* descriptor, WGPUCreateComputePipelineAsyncCallbackInfo callbackInfo) {
-    return wgpuDeviceCreateComputePipelineAsyncF(self, descriptor, callbackInfo);
-}
-DllExport(WGPUFuture) gpuDeviceCreateComputePipelineAsync2(WGPUDevice self, const WGPUComputePipelineDescriptor* descriptor, WGPUCreateComputePipelineAsyncCallbackInfo2 callbackInfo) {
-    return wgpuDeviceCreateComputePipelineAsync2(self, descriptor, callbackInfo);
+DllExport(WGPUFuture) gpuDeviceCreateComputePipelineAsync(WGPUDevice self, const WGPUComputePipelineDescriptor* descriptor, WGPUCreateComputePipelineAsyncCallbackInfo callbackInfo) {
+    return wgpuDeviceCreateComputePipelineAsync(self, descriptor, callbackInfo);
 }
 DllExport(WGPUExternalTexture) gpuDeviceCreateExternalTexture(WGPUDevice self, const WGPUExternalTextureDescriptor* externalTextureDescriptor) {
     return wgpuDeviceCreateExternalTexture(self, externalTextureDescriptor);
@@ -312,14 +295,8 @@ DllExport(WGPUPipelineLayout) gpuDeviceCreatePipelineLayout(WGPUDevice self, con
 DllExport(WGPUQuerySet) gpuDeviceCreateQuerySet(WGPUDevice self, const WGPUQuerySetDescriptor* descriptor) {
     return wgpuDeviceCreateQuerySet(self, descriptor);
 }
-DllExport(void) gpuDeviceCreateRenderPipelineAsync(WGPUDevice self, const WGPURenderPipelineDescriptor* descriptor, WGPUCreateRenderPipelineAsyncCallback callback, void * userdata) {
-    return wgpuDeviceCreateRenderPipelineAsync(self, descriptor, callback, userdata);
-}
-DllExport(WGPUFuture) gpuDeviceCreateRenderPipelineAsyncF(WGPUDevice self, const WGPURenderPipelineDescriptor* descriptor, WGPUCreateRenderPipelineAsyncCallbackInfo callbackInfo) {
-    return wgpuDeviceCreateRenderPipelineAsyncF(self, descriptor, callbackInfo);
-}
-DllExport(WGPUFuture) gpuDeviceCreateRenderPipelineAsync2(WGPUDevice self, const WGPURenderPipelineDescriptor* descriptor, WGPUCreateRenderPipelineAsyncCallbackInfo2 callbackInfo) {
-    return wgpuDeviceCreateRenderPipelineAsync2(self, descriptor, callbackInfo);
+DllExport(WGPUFuture) gpuDeviceCreateRenderPipelineAsync(WGPUDevice self, const WGPURenderPipelineDescriptor* descriptor, WGPUCreateRenderPipelineAsyncCallbackInfo callbackInfo) {
+    return wgpuDeviceCreateRenderPipelineAsync(self, descriptor, callbackInfo);
 }
 DllExport(WGPURenderBundleEncoder) gpuDeviceCreateRenderBundleEncoder(WGPUDevice self, const WGPURenderBundleEncoderDescriptor* descriptor) {
     return wgpuDeviceCreateRenderBundleEncoder(self, descriptor);
@@ -357,7 +334,7 @@ DllExport(void) gpuDeviceDestroy(WGPUDevice self) {
 DllExport(WGPUStatus) gpuDeviceGetAHardwareBufferProperties(WGPUDevice self, void * handle, WGPUAHardwareBufferProperties* properties) {
     return wgpuDeviceGetAHardwareBufferProperties(self, handle, properties);
 }
-DllExport(WGPUStatus) gpuDeviceGetLimits(WGPUDevice self, WGPUSupportedLimits* limits) {
+DllExport(WGPUStatus) gpuDeviceGetLimits(WGPUDevice self, WGPULimits* limits) {
     return wgpuDeviceGetLimits(self, limits);
 }
 DllExport(WGPUFuture) gpuDeviceGetLostFuture(WGPUDevice self) {
@@ -387,20 +364,14 @@ DllExport(void) gpuDeviceForceLoss(WGPUDevice self, WGPUDeviceLostReason typ, WG
 DllExport(void) gpuDeviceTick(WGPUDevice self) {
     return wgpuDeviceTick(self);
 }
-DllExport(void) gpuDeviceSetLoggingCallback(WGPUDevice self, WGPULoggingCallback callback, void * userdata) {
-    return wgpuDeviceSetLoggingCallback(self, callback, userdata);
+DllExport(void) gpuDeviceSetLoggingCallback(WGPUDevice self, WGPULoggingCallbackInfo callbackInfo) {
+    return wgpuDeviceSetLoggingCallback(self, callbackInfo);
 }
 DllExport(void) gpuDevicePushErrorScope(WGPUDevice self, WGPUErrorFilter filter) {
     return wgpuDevicePushErrorScope(self, filter);
 }
-DllExport(void) gpuDevicePopErrorScope(WGPUDevice self, WGPUErrorCallback oldCallback, void * userdata) {
-    return wgpuDevicePopErrorScope(self, oldCallback, userdata);
-}
-DllExport(WGPUFuture) gpuDevicePopErrorScopeF(WGPUDevice self, WGPUPopErrorScopeCallbackInfo callbackInfo) {
-    return wgpuDevicePopErrorScopeF(self, callbackInfo);
-}
-DllExport(WGPUFuture) gpuDevicePopErrorScope2(WGPUDevice self, WGPUPopErrorScopeCallbackInfo2 callbackInfo) {
-    return wgpuDevicePopErrorScope2(self, callbackInfo);
+DllExport(WGPUFuture) gpuDevicePopErrorScope(WGPUDevice self, WGPUPopErrorScopeCallbackInfo callbackInfo) {
+    return wgpuDevicePopErrorScope(self, callbackInfo);
 }
 DllExport(void) gpuDeviceSetLabel(WGPUDevice self, WGPUStringView label) {
     return wgpuDeviceSetLabel(self, label);
@@ -504,20 +475,14 @@ typedef struct {
 DllExport(WGPUWaitStatus) gpuInstanceWaitAny(const WGPUInstanceWaitAnyArgs* args) {
     return wgpuInstanceWaitAny(args->Self, args->FutureCount, args->Futures, args->TimeoutNS);
 }
-DllExport(void) gpuInstanceRequestAdapter(WGPUInstance self, const WGPURequestAdapterOptions* options, WGPURequestAdapterCallback callback, void * userdata) {
-    return wgpuInstanceRequestAdapter(self, options, callback, userdata);
+DllExport(WGPUFuture) gpuInstanceRequestAdapter(WGPUInstance self, const WGPURequestAdapterOptions* options, WGPURequestAdapterCallbackInfo callbackInfo) {
+    return wgpuInstanceRequestAdapter(self, options, callbackInfo);
 }
-DllExport(WGPUFuture) gpuInstanceRequestAdapterF(WGPUInstance self, const WGPURequestAdapterOptions* options, WGPURequestAdapterCallbackInfo callbackInfo) {
-    return wgpuInstanceRequestAdapterF(self, options, callbackInfo);
-}
-DllExport(WGPUFuture) gpuInstanceRequestAdapter2(WGPUInstance self, const WGPURequestAdapterOptions* options, WGPURequestAdapterCallbackInfo2 callbackInfo) {
-    return wgpuInstanceRequestAdapter2(self, options, callbackInfo);
-}
-DllExport(bool) gpuInstanceHasWGSLLanguageFeature(WGPUInstance self, WGPUWGSLFeatureName feature) {
+DllExport(bool) gpuInstanceHasWGSLLanguageFeature(WGPUInstance self, WGPUWGSLLanguageFeatureName feature) {
     return wgpuInstanceHasWGSLLanguageFeature(self, feature);
 }
-DllExport(size_t) gpuInstanceEnumerateWGSLLanguageFeatures(WGPUInstance self, WGPUWGSLFeatureName* features) {
-    return wgpuInstanceEnumerateWGSLLanguageFeatures(self, features);
+DllExport(WGPUStatus) gpuInstanceGetWGSLLanguageFeatures(WGPUInstance self, WGPUSupportedWGSLLanguageFeatures* features) {
+    return wgpuInstanceGetWGSLLanguageFeatures(self, features);
 }
 DllExport(void) gpuInstanceRelease(WGPUInstance self) {
     return wgpuInstanceRelease(self);
@@ -525,8 +490,8 @@ DllExport(void) gpuInstanceRelease(WGPUInstance self) {
 DllExport(void) gpuInstanceAddRef(WGPUInstance self) {
     return wgpuInstanceAddRef(self);
 }
-DllExport(WGPUStatus) gpuGetInstanceFeatures(WGPUInstanceFeatures* features) {
-    return wgpuGetInstanceFeatures(features);
+DllExport(WGPUStatus) gpuGetInstanceCapabilities(WGPUInstanceCapabilities* capabilities) {
+    return wgpuGetInstanceCapabilities(capabilities);
 }
 DllExport(void) gpuPipelineLayoutSetLabel(WGPUPipelineLayout self, WGPUStringView label) {
     return wgpuPipelineLayoutSetLabel(self, label);
@@ -558,14 +523,8 @@ DllExport(void) gpuQuerySetAddRef(WGPUQuerySet self) {
 DllExport(void) gpuQueueSubmit(WGPUQueue self, size_t commandCount, const WGPUCommandBuffer* commands) {
     return wgpuQueueSubmit(self, commandCount, commands);
 }
-DllExport(void) gpuQueueOnSubmittedWorkDone(WGPUQueue self, WGPUQueueWorkDoneCallback callback, void * userdata) {
-    return wgpuQueueOnSubmittedWorkDone(self, callback, userdata);
-}
-DllExport(WGPUFuture) gpuQueueOnSubmittedWorkDoneF(WGPUQueue self, WGPUQueueWorkDoneCallbackInfo callbackInfo) {
-    return wgpuQueueOnSubmittedWorkDoneF(self, callbackInfo);
-}
-DllExport(WGPUFuture) gpuQueueOnSubmittedWorkDone2(WGPUQueue self, WGPUQueueWorkDoneCallbackInfo2 callbackInfo) {
-    return wgpuQueueOnSubmittedWorkDone2(self, callbackInfo);
+DllExport(WGPUFuture) gpuQueueOnSubmittedWorkDone(WGPUQueue self, WGPUQueueWorkDoneCallbackInfo callbackInfo) {
+    return wgpuQueueOnSubmittedWorkDone(self, callbackInfo);
 }
 typedef struct { 
    WGPUQueue Self;
@@ -579,19 +538,19 @@ DllExport(void) gpuQueueWriteBuffer(const WGPUQueueWriteBufferArgs* args) {
 }
 typedef struct { 
    WGPUQueue Self;
-   const WGPUImageCopyTexture* Destination;
+   const WGPUTexelCopyTextureInfo* Destination;
    const void* Data;
    size_t DataSize;
-   const WGPUTextureDataLayout* DataLayout;
+   const WGPUTexelCopyBufferLayout* DataLayout;
    const WGPUExtent3D* WriteSize;
 } WGPUQueueWriteTextureArgs;
 DllExport(void) gpuQueueWriteTexture(const WGPUQueueWriteTextureArgs* args) {
     return wgpuQueueWriteTexture(args->Self, args->Destination, args->Data, args->DataSize, args->DataLayout, args->WriteSize);
 }
-DllExport(void) gpuQueueCopyTextureForBrowser(WGPUQueue self, const WGPUImageCopyTexture* source, const WGPUImageCopyTexture* destination, const WGPUExtent3D* copySize, const WGPUCopyTextureForBrowserOptions* options) {
+DllExport(void) gpuQueueCopyTextureForBrowser(WGPUQueue self, const WGPUTexelCopyTextureInfo* source, const WGPUTexelCopyTextureInfo* destination, const WGPUExtent3D* copySize, const WGPUCopyTextureForBrowserOptions* options) {
     return wgpuQueueCopyTextureForBrowser(self, source, destination, copySize, options);
 }
-DllExport(void) gpuQueueCopyExternalTextureForBrowser(WGPUQueue self, const WGPUImageCopyExternalTexture* source, const WGPUImageCopyTexture* destination, const WGPUExtent3D* copySize, const WGPUCopyTextureForBrowserOptions* options) {
+DllExport(void) gpuQueueCopyExternalTextureForBrowser(WGPUQueue self, const WGPUImageCopyExternalTexture* source, const WGPUTexelCopyTextureInfo* destination, const WGPUExtent3D* copySize, const WGPUCopyTextureForBrowserOptions* options) {
     return wgpuQueueCopyExternalTextureForBrowser(self, source, destination, copySize, options);
 }
 DllExport(void) gpuQueueSetLabel(WGPUQueue self, WGPUStringView label) {
@@ -682,6 +641,9 @@ DllExport(WGPURenderBundle) gpuRenderBundleEncoderFinish(WGPURenderBundleEncoder
 }
 DllExport(void) gpuRenderBundleEncoderSetLabel(WGPURenderBundleEncoder self, WGPUStringView label) {
     return wgpuRenderBundleEncoderSetLabel(self, label);
+}
+DllExport(void) gpuRenderBundleEncoderSetImmediateData(WGPURenderBundleEncoder self, uint32_t offset, const void* data, size_t size) {
+    return wgpuRenderBundleEncoderSetImmediateData(self, offset, data, size);
 }
 DllExport(void) gpuRenderBundleEncoderRelease(WGPURenderBundleEncoder self) {
     return wgpuRenderBundleEncoderRelease(self);
@@ -818,6 +780,9 @@ DllExport(void) gpuRenderPassEncoderEnd(WGPURenderPassEncoder self) {
 DllExport(void) gpuRenderPassEncoderSetLabel(WGPURenderPassEncoder self, WGPUStringView label) {
     return wgpuRenderPassEncoderSetLabel(self, label);
 }
+DllExport(void) gpuRenderPassEncoderSetImmediateData(WGPURenderPassEncoder self, uint32_t offset, const void* data, size_t size) {
+    return wgpuRenderPassEncoderSetImmediateData(self, offset, data, size);
+}
 DllExport(void) gpuRenderPassEncoderRelease(WGPURenderPassEncoder self) {
     return wgpuRenderPassEncoderRelease(self);
 }
@@ -845,14 +810,8 @@ DllExport(void) gpuSamplerRelease(WGPUSampler self) {
 DllExport(void) gpuSamplerAddRef(WGPUSampler self) {
     return wgpuSamplerAddRef(self);
 }
-DllExport(void) gpuShaderModuleGetCompilationInfo(WGPUShaderModule self, WGPUCompilationInfoCallback callback, void * userdata) {
-    return wgpuShaderModuleGetCompilationInfo(self, callback, userdata);
-}
-DllExport(WGPUFuture) gpuShaderModuleGetCompilationInfoF(WGPUShaderModule self, WGPUCompilationInfoCallbackInfo callbackInfo) {
-    return wgpuShaderModuleGetCompilationInfoF(self, callbackInfo);
-}
-DllExport(WGPUFuture) gpuShaderModuleGetCompilationInfo2(WGPUShaderModule self, WGPUCompilationInfoCallbackInfo2 callbackInfo) {
-    return wgpuShaderModuleGetCompilationInfo2(self, callbackInfo);
+DllExport(WGPUFuture) gpuShaderModuleGetCompilationInfo(WGPUShaderModule self, WGPUCompilationInfoCallbackInfo callbackInfo) {
+    return wgpuShaderModuleGetCompilationInfo(self, callbackInfo);
 }
 DllExport(void) gpuShaderModuleSetLabel(WGPUShaderModule self, WGPUStringView label) {
     return wgpuShaderModuleSetLabel(self, label);

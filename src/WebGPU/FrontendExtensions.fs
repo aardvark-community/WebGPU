@@ -17,7 +17,7 @@ type FrontendDeviceDescriptor =
         Label : string
         DebugOutput : bool
         RequiredFeatures : array<FeatureName>
-        RequiredLimits : RequiredLimits
+        RequiredLimits : Limits
         DefaultQueue : QueueDescriptor
     }
 
@@ -61,7 +61,7 @@ type WebGPU private() =
                         PowerPreference = PowerPreference.Undefined
                         BackendType = BackendType.Undefined
                         ForceFallbackAdapter = false
-                        CompatibilityMode = false
+                        FeatureLevel = FeatureLevel.Undefined
                     }
                 
                 opt.Pin (Unchecked.defaultof<_>, fun pOpt ->
@@ -94,12 +94,20 @@ type WebGPU private() =
     [<Extension>]
     static member private RequestAdapterAsync(this : Instance, options : RequestAdapterOptions) =
         let tcs = TaskCompletionSource<Adapter>()
-        this.RequestAdapter(options, RequestAdapterCallback(fun disp status adapter message ->
-            disp.Dispose()
-            match status with
-            | RequestAdapterStatus.Success -> tcs.SetResult adapter
-            | _ -> tcs.SetException(Exception $"could not create adapter: {message}")
-        ))
+        
+        let info : RequestAdapterCallbackInfo =
+            {
+                Mode = CallbackMode.AllowProcessEvents
+                Callback =
+                    RequestAdapterCallback(fun disp status adapter message ->
+                        disp.Dispose()
+                        match status with
+                        | RequestAdapterStatus.Success -> tcs.SetResult adapter
+                        | _ -> tcs.SetException(Exception $"could not create adapter: {message}")
+                    )
+            }
+        
+        this.RequestAdapter(options, info) |> ignore
         tcs.Task
         
     [<Extension>]
@@ -116,7 +124,7 @@ type WebGPU private() =
                         PowerPreference = PowerPreference.Undefined
                         BackendType = BackendType.Undefined
                         ForceFallbackAdapter = false
-                        CompatibilityMode = false
+                        FeatureLevel = FeatureLevel.Undefined
                     } 
             else
                 let res = choose adapters
@@ -192,8 +200,8 @@ type WebGPUExtensions private() =
             if options.DebugOutput then
                 {
                     Mode = CallbackMode.AllowProcessEvents
-                    DeviceLostCallbackInfo2.Callback =
-                        DeviceLostCallback2(fun _disp device typ message ->
+                    DeviceLostCallbackInfo.Callback =
+                        DeviceLostCallback(fun _disp device typ message ->
                             let t = System.Diagnostics.StackTrace(4) |> string
                             let message = enumRx.Replace(message, "$1.") + "\n" + t
                             let lines = message.Split('\n')
@@ -203,7 +211,7 @@ type WebGPUExtensions private() =
                         )
                 }
             else
-                DeviceLostCallbackInfo2.Null
+                DeviceLostCallbackInfo.Null
         
         let realOptions =
             {
@@ -212,41 +220,55 @@ type WebGPUExtensions private() =
                 RequiredFeatures = options.RequiredFeatures
                 RequiredLimits = options.RequiredLimits
                 DefaultQueue = options.DefaultQueue
-                DeviceLostCallbackInfo2 = err
-                UncapturedErrorCallbackInfo2 = UncapturedErrorCallbackInfo2.Null
+                DeviceLostCallbackInfo = err
+                UncapturedErrorCallbackInfo = UncapturedErrorCallbackInfo.Null
             }
         
-        this.RequestDevice(realOptions, RequestDeviceCallback(fun disp status device message ->
-            disp.Dispose()
-            match status with
-            | RequestDeviceStatus.Success -> tcs.SetResult device
-            | _ -> tcs.SetException(Exception $"could not create device: {message}")
-        ))
+        let info : RequestDeviceCallbackInfo =
+            {
+                Mode = CallbackMode.AllowProcessEvents
+                Callback =
+                    RequestDeviceCallback(fun disp status device message ->
+                        disp.Dispose()
+                        match status with
+                        | RequestDeviceStatus.Success -> tcs.SetResult device
+                        | _ -> tcs.SetException(Exception $"could not create device: {message}")
+                    )
+            }
+        
+        this.RequestDevice(realOptions, info) |> ignore
         task {
             let! dev = tcs.Task
             
             if options.DebugOutput then
-                dev.SetLoggingCallback(LoggingCallback(fun _ t str ->
-                    let lines = str.Split("\n")
-                    for line in lines do 
-                        match t with
-                        | LoggingType.Error -> Report.ErrorNoPrefix("{0}", line)
-                        | LoggingType.Warning -> Report.WarnNoPrefix("{0}", line)
-                        | LoggingType.Info -> Report.Line("{0}", line)
-                        | _ -> Report.Line(4, "{0}", line)
-                ))
+                
+                let info : LoggingCallbackInfo =
+                    {
+                        Callback =
+                            LoggingCallback(fun _ t str ->
+                                let lines = str.Split("\n")
+                                for line in lines do 
+                                    match t with
+                                    | LoggingType.Error -> Report.ErrorNoPrefix("{0}", line)
+                                    | LoggingType.Warning -> Report.WarnNoPrefix("{0}", line)
+                                    | LoggingType.Info -> Report.Line("{0}", line)
+                                    | _ -> Report.Line(4, "{0}", line)
+                            )
+                    }
+                
+                dev.SetLoggingCallback(info)
             
             return dev   
         }
 
     [<Extension>]
     static member GetFormatCapabilities(this : Adapter, format : TextureFormat) =
-         let mutable res = Unchecked.defaultof<WebGPU.Raw.FormatCapabilities>
+         let mutable res = Unchecked.defaultof<WebGPU.Raw.DawnFormatCapabilities>
          use ptr = fixed &res
          let status = WebGPU.Raw.WebGPU.AdapterGetFormatCapabilities(this.Handle, format, ptr)
          if status <> Status.Success then
              failwith $"could not get format capabilities: {status}"
-         FormatCapabilities.Read(Unchecked.defaultof<_>, &res)
+         DawnFormatCapabilities.Read(Unchecked.defaultof<_>, &res)
          
     [<Extension>]
     static member GetCapabilities(this : Surface, adapter : Adapter) =
@@ -260,19 +282,19 @@ type WebGPUExtensions private() =
    
     [<Extension>]
     static member GetWGSLLanguageFeatures(this : Instance) =
-        let cnt = WebGPU.Raw.WebGPU.InstanceEnumerateWGSLLanguageFeatures(this.Handle, NativePtr.ofNativeInt 0n)
+        let cnt = WebGPU.Raw.WebGPU.InstanceGetWGSLLanguageFeatures(this.Handle, NativePtr.ofNativeInt 0n)
         let arr = Array.zeroCreate (int cnt)
         use ptr = fixed arr
-        WebGPU.Raw.WebGPU.InstanceEnumerateWGSLLanguageFeatures(this.Handle, ptr) |> ignore
+        WebGPU.Raw.WebGPU.InstanceGetWGSLLanguageFeatures(this.Handle, ptr) |> ignore
         arr
         
     [<Extension>]
     static member Wait(this : Queue) =
         let tcs = TaskCompletionSource()
-        this.OnSubmittedWorkDone2 {
-            QueueWorkDoneCallbackInfo2.Mode = CallbackMode.AllowSpontaneous
+        this.OnSubmittedWorkDone {
+            QueueWorkDoneCallbackInfo.Mode = CallbackMode.AllowSpontaneous
             Callback =
-                QueueWorkDoneCallback2(fun d s ->
+                QueueWorkDoneCallback(fun d s ->
                     match s with
                     | QueueWorkDoneStatus.Success -> tcs.SetResult()
                     | _ -> tcs.SetException(Exception (sprintf "could not wait for queue: %A" s))
@@ -283,9 +305,9 @@ type WebGPUExtensions private() =
     [<Extension>]
     static member PopErrorScope(device : Device) =
         let tcs = TaskCompletionSource<_>()
-        device.PopErrorScope2 {
+        device.PopErrorScope {
             Mode = CallbackMode.AllowProcessEvents
-            Callback = PopErrorScopeCallback2 (fun d status typ message ->
+            Callback = PopErrorScopeCallback (fun d status typ message ->
                 d.Dispose()
                 tcs.SetResult(typ, message)
                 ()
@@ -296,9 +318,9 @@ type WebGPUExtensions private() =
     [<Extension>]
     static member GetCompilationInfo(this : ShaderModule) =
         let tcs = TaskCompletionSource<_>()
-        this.GetCompilationInfo2 {
+        this.GetCompilationInfo {
             Mode = CallbackMode.AllowProcessEvents
-            Callback = CompilationInfoCallback2(fun d status info ->
+            Callback = CompilationInfoCallback(fun d status info ->
                 tcs.SetResult(info)
             )
         } |> ignore

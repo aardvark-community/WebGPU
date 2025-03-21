@@ -79,7 +79,7 @@ type RenderTask(device : Device, signature : IFramebufferSignature, objects : as
                         )
                     DepthStencilAttachment = depth
                     OcclusionQuerySet = QuerySet.Null
-                    TimestampWrites = RenderPassTimestampWrites.Null
+                    TimestampWrites = PassTimestampWrites.Null
                 }
             for o in all do
                 renc.Render(o, update, token)
@@ -197,7 +197,7 @@ type ClearTask(device : Device, signature : IFramebufferSignature, values : aval
                         )
                     DepthStencilAttachment = depth
                     OcclusionQuerySet = QuerySet.Null
-                    TimestampWrites = RenderPassTimestampWrites.Null
+                    TimestampWrites = PassTimestampWrites.Null
                 }
             
             renc.End()

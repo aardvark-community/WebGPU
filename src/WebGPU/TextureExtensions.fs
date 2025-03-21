@@ -127,7 +127,7 @@ type ImageExtensions private() =
                     tmp.Unmap()
                     
                     //use enc = device.CreateCommandEncoder { Label = null; Next = null }
-                    let src : ImageCopyBuffer =
+                    let src : TexelCopyBufferInfo =
                         {
                             Layout =
                                 {
@@ -137,7 +137,7 @@ type ImageExtensions private() =
                                 }
                             Buffer = tmp
                         }
-                    let dst : ImageCopyTexture =
+                    let dst : TexelCopyTextureInfo =
                         {
                             Texture = tex
                             Origin = { X = dstOffset.X; Y = dstOffset.Y; Z = dstOffset.Z }

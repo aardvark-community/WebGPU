@@ -38,37 +38,40 @@
 namespace wgpu {
 
   template <typename CharT, typename Traits>
-  std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, WGSLFeatureName value) {
+  std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, WGSLLanguageFeatureName value) {
       switch (value) {
-      case WGSLFeatureName::ReadonlyAndReadwriteStorageTextures:
-        o << "WGSLFeatureName::ReadonlyAndReadwriteStorageTextures";
+      case WGSLLanguageFeatureName::ReadonlyAndReadwriteStorageTextures:
+        o << "WGSLLanguageFeatureName::ReadonlyAndReadwriteStorageTextures";
         break;
-      case WGSLFeatureName::Packed4x8IntegerDotProduct:
-        o << "WGSLFeatureName::Packed4x8IntegerDotProduct";
+      case WGSLLanguageFeatureName::Packed4x8IntegerDotProduct:
+        o << "WGSLLanguageFeatureName::Packed4x8IntegerDotProduct";
         break;
-      case WGSLFeatureName::UnrestrictedPointerParameters:
-        o << "WGSLFeatureName::UnrestrictedPointerParameters";
+      case WGSLLanguageFeatureName::UnrestrictedPointerParameters:
+        o << "WGSLLanguageFeatureName::UnrestrictedPointerParameters";
         break;
-      case WGSLFeatureName::PointerCompositeAccess:
-        o << "WGSLFeatureName::PointerCompositeAccess";
+      case WGSLLanguageFeatureName::PointerCompositeAccess:
+        o << "WGSLLanguageFeatureName::PointerCompositeAccess";
         break;
-      case WGSLFeatureName::ChromiumTestingUnimplemented:
-        o << "WGSLFeatureName::ChromiumTestingUnimplemented";
+      case WGSLLanguageFeatureName::SizedBindingArray:
+        o << "WGSLLanguageFeatureName::SizedBindingArray";
         break;
-      case WGSLFeatureName::ChromiumTestingUnsafeExperimental:
-        o << "WGSLFeatureName::ChromiumTestingUnsafeExperimental";
+      case WGSLLanguageFeatureName::ChromiumTestingUnimplemented:
+        o << "WGSLLanguageFeatureName::ChromiumTestingUnimplemented";
         break;
-      case WGSLFeatureName::ChromiumTestingExperimental:
-        o << "WGSLFeatureName::ChromiumTestingExperimental";
+      case WGSLLanguageFeatureName::ChromiumTestingUnsafeExperimental:
+        o << "WGSLLanguageFeatureName::ChromiumTestingUnsafeExperimental";
         break;
-      case WGSLFeatureName::ChromiumTestingShippedWithKillswitch:
-        o << "WGSLFeatureName::ChromiumTestingShippedWithKillswitch";
+      case WGSLLanguageFeatureName::ChromiumTestingExperimental:
+        o << "WGSLLanguageFeatureName::ChromiumTestingExperimental";
         break;
-      case WGSLFeatureName::ChromiumTestingShipped:
-        o << "WGSLFeatureName::ChromiumTestingShipped";
+      case WGSLLanguageFeatureName::ChromiumTestingShippedWithKillswitch:
+        o << "WGSLLanguageFeatureName::ChromiumTestingShippedWithKillswitch";
+        break;
+      case WGSLLanguageFeatureName::ChromiumTestingShipped:
+        o << "WGSLLanguageFeatureName::ChromiumTestingShipped";
         break;
           default:
-            o << "WGSLFeatureName::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<WGSLFeatureName>::type>(value);
+            o << "WGSLLanguageFeatureName::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<WGSLLanguageFeatureName>::type>(value);
       }
       return o;
   }
@@ -255,6 +258,9 @@ namespace wgpu {
   template <typename CharT, typename Traits>
   std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, BufferBindingType value) {
       switch (value) {
+      case BufferBindingType::BindingNotUsed:
+        o << "BufferBindingType::BindingNotUsed";
+        break;
       case BufferBindingType::Undefined:
         o << "BufferBindingType::Undefined";
         break;
@@ -269,44 +275,6 @@ namespace wgpu {
         break;
           default:
             o << "BufferBindingType::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<BufferBindingType>::type>(value);
-      }
-      return o;
-  }
-  template <typename CharT, typename Traits>
-  std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, BufferMapAsyncStatus value) {
-      switch (value) {
-      case BufferMapAsyncStatus::Success:
-        o << "BufferMapAsyncStatus::Success";
-        break;
-      case BufferMapAsyncStatus::InstanceDropped:
-        o << "BufferMapAsyncStatus::InstanceDropped";
-        break;
-      case BufferMapAsyncStatus::ValidationError:
-        o << "BufferMapAsyncStatus::ValidationError";
-        break;
-      case BufferMapAsyncStatus::Unknown:
-        o << "BufferMapAsyncStatus::Unknown";
-        break;
-      case BufferMapAsyncStatus::DeviceLost:
-        o << "BufferMapAsyncStatus::DeviceLost";
-        break;
-      case BufferMapAsyncStatus::DestroyedBeforeCallback:
-        o << "BufferMapAsyncStatus::DestroyedBeforeCallback";
-        break;
-      case BufferMapAsyncStatus::UnmappedBeforeCallback:
-        o << "BufferMapAsyncStatus::UnmappedBeforeCallback";
-        break;
-      case BufferMapAsyncStatus::MappingAlreadyPending:
-        o << "BufferMapAsyncStatus::MappingAlreadyPending";
-        break;
-      case BufferMapAsyncStatus::OffsetOutOfRange:
-        o << "BufferMapAsyncStatus::OffsetOutOfRange";
-        break;
-      case BufferMapAsyncStatus::SizeOutOfRange:
-        o << "BufferMapAsyncStatus::SizeOutOfRange";
-        break;
-          default:
-            o << "BufferMapAsyncStatus::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<BufferMapAsyncStatus>::type>(value);
       }
       return o;
   }
@@ -388,15 +356,6 @@ namespace wgpu {
       case CompilationInfoRequestStatus::InstanceDropped:
         o << "CompilationInfoRequestStatus::InstanceDropped";
         break;
-      case CompilationInfoRequestStatus::Error:
-        o << "CompilationInfoRequestStatus::Error";
-        break;
-      case CompilationInfoRequestStatus::DeviceLost:
-        o << "CompilationInfoRequestStatus::DeviceLost";
-        break;
-      case CompilationInfoRequestStatus::Unknown:
-        o << "CompilationInfoRequestStatus::Unknown";
-        break;
           default:
             o << "CompilationInfoRequestStatus::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<CompilationInfoRequestStatus>::type>(value);
       }
@@ -456,15 +415,6 @@ namespace wgpu {
         break;
       case CreatePipelineAsyncStatus::InternalError:
         o << "CreatePipelineAsyncStatus::InternalError";
-        break;
-      case CreatePipelineAsyncStatus::DeviceLost:
-        o << "CreatePipelineAsyncStatus::DeviceLost";
-        break;
-      case CreatePipelineAsyncStatus::DeviceDestroyed:
-        o << "CreatePipelineAsyncStatus::DeviceDestroyed";
-        break;
-      case CreatePipelineAsyncStatus::Unknown:
-        o << "CreatePipelineAsyncStatus::Unknown";
         break;
           default:
             o << "CreatePipelineAsyncStatus::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<CreatePipelineAsyncStatus>::type>(value);
@@ -546,9 +496,6 @@ namespace wgpu {
       case ErrorType::Unknown:
         o << "ErrorType::Unknown";
         break;
-      case ErrorType::DeviceLost:
-        o << "ErrorType::DeviceLost";
-        break;
           default:
             o << "ErrorType::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<ErrorType>::type>(value);
       }
@@ -571,6 +518,23 @@ namespace wgpu {
         break;
           default:
             o << "ExternalTextureRotation::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<ExternalTextureRotation>::type>(value);
+      }
+      return o;
+  }
+  template <typename CharT, typename Traits>
+  std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, FeatureLevel value) {
+      switch (value) {
+      case FeatureLevel::Undefined:
+        o << "FeatureLevel::Undefined";
+        break;
+      case FeatureLevel::Compatibility:
+        o << "FeatureLevel::Compatibility";
+        break;
+      case FeatureLevel::Core:
+        o << "FeatureLevel::Core";
+        break;
+          default:
+            o << "FeatureLevel::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<FeatureLevel>::type>(value);
       }
       return o;
   }
@@ -613,11 +577,17 @@ namespace wgpu {
       case FeatureName::Float32Blendable:
         o << "FeatureName::Float32Blendable";
         break;
+      case FeatureName::ClipDistances:
+        o << "FeatureName::ClipDistances";
+        break;
+      case FeatureName::DualSourceBlending:
+        o << "FeatureName::DualSourceBlending";
+        break;
       case FeatureName::Subgroups:
         o << "FeatureName::Subgroups";
         break;
-      case FeatureName::SubgroupsF16:
-        o << "FeatureName::SubgroupsF16";
+      case FeatureName::CoreFeaturesAndLimits:
+        o << "FeatureName::CoreFeaturesAndLimits";
         break;
       case FeatureName::DawnInternalUsages:
         o << "FeatureName::DawnInternalUsages";
@@ -643,8 +613,8 @@ namespace wgpu {
       case FeatureName::MSAARenderToSingleSampled:
         o << "FeatureName::MSAARenderToSingleSampled";
         break;
-      case FeatureName::DualSourceBlending:
-        o << "FeatureName::DualSourceBlending";
+      case FeatureName::SubgroupsF16:
+        o << "FeatureName::SubgroupsF16";
         break;
       case FeatureName::D3D11MultithreadProtected:
         o << "FeatureName::D3D11MultithreadProtected";
@@ -697,11 +667,11 @@ namespace wgpu {
       case FeatureName::R8UnormStorage:
         o << "FeatureName::R8UnormStorage";
         break;
-      case FeatureName::FormatCapabilities:
-        o << "FeatureName::FormatCapabilities";
+      case FeatureName::DawnFormatCapabilities:
+        o << "FeatureName::DawnFormatCapabilities";
         break;
-      case FeatureName::DrmFormatCapabilities:
-        o << "FeatureName::DrmFormatCapabilities";
+      case FeatureName::DawnDrmFormatCapabilities:
+        o << "FeatureName::DawnDrmFormatCapabilities";
         break;
       case FeatureName::Norm16TextureFormats:
         o << "FeatureName::Norm16TextureFormats";
@@ -781,11 +751,17 @@ namespace wgpu {
       case FeatureName::MultiDrawIndirect:
         o << "FeatureName::MultiDrawIndirect";
         break;
-      case FeatureName::ClipDistances:
-        o << "FeatureName::ClipDistances";
-        break;
       case FeatureName::DawnTexelCopyBufferRowAlignment:
         o << "FeatureName::DawnTexelCopyBufferRowAlignment";
+        break;
+      case FeatureName::FlexibleTextureViews:
+        o << "FeatureName::FlexibleTextureViews";
+        break;
+      case FeatureName::ChromiumExperimentalSubgroupMatrix:
+        o << "FeatureName::ChromiumExperimentalSubgroupMatrix";
+        break;
+      case FeatureName::SharedFenceEGLSync:
+        o << "FeatureName::SharedFenceEGLSync";
         break;
           default:
             o << "FeatureName::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<FeatureName>::type>(value);
@@ -898,9 +874,6 @@ namespace wgpu {
       case MapAsyncStatus::Aborted:
         o << "MapAsyncStatus::Aborted";
         break;
-      case MapAsyncStatus::Unknown:
-        o << "MapAsyncStatus::Unknown";
-        break;
           default:
             o << "MapAsyncStatus::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<MapAsyncStatus>::type>(value);
       }
@@ -931,6 +904,9 @@ namespace wgpu {
         break;
       case PopErrorScopeStatus::InstanceDropped:
         o << "PopErrorScopeStatus::InstanceDropped";
+        break;
+      case PopErrorScopeStatus::Error:
+        o << "PopErrorScopeStatus::Error";
         break;
           default:
             o << "PopErrorScopeStatus::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<PopErrorScopeStatus>::type>(value);
@@ -1026,12 +1002,6 @@ namespace wgpu {
       case QueueWorkDoneStatus::Error:
         o << "QueueWorkDoneStatus::Error";
         break;
-      case QueueWorkDoneStatus::Unknown:
-        o << "QueueWorkDoneStatus::Unknown";
-        break;
-      case QueueWorkDoneStatus::DeviceLost:
-        o << "QueueWorkDoneStatus::DeviceLost";
-        break;
           default:
             o << "QueueWorkDoneStatus::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<QueueWorkDoneStatus>::type>(value);
       }
@@ -1052,9 +1022,6 @@ namespace wgpu {
       case RequestAdapterStatus::Error:
         o << "RequestAdapterStatus::Error";
         break;
-      case RequestAdapterStatus::Unknown:
-        o << "RequestAdapterStatus::Unknown";
-        break;
           default:
             o << "RequestAdapterStatus::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<RequestAdapterStatus>::type>(value);
       }
@@ -1071,9 +1038,6 @@ namespace wgpu {
         break;
       case RequestDeviceStatus::Error:
         o << "RequestDeviceStatus::Error";
-        break;
-      case RequestDeviceStatus::Unknown:
-        o << "RequestDeviceStatus::Unknown";
         break;
           default:
             o << "RequestDeviceStatus::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<RequestDeviceStatus>::type>(value);
@@ -1191,8 +1155,8 @@ namespace wgpu {
       case SType::DawnWGSLBlocklist:
         o << "SType::DawnWGSLBlocklist";
         break;
-      case SType::DrmFormatCapabilities:
-        o << "SType::DrmFormatCapabilities";
+      case SType::DawnDrmFormatCapabilities:
+        o << "SType::DawnDrmFormatCapabilities";
         break;
       case SType::ShaderModuleCompilationOptions:
         o << "SType::ShaderModuleCompilationOptions";
@@ -1296,6 +1260,21 @@ namespace wgpu {
       case SType::DawnTexelCopyBufferRowAlignmentLimits:
         o << "SType::DawnTexelCopyBufferRowAlignmentLimits";
         break;
+      case SType::AdapterPropertiesSubgroupMatrixConfigs:
+        o << "SType::AdapterPropertiesSubgroupMatrixConfigs";
+        break;
+      case SType::SharedFenceEGLSyncDescriptor:
+        o << "SType::SharedFenceEGLSyncDescriptor";
+        break;
+      case SType::SharedFenceEGLSyncExportInfo:
+        o << "SType::SharedFenceEGLSyncExportInfo";
+        break;
+      case SType::DawnInjectedInvalidSType:
+        o << "SType::DawnInjectedInvalidSType";
+        break;
+      case SType::DawnCompilationMessageUtf16:
+        o << "SType::DawnCompilationMessageUtf16";
+        break;
           default:
             o << "SType::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<SType>::type>(value);
       }
@@ -1304,6 +1283,9 @@ namespace wgpu {
   template <typename CharT, typename Traits>
   std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, SamplerBindingType value) {
       switch (value) {
+      case SamplerBindingType::BindingNotUsed:
+        o << "SamplerBindingType::BindingNotUsed";
+        break;
       case SamplerBindingType::Undefined:
         o << "SamplerBindingType::Undefined";
         break;
@@ -1338,6 +1320,9 @@ namespace wgpu {
         break;
       case SharedFenceType::MTLSharedEvent:
         o << "SharedFenceType::MTLSharedEvent";
+        break;
+      case SharedFenceType::EGLSync:
+        o << "SharedFenceType::EGLSync";
         break;
           default:
             o << "SharedFenceType::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<SharedFenceType>::type>(value);
@@ -1396,6 +1381,9 @@ namespace wgpu {
   template <typename CharT, typename Traits>
   std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, StorageTextureAccess value) {
       switch (value) {
+      case StorageTextureAccess::BindingNotUsed:
+        o << "StorageTextureAccess::BindingNotUsed";
+        break;
       case StorageTextureAccess::Undefined:
         o << "StorageTextureAccess::Undefined";
         break;
@@ -1431,10 +1419,33 @@ namespace wgpu {
       return o;
   }
   template <typename CharT, typename Traits>
+  std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, SubgroupMatrixComponentType value) {
+      switch (value) {
+      case SubgroupMatrixComponentType::F32:
+        o << "SubgroupMatrixComponentType::F32";
+        break;
+      case SubgroupMatrixComponentType::F16:
+        o << "SubgroupMatrixComponentType::F16";
+        break;
+      case SubgroupMatrixComponentType::U32:
+        o << "SubgroupMatrixComponentType::U32";
+        break;
+      case SubgroupMatrixComponentType::I32:
+        o << "SubgroupMatrixComponentType::I32";
+        break;
+          default:
+            o << "SubgroupMatrixComponentType::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<SubgroupMatrixComponentType>::type>(value);
+      }
+      return o;
+  }
+  template <typename CharT, typename Traits>
   std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, SurfaceGetCurrentTextureStatus value) {
       switch (value) {
-      case SurfaceGetCurrentTextureStatus::Success:
-        o << "SurfaceGetCurrentTextureStatus::Success";
+      case SurfaceGetCurrentTextureStatus::SuccessOptimal:
+        o << "SurfaceGetCurrentTextureStatus::SuccessOptimal";
+        break;
+      case SurfaceGetCurrentTextureStatus::SuccessSuboptimal:
+        o << "SurfaceGetCurrentTextureStatus::SuccessSuboptimal";
         break;
       case SurfaceGetCurrentTextureStatus::Timeout:
         o << "SurfaceGetCurrentTextureStatus::Timeout";
@@ -1444,12 +1455,6 @@ namespace wgpu {
         break;
       case SurfaceGetCurrentTextureStatus::Lost:
         o << "SurfaceGetCurrentTextureStatus::Lost";
-        break;
-      case SurfaceGetCurrentTextureStatus::OutOfMemory:
-        o << "SurfaceGetCurrentTextureStatus::OutOfMemory";
-        break;
-      case SurfaceGetCurrentTextureStatus::DeviceLost:
-        o << "SurfaceGetCurrentTextureStatus::DeviceLost";
         break;
       case SurfaceGetCurrentTextureStatus::Error:
         o << "SurfaceGetCurrentTextureStatus::Error";
@@ -1849,6 +1854,9 @@ namespace wgpu {
   template <typename CharT, typename Traits>
   std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, TextureSampleType value) {
       switch (value) {
+      case TextureSampleType::BindingNotUsed:
+        o << "TextureSampleType::BindingNotUsed";
+        break;
       case TextureSampleType::Undefined:
         o << "TextureSampleType::Undefined";
         break;
@@ -2035,9 +2043,6 @@ namespace wgpu {
   template <typename CharT, typename Traits>
   std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, VertexStepMode value) {
       switch (value) {
-      case VertexStepMode::VertexBufferNotUsed:
-        o << "VertexStepMode::VertexBufferNotUsed";
-        break;
       case VertexStepMode::Undefined:
         o << "VertexStepMode::Undefined";
         break;
@@ -2061,17 +2066,8 @@ namespace wgpu {
       case WaitStatus::TimedOut:
         o << "WaitStatus::TimedOut";
         break;
-      case WaitStatus::UnsupportedTimeout:
-        o << "WaitStatus::UnsupportedTimeout";
-        break;
-      case WaitStatus::UnsupportedCount:
-        o << "WaitStatus::UnsupportedCount";
-        break;
-      case WaitStatus::UnsupportedMixedSources:
-        o << "WaitStatus::UnsupportedMixedSources";
-        break;
-      case WaitStatus::Unknown:
-        o << "WaitStatus::Unknown";
+      case WaitStatus::Error:
+        o << "WaitStatus::Error";
         break;
           default:
             o << "WaitStatus::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<WaitStatus>::type>(value);
@@ -2259,7 +2255,8 @@ namespace wgpu {
   std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, HeapProperty value) {
     o << "HeapProperty::";
     if (!static_cast<bool>(value)) {
-    o << std::showbase << std::hex << std::setfill('0') << std::setw(4) << 0;
+    // 0 is often explicitly declared as None.
+    o << "None";
       return o;
     }
 

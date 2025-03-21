@@ -280,7 +280,7 @@ module Shader =
                 DebugOutput = true
                 Label = "Devon"
                 RequiredFeatures = adapter.Features.Features
-                RequiredLimits = { Limits = adapter.Limits.Limits }
+                RequiredLimits = adapter.Limits
                 DefaultQueue = { Label = "Quentin" }
             }).Result
         

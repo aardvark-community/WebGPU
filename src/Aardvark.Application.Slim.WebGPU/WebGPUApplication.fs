@@ -64,10 +64,6 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
             
             member this.Dispose() = ()
             member this.Boot(glfw) =
-                let thread = 
-                    startThread <| fun () ->
-                        while true do
-                            instance.ProcessEvents()
                 ()
                 
             member this.CreateSurface(runtime,config,glfw,window) =
@@ -221,6 +217,12 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
     static member Create(debug : bool) =
         task {
             let instance = WebGPU.CreateInstance()
+            
+            let thread = 
+                startThread <| fun () ->
+                    while true do
+                        instance.ProcessEvents()
+            
             let! adapter = instance.CreateAdapter()
                 
             Log.start "WebGPUApplication"
@@ -232,7 +234,6 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
             Log.line "AdapterType:       %A" adapter.Info.AdapterType
             Log.line "VendorID:          0x%08X" adapter.Info.VendorID
             Log.line "DeviceID:          0x%08X" adapter.Info.DeviceID
-            Log.line "CompatibilityMode: %b" adapter.Info.CompatibilityMode
             
             Log.start "Features"
             
@@ -250,15 +251,19 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
             
             Log.stop()
                 
+            
+                
             let! device =
                 adapter.RequestDeviceAsync {
                     Next = null
                     Label = "WebGPUApplication"
                     DebugOutput = debug
                     RequiredFeatures = adapter.Features.Features
-                    RequiredLimits = { Limits = adapter.Limits.Limits }
+                    RequiredLimits = adapter.Limits
                     DefaultQueue = { Label = "DefaultQueue" }
                 }
+                
+            
                 
             let runtime = new Runtime(device)
             return new WebGPUApplication(debug, instance, adapter, device, runtime)

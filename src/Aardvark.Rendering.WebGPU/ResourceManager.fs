@@ -368,7 +368,7 @@ type ResourceManager(device : Device) =
                         | Some maxIndex ->
                             let empty =
                                 {
-                                    VertexBufferLayout.StepMode = VertexStepMode.VertexBufferNotUsed
+                                    VertexBufferLayout.StepMode = VertexStepMode.Undefined
                                     ArrayStride = 0L
                                     Attributes = [||]
                                 }

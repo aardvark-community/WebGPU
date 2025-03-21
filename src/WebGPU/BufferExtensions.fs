@@ -93,10 +93,10 @@ type WebGPUBufferExtensions private() =
         | _ ->
             let tcs = TaskCompletionSource<_>()
             
-            let info : BufferMapCallbackInfo2 =
+            let info : BufferMapCallbackInfo =
                 {
                     Mode = CallbackMode.AllowSpontaneous
-                    Callback = BufferMapCallback2(fun d status msg ->
+                    Callback = BufferMapCallback(fun d status msg ->
                         d.Dispose()
                         match status with
                         | MapAsyncStatus.Success ->
@@ -112,7 +112,7 @@ type WebGPUBufferExtensions private() =
                     )
                 }
             
-            buffer.MapAsync2(mode, offset, size, info) |> ignore
+            buffer.MapAsync(mode, offset, size, info) |> ignore
            
             tcs.Task
     

@@ -102,7 +102,7 @@ type TextureExtensions private() =
                         }
                     }
                 
-                let dstDesc : ImageCopyTexture =
+                let dstDesc : TexelCopyTextureInfo =
                     {
                         Texture = dst
                         MipLevel = level

@@ -5,39 +5,31 @@ open System.Runtime.InteropServices
 open Microsoft.FSharp.NativeInterop
 open WebGPU
 #nowarn "9"
-[<Struct; StructLayout(LayoutKind.Sequential)>]
-type INTERNAL__HAVE_EMDAWNWEBGPU_HEADER = 
-    struct
-        val mutable public Unused : int
-        new(unused : int) = { Unused = unused }
-    end
 type Proc = delegate of unit -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RequestAdapterOptions = 
     struct
         val mutable public NextInChain : nativeint
-        val mutable public CompatibleSurface : nativeint
+        val mutable public FeatureLevel : FeatureLevel
         val mutable public PowerPreference : PowerPreference
-        val mutable public BackendType : BackendType
         val mutable public ForceFallbackAdapter : int
-        val mutable public CompatibilityMode : int
-        new(nextInChain : nativeint, compatibleSurface : nativeint, powerPreference : PowerPreference, backendType : BackendType, forceFallbackAdapter : int, compatibilityMode : int) = { NextInChain = nextInChain; CompatibleSurface = compatibleSurface; PowerPreference = powerPreference; BackendType = backendType; ForceFallbackAdapter = forceFallbackAdapter; CompatibilityMode = compatibilityMode }
-        new(compatibleSurface : nativeint, powerPreference : PowerPreference, backendType : BackendType, forceFallbackAdapter : int, compatibilityMode : int) = RequestAdapterOptions(0n, compatibleSurface, powerPreference, backendType, forceFallbackAdapter, compatibilityMode)
+        val mutable public BackendType : BackendType
+        val mutable public CompatibleSurface : nativeint
+        new(nextInChain : nativeint, featureLevel : FeatureLevel, powerPreference : PowerPreference, forceFallbackAdapter : int, backendType : BackendType, compatibleSurface : nativeint) = { NextInChain = nextInChain; FeatureLevel = featureLevel; PowerPreference = powerPreference; ForceFallbackAdapter = forceFallbackAdapter; BackendType = backendType; CompatibleSurface = compatibleSurface }
+        new(featureLevel : FeatureLevel, powerPreference : PowerPreference, forceFallbackAdapter : int, backendType : BackendType, compatibleSurface : nativeint) = RequestAdapterOptions(0n, featureLevel, powerPreference, forceFallbackAdapter, backendType, compatibleSurface)
     end
-type RequestAdapterCallback = delegate of status : RequestAdapterStatus * adapter : nativeint * message : StringView * userdata : nativeint -> unit
-type RequestAdapterCallback2 = delegate of status : RequestAdapterStatus * adapter : nativeint * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
-type RequestAdapterCallbackInfo = 
+type RequestAdapterWebXROptions = 
     struct
         val mutable public NextInChain : nativeint
-        val mutable public Mode : CallbackMode
-        val mutable public Callback : nativeint
-        val mutable public Userdata : nativeint
-        new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata = userdata }
-        new(mode : CallbackMode, callback : nativeint, userdata : nativeint) = RequestAdapterCallbackInfo(0n, mode, callback, userdata)
+        val mutable public SType : SType
+        val mutable public XrCompatible : int
+        new(nextInChain : nativeint, sType : SType, xrCompatible : int) = { NextInChain = nextInChain; SType = sType; XrCompatible = xrCompatible }
+        new(xrCompatible : int) = RequestAdapterWebXROptions(0n, Unchecked.defaultof<SType>, xrCompatible)
     end
+type RequestAdapterCallback = delegate of status : RequestAdapterStatus * adapter : nativeint * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
-type RequestAdapterCallbackInfo2 = 
+type RequestAdapterCallbackInfo = 
     struct
         val mutable public NextInChain : nativeint
         val mutable public Mode : CallbackMode
@@ -45,7 +37,7 @@ type RequestAdapterCallbackInfo2 =
         val mutable public Userdata1 : nativeint
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
-        new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = RequestAdapterCallbackInfo2(0n, mode, callback, userdata1, userdata2)
+        new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = RequestAdapterCallbackInfo(0n, mode, callback, userdata1, userdata2)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type AdapterInfo = 
@@ -59,9 +51,10 @@ type AdapterInfo =
         val mutable public AdapterType : AdapterType
         val mutable public VendorID : uint32
         val mutable public DeviceID : uint32
-        val mutable public CompatibilityMode : int
-        new(nextInChain : nativeint, vendor : StringView, architecture : StringView, device : StringView, description : StringView, backendType : BackendType, adapterType : AdapterType, vendorID : uint32, deviceID : uint32, compatibilityMode : int) = { NextInChain = nextInChain; Vendor = vendor; Architecture = architecture; Device = device; Description = description; BackendType = backendType; AdapterType = adapterType; VendorID = vendorID; DeviceID = deviceID; CompatibilityMode = compatibilityMode }
-        new(vendor : StringView, architecture : StringView, device : StringView, description : StringView, backendType : BackendType, adapterType : AdapterType, vendorID : uint32, deviceID : uint32, compatibilityMode : int) = AdapterInfo(0n, vendor, architecture, device, description, backendType, adapterType, vendorID, deviceID, compatibilityMode)
+        val mutable public SubgroupMinSize : uint32
+        val mutable public SubgroupMaxSize : uint32
+        new(nextInChain : nativeint, vendor : StringView, architecture : StringView, device : StringView, description : StringView, backendType : BackendType, adapterType : AdapterType, vendorID : uint32, deviceID : uint32, subgroupMinSize : uint32, subgroupMaxSize : uint32) = { NextInChain = nextInChain; Vendor = vendor; Architecture = architecture; Device = device; Description = description; BackendType = backendType; AdapterType = adapterType; VendorID = vendorID; DeviceID = deviceID; SubgroupMinSize = subgroupMinSize; SubgroupMaxSize = subgroupMaxSize }
+        new(vendor : StringView, architecture : StringView, device : StringView, description : StringView, backendType : BackendType, adapterType : AdapterType, vendorID : uint32, deviceID : uint32, subgroupMinSize : uint32, subgroupMaxSize : uint32) = AdapterInfo(0n, vendor, architecture, device, description, backendType, adapterType, vendorID, deviceID, subgroupMinSize, subgroupMaxSize)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DeviceDescriptor = 
@@ -70,12 +63,12 @@ type DeviceDescriptor =
         val mutable public Label : StringView
         val mutable public RequiredFeatureCount : unativeint
         val mutable public RequiredFeatures : nativeptr<FeatureName>
-        val mutable public RequiredLimits : nativeptr<RequiredLimits>
+        val mutable public RequiredLimits : nativeptr<Limits>
         val mutable public DefaultQueue : QueueDescriptor
-        val mutable public DeviceLostCallbackInfo2 : DeviceLostCallbackInfo2
-        val mutable public UncapturedErrorCallbackInfo2 : UncapturedErrorCallbackInfo2
-        new(nextInChain : nativeint, label : StringView, requiredFeatureCount : unativeint, requiredFeatures : nativeptr<FeatureName>, requiredLimits : nativeptr<RequiredLimits>, defaultQueue : QueueDescriptor, deviceLostCallbackInfo2 : DeviceLostCallbackInfo2, uncapturedErrorCallbackInfo2 : UncapturedErrorCallbackInfo2) = { NextInChain = nextInChain; Label = label; RequiredFeatureCount = requiredFeatureCount; RequiredFeatures = requiredFeatures; RequiredLimits = requiredLimits; DefaultQueue = defaultQueue; DeviceLostCallbackInfo2 = deviceLostCallbackInfo2; UncapturedErrorCallbackInfo2 = uncapturedErrorCallbackInfo2 }
-        new(label : StringView, requiredFeatureCount : unativeint, requiredFeatures : nativeptr<FeatureName>, requiredLimits : nativeptr<RequiredLimits>, defaultQueue : QueueDescriptor, deviceLostCallbackInfo2 : DeviceLostCallbackInfo2, uncapturedErrorCallbackInfo2 : UncapturedErrorCallbackInfo2) = DeviceDescriptor(0n, label, requiredFeatureCount, requiredFeatures, requiredLimits, defaultQueue, deviceLostCallbackInfo2, uncapturedErrorCallbackInfo2)
+        val mutable public DeviceLostCallbackInfo : DeviceLostCallbackInfo
+        val mutable public UncapturedErrorCallbackInfo : UncapturedErrorCallbackInfo
+        new(nextInChain : nativeint, label : StringView, requiredFeatureCount : unativeint, requiredFeatures : nativeptr<FeatureName>, requiredLimits : nativeptr<Limits>, defaultQueue : QueueDescriptor, deviceLostCallbackInfo : DeviceLostCallbackInfo, uncapturedErrorCallbackInfo : UncapturedErrorCallbackInfo) = { NextInChain = nextInChain; Label = label; RequiredFeatureCount = requiredFeatureCount; RequiredFeatures = requiredFeatures; RequiredLimits = requiredLimits; DefaultQueue = defaultQueue; DeviceLostCallbackInfo = deviceLostCallbackInfo; UncapturedErrorCallbackInfo = uncapturedErrorCallbackInfo }
+        new(label : StringView, requiredFeatureCount : unativeint, requiredFeatures : nativeptr<FeatureName>, requiredLimits : nativeptr<Limits>, defaultQueue : QueueDescriptor, deviceLostCallbackInfo : DeviceLostCallbackInfo, uncapturedErrorCallbackInfo : UncapturedErrorCallbackInfo) = DeviceDescriptor(0n, label, requiredFeatureCount, requiredFeatures, requiredLimits, defaultQueue, deviceLostCallbackInfo, uncapturedErrorCallbackInfo)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnTogglesDescriptor = 
@@ -196,14 +189,14 @@ type SurfaceConfiguration =
         val mutable public Device : nativeint
         val mutable public Format : TextureFormat
         val mutable public Usage : TextureUsage
+        val mutable public Width : uint32
+        val mutable public Height : uint32
         val mutable public ViewFormatCount : unativeint
         val mutable public ViewFormats : nativeptr<TextureFormat>
         val mutable public AlphaMode : CompositeAlphaMode
-        val mutable public Width : uint32
-        val mutable public Height : uint32
         val mutable public PresentMode : PresentMode
-        new(nextInChain : nativeint, device : nativeint, format : TextureFormat, usage : TextureUsage, viewFormatCount : unativeint, viewFormats : nativeptr<TextureFormat>, alphaMode : CompositeAlphaMode, width : uint32, height : uint32, presentMode : PresentMode) = { NextInChain = nextInChain; Device = device; Format = format; Usage = usage; ViewFormatCount = viewFormatCount; ViewFormats = viewFormats; AlphaMode = alphaMode; Width = width; Height = height; PresentMode = presentMode }
-        new(device : nativeint, format : TextureFormat, usage : TextureUsage, viewFormatCount : unativeint, viewFormats : nativeptr<TextureFormat>, alphaMode : CompositeAlphaMode, width : uint32, height : uint32, presentMode : PresentMode) = SurfaceConfiguration(0n, device, format, usage, viewFormatCount, viewFormats, alphaMode, width, height, presentMode)
+        new(nextInChain : nativeint, device : nativeint, format : TextureFormat, usage : TextureUsage, width : uint32, height : uint32, viewFormatCount : unativeint, viewFormats : nativeptr<TextureFormat>, alphaMode : CompositeAlphaMode, presentMode : PresentMode) = { NextInChain = nextInChain; Device = device; Format = format; Usage = usage; Width = width; Height = height; ViewFormatCount = viewFormatCount; ViewFormats = viewFormats; AlphaMode = alphaMode; PresentMode = presentMode }
+        new(device : nativeint, format : TextureFormat, usage : TextureUsage, width : uint32, height : uint32, viewFormatCount : unativeint, viewFormats : nativeptr<TextureFormat>, alphaMode : CompositeAlphaMode, presentMode : PresentMode) = SurfaceConfiguration(0n, device, format, usage, width, height, viewFormatCount, viewFormats, alphaMode, presentMode)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type ExternalTextureBindingEntry = 
@@ -292,20 +285,9 @@ type BufferHostMappedPointer =
         new(pointer : nativeint, disposeCallback : nativeint, userdata : nativeint) = BufferHostMappedPointer(0n, Unchecked.defaultof<SType>, pointer, disposeCallback, userdata)
     end
 type Callback = delegate of userdata : nativeint -> unit
-type BufferMapCallback = delegate of status : BufferMapAsyncStatus * userdata : nativeint -> unit
-type BufferMapCallback2 = delegate of status : MapAsyncStatus * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
+type BufferMapCallback = delegate of status : MapAsyncStatus * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type BufferMapCallbackInfo = 
-    struct
-        val mutable public NextInChain : nativeint
-        val mutable public Mode : CallbackMode
-        val mutable public Callback : nativeint
-        val mutable public Userdata : nativeint
-        new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata = userdata }
-        new(mode : CallbackMode, callback : nativeint, userdata : nativeint) = BufferMapCallbackInfo(0n, mode, callback, userdata)
-    end
-[<Struct; StructLayout(LayoutKind.Sequential)>]
-type BufferMapCallbackInfo2 = 
     struct
         val mutable public NextInChain : nativeint
         val mutable public Mode : CallbackMode
@@ -313,7 +295,7 @@ type BufferMapCallbackInfo2 =
         val mutable public Userdata1 : nativeint
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
-        new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = BufferMapCallbackInfo2(0n, mode, callback, userdata1, userdata2)
+        new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = BufferMapCallbackInfo(0n, mode, callback, userdata1, userdata2)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type Color = 
@@ -358,20 +340,9 @@ type CompilationInfo =
         new(nextInChain : nativeint, messageCount : unativeint, messages : nativeptr<CompilationMessage>) = { NextInChain = nextInChain; MessageCount = messageCount; Messages = messages }
         new(messageCount : unativeint, messages : nativeptr<CompilationMessage>) = CompilationInfo(0n, messageCount, messages)
     end
-type CompilationInfoCallback = delegate of status : CompilationInfoRequestStatus * compilationInfo : nativeptr<CompilationInfo> * userdata : nativeint -> unit
-type CompilationInfoCallback2 = delegate of status : CompilationInfoRequestStatus * compilationInfo : nativeptr<CompilationInfo> * userdata1 : nativeint * userdata2 : nativeint -> unit
+type CompilationInfoCallback = delegate of status : CompilationInfoRequestStatus * compilationInfo : nativeptr<CompilationInfo> * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type CompilationInfoCallbackInfo = 
-    struct
-        val mutable public NextInChain : nativeint
-        val mutable public Mode : CallbackMode
-        val mutable public Callback : nativeint
-        val mutable public Userdata : nativeint
-        new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata = userdata }
-        new(mode : CallbackMode, callback : nativeint, userdata : nativeint) = CompilationInfoCallbackInfo(0n, mode, callback, userdata)
-    end
-[<Struct; StructLayout(LayoutKind.Sequential)>]
-type CompilationInfoCallbackInfo2 = 
     struct
         val mutable public NextInChain : nativeint
         val mutable public Mode : CallbackMode
@@ -379,7 +350,7 @@ type CompilationInfoCallbackInfo2 =
         val mutable public Userdata1 : nativeint
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
-        new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = CompilationInfoCallbackInfo2(0n, mode, callback, userdata1, userdata2)
+        new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = CompilationInfoCallbackInfo(0n, mode, callback, userdata1, userdata2)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type CompilationMessage = 
@@ -391,28 +362,28 @@ type CompilationMessage =
         val mutable public LinePos : uint64
         val mutable public Offset : uint64
         val mutable public Length : uint64
-        val mutable public Utf16LinePos : uint64
-        val mutable public Utf16Offset : uint64
-        val mutable public Utf16Length : uint64
-        new(nextInChain : nativeint, message : StringView, typ : CompilationMessageType, lineNum : uint64, linePos : uint64, offset : uint64, length : uint64, utf16LinePos : uint64, utf16Offset : uint64, utf16Length : uint64) = { NextInChain = nextInChain; Message = message; Type = typ; LineNum = lineNum; LinePos = linePos; Offset = offset; Length = length; Utf16LinePos = utf16LinePos; Utf16Offset = utf16Offset; Utf16Length = utf16Length }
-        new(message : StringView, typ : CompilationMessageType, lineNum : uint64, linePos : uint64, offset : uint64, length : uint64, utf16LinePos : uint64, utf16Offset : uint64, utf16Length : uint64) = CompilationMessage(0n, message, typ, lineNum, linePos, offset, length, utf16LinePos, utf16Offset, utf16Length)
+        new(nextInChain : nativeint, message : StringView, typ : CompilationMessageType, lineNum : uint64, linePos : uint64, offset : uint64, length : uint64) = { NextInChain = nextInChain; Message = message; Type = typ; LineNum = lineNum; LinePos = linePos; Offset = offset; Length = length }
+        new(message : StringView, typ : CompilationMessageType, lineNum : uint64, linePos : uint64, offset : uint64, length : uint64) = CompilationMessage(0n, message, typ, lineNum, linePos, offset, length)
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type DawnCompilationMessageUtf16 = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public SType : SType
+        val mutable public LinePos : uint64
+        val mutable public Offset : uint64
+        val mutable public Length : uint64
+        new(nextInChain : nativeint, sType : SType, linePos : uint64, offset : uint64, length : uint64) = { NextInChain = nextInChain; SType = sType; LinePos = linePos; Offset = offset; Length = length }
+        new(linePos : uint64, offset : uint64, length : uint64) = DawnCompilationMessageUtf16(0n, Unchecked.defaultof<SType>, linePos, offset, length)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type ComputePassDescriptor = 
     struct
         val mutable public NextInChain : nativeint
         val mutable public Label : StringView
-        val mutable public TimestampWrites : nativeptr<ComputePassTimestampWrites>
-        new(nextInChain : nativeint, label : StringView, timestampWrites : nativeptr<ComputePassTimestampWrites>) = { NextInChain = nextInChain; Label = label; TimestampWrites = timestampWrites }
-        new(label : StringView, timestampWrites : nativeptr<ComputePassTimestampWrites>) = ComputePassDescriptor(0n, label, timestampWrites)
-    end
-[<Struct; StructLayout(LayoutKind.Sequential)>]
-type ComputePassTimestampWrites = 
-    struct
-        val mutable public QuerySet : nativeint
-        val mutable public BeginningOfPassWriteIndex : uint32
-        val mutable public EndOfPassWriteIndex : uint32
-        new(querySet : nativeint, beginningOfPassWriteIndex : uint32, endOfPassWriteIndex : uint32) = { QuerySet = querySet; BeginningOfPassWriteIndex = beginningOfPassWriteIndex; EndOfPassWriteIndex = endOfPassWriteIndex }
+        val mutable public TimestampWrites : nativeptr<PassTimestampWrites>
+        new(nextInChain : nativeint, label : StringView, timestampWrites : nativeptr<PassTimestampWrites>) = { NextInChain = nextInChain; Label = label; TimestampWrites = timestampWrites }
+        new(label : StringView, timestampWrites : nativeptr<PassTimestampWrites>) = ComputePassDescriptor(0n, label, timestampWrites)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type ComputePipelineDescriptor = 
@@ -439,51 +410,29 @@ type CopyTextureForBrowserOptions =
         new(nextInChain : nativeint, flipY : int, needsColorSpaceConversion : int, srcAlphaMode : AlphaMode, srcTransferFunctionParameters : nativeptr<float32>, conversionMatrix : nativeptr<float32>, dstTransferFunctionParameters : nativeptr<float32>, dstAlphaMode : AlphaMode, internalUsage : int) = { NextInChain = nextInChain; FlipY = flipY; NeedsColorSpaceConversion = needsColorSpaceConversion; SrcAlphaMode = srcAlphaMode; SrcTransferFunctionParameters = srcTransferFunctionParameters; ConversionMatrix = conversionMatrix; DstTransferFunctionParameters = dstTransferFunctionParameters; DstAlphaMode = dstAlphaMode; InternalUsage = internalUsage }
         new(flipY : int, needsColorSpaceConversion : int, srcAlphaMode : AlphaMode, srcTransferFunctionParameters : nativeptr<float32>, conversionMatrix : nativeptr<float32>, dstTransferFunctionParameters : nativeptr<float32>, dstAlphaMode : AlphaMode, internalUsage : int) = CopyTextureForBrowserOptions(0n, flipY, needsColorSpaceConversion, srcAlphaMode, srcTransferFunctionParameters, conversionMatrix, dstTransferFunctionParameters, dstAlphaMode, internalUsage)
     end
-type CreateComputePipelineAsyncCallback = delegate of status : CreatePipelineAsyncStatus * pipeline : nativeint * message : StringView * userdata : nativeint -> unit
-type CreateComputePipelineAsyncCallback2 = delegate of status : CreatePipelineAsyncStatus * pipeline : nativeint * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
+type CreateComputePipelineAsyncCallback = delegate of status : CreatePipelineAsyncStatus * pipeline : nativeint * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type CreateComputePipelineAsyncCallbackInfo = 
     struct
         val mutable public NextInChain : nativeint
         val mutable public Mode : CallbackMode
         val mutable public Callback : nativeint
-        val mutable public Userdata : nativeint
-        new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata = userdata }
-        new(mode : CallbackMode, callback : nativeint, userdata : nativeint) = CreateComputePipelineAsyncCallbackInfo(0n, mode, callback, userdata)
-    end
-[<Struct; StructLayout(LayoutKind.Sequential)>]
-type CreateComputePipelineAsyncCallbackInfo2 = 
-    struct
-        val mutable public NextInChain : nativeint
-        val mutable public Mode : CallbackMode
-        val mutable public Callback : nativeint
         val mutable public Userdata1 : nativeint
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
-        new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = CreateComputePipelineAsyncCallbackInfo2(0n, mode, callback, userdata1, userdata2)
+        new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = CreateComputePipelineAsyncCallbackInfo(0n, mode, callback, userdata1, userdata2)
     end
-type CreateRenderPipelineAsyncCallback = delegate of status : CreatePipelineAsyncStatus * pipeline : nativeint * message : StringView * userdata : nativeint -> unit
-type CreateRenderPipelineAsyncCallback2 = delegate of status : CreatePipelineAsyncStatus * pipeline : nativeint * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
+type CreateRenderPipelineAsyncCallback = delegate of status : CreatePipelineAsyncStatus * pipeline : nativeint * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type CreateRenderPipelineAsyncCallbackInfo = 
     struct
         val mutable public NextInChain : nativeint
         val mutable public Mode : CallbackMode
         val mutable public Callback : nativeint
-        val mutable public Userdata : nativeint
-        new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata = userdata }
-        new(mode : CallbackMode, callback : nativeint, userdata : nativeint) = CreateRenderPipelineAsyncCallbackInfo(0n, mode, callback, userdata)
-    end
-[<Struct; StructLayout(LayoutKind.Sequential)>]
-type CreateRenderPipelineAsyncCallbackInfo2 = 
-    struct
-        val mutable public NextInChain : nativeint
-        val mutable public Mode : CallbackMode
-        val mutable public Callback : nativeint
         val mutable public Userdata1 : nativeint
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
-        new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = CreateRenderPipelineAsyncCallbackInfo2(0n, mode, callback, userdata1, userdata2)
+        new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = CreateRenderPipelineAsyncCallbackInfo(0n, mode, callback, userdata1, userdata2)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type AHardwareBufferProperties = 
@@ -491,66 +440,32 @@ type AHardwareBufferProperties =
         val mutable public YCbCrInfo : YCbCrVkDescriptor
         new(yCbCrInfo : YCbCrVkDescriptor) = { YCbCrInfo = yCbCrInfo }
     end
-type DeviceLostCallback = delegate of reason : DeviceLostReason * message : StringView * userdata : nativeint -> unit
-type DeviceLostCallbackNew = delegate of device : nativeptr<nativeint> * reason : DeviceLostReason * message : StringView * userdata : nativeint -> unit
-type DeviceLostCallback2 = delegate of device : nativeptr<nativeint> * reason : DeviceLostReason * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
+type DeviceLostCallback = delegate of device : nativeptr<nativeint> * reason : DeviceLostReason * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DeviceLostCallbackInfo = 
     struct
         val mutable public NextInChain : nativeint
         val mutable public Mode : CallbackMode
         val mutable public Callback : nativeint
-        val mutable public Userdata : nativeint
-        new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata = userdata }
-        new(mode : CallbackMode, callback : nativeint, userdata : nativeint) = DeviceLostCallbackInfo(0n, mode, callback, userdata)
-    end
-[<Struct; StructLayout(LayoutKind.Sequential)>]
-type DeviceLostCallbackInfo2 = 
-    struct
-        val mutable public NextInChain : nativeint
-        val mutable public Mode : CallbackMode
-        val mutable public Callback : nativeint
         val mutable public Userdata1 : nativeint
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
-        new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = DeviceLostCallbackInfo2(0n, mode, callback, userdata1, userdata2)
+        new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = DeviceLostCallbackInfo(0n, mode, callback, userdata1, userdata2)
     end
-type ErrorCallback = delegate of typ : ErrorType * message : StringView * userdata : nativeint -> unit
 type UncapturedErrorCallback = delegate of device : nativeptr<nativeint> * typ : ErrorType * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type UncapturedErrorCallbackInfo = 
     struct
         val mutable public NextInChain : nativeint
         val mutable public Callback : nativeint
-        val mutable public Userdata : nativeint
-        new(nextInChain : nativeint, callback : nativeint, userdata : nativeint) = { NextInChain = nextInChain; Callback = callback; Userdata = userdata }
-        new(callback : nativeint, userdata : nativeint) = UncapturedErrorCallbackInfo(0n, callback, userdata)
-    end
-[<Struct; StructLayout(LayoutKind.Sequential)>]
-type UncapturedErrorCallbackInfo2 = 
-    struct
-        val mutable public NextInChain : nativeint
-        val mutable public Callback : nativeint
         val mutable public Userdata1 : nativeint
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
-        new(callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = UncapturedErrorCallbackInfo2(0n, callback, userdata1, userdata2)
+        new(callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = UncapturedErrorCallbackInfo(0n, callback, userdata1, userdata2)
     end
-type PopErrorScopeCallback = delegate of status : PopErrorScopeStatus * typ : ErrorType * message : StringView * userdata : nativeint -> unit
-type PopErrorScopeCallback2 = delegate of status : PopErrorScopeStatus * typ : ErrorType * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
+type PopErrorScopeCallback = delegate of status : PopErrorScopeStatus * typ : ErrorType * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type PopErrorScopeCallbackInfo = 
-    struct
-        val mutable public NextInChain : nativeint
-        val mutable public Mode : CallbackMode
-        val mutable public Callback : nativeint
-        val mutable public OldCallback : nativeint
-        val mutable public Userdata : nativeint
-        new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, oldCallback : nativeint, userdata : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; OldCallback = oldCallback; Userdata = userdata }
-        new(mode : CallbackMode, callback : nativeint, oldCallback : nativeint, userdata : nativeint) = PopErrorScopeCallbackInfo(0n, mode, callback, oldCallback, userdata)
-    end
-[<Struct; StructLayout(LayoutKind.Sequential)>]
-type PopErrorScopeCallbackInfo2 = 
     struct
         val mutable public NextInChain : nativeint
         val mutable public Mode : CallbackMode
@@ -558,11 +473,12 @@ type PopErrorScopeCallbackInfo2 =
         val mutable public Userdata1 : nativeint
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
-        new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = PopErrorScopeCallbackInfo2(0n, mode, callback, userdata1, userdata2)
+        new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = PopErrorScopeCallbackInfo(0n, mode, callback, userdata1, userdata2)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type Limits = 
     struct
+        val mutable public NextInChain : nativeint
         val mutable public MaxTextureDimension1D : uint32
         val mutable public MaxTextureDimension2D : uint32
         val mutable public MaxTextureDimension3D : uint32
@@ -585,7 +501,6 @@ type Limits =
         val mutable public MaxBufferSize : uint64
         val mutable public MaxVertexAttributes : uint32
         val mutable public MaxVertexBufferArrayStride : uint32
-        val mutable public MaxInterStageShaderComponents : uint32
         val mutable public MaxInterStageShaderVariables : uint32
         val mutable public MaxColorAttachments : uint32
         val mutable public MaxColorAttachmentBytesPerSample : uint32
@@ -595,7 +510,12 @@ type Limits =
         val mutable public MaxComputeWorkgroupSizeY : uint32
         val mutable public MaxComputeWorkgroupSizeZ : uint32
         val mutable public MaxComputeWorkgroupsPerDimension : uint32
-        new(maxTextureDimension1D : uint32, maxTextureDimension2D : uint32, maxTextureDimension3D : uint32, maxTextureArrayLayers : uint32, maxBindGroups : uint32, maxBindGroupsPlusVertexBuffers : uint32, maxBindingsPerBindGroup : uint32, maxDynamicUniformBuffersPerPipelineLayout : uint32, maxDynamicStorageBuffersPerPipelineLayout : uint32, maxSampledTexturesPerShaderStage : uint32, maxSamplersPerShaderStage : uint32, maxStorageBuffersPerShaderStage : uint32, maxStorageTexturesPerShaderStage : uint32, maxUniformBuffersPerShaderStage : uint32, maxUniformBufferBindingSize : uint64, maxStorageBufferBindingSize : uint64, minUniformBufferOffsetAlignment : uint32, minStorageBufferOffsetAlignment : uint32, maxVertexBuffers : uint32, maxBufferSize : uint64, maxVertexAttributes : uint32, maxVertexBufferArrayStride : uint32, maxInterStageShaderComponents : uint32, maxInterStageShaderVariables : uint32, maxColorAttachments : uint32, maxColorAttachmentBytesPerSample : uint32, maxComputeWorkgroupStorageSize : uint32, maxComputeInvocationsPerWorkgroup : uint32, maxComputeWorkgroupSizeX : uint32, maxComputeWorkgroupSizeY : uint32, maxComputeWorkgroupSizeZ : uint32, maxComputeWorkgroupsPerDimension : uint32) = { MaxTextureDimension1D = maxTextureDimension1D; MaxTextureDimension2D = maxTextureDimension2D; MaxTextureDimension3D = maxTextureDimension3D; MaxTextureArrayLayers = maxTextureArrayLayers; MaxBindGroups = maxBindGroups; MaxBindGroupsPlusVertexBuffers = maxBindGroupsPlusVertexBuffers; MaxBindingsPerBindGroup = maxBindingsPerBindGroup; MaxDynamicUniformBuffersPerPipelineLayout = maxDynamicUniformBuffersPerPipelineLayout; MaxDynamicStorageBuffersPerPipelineLayout = maxDynamicStorageBuffersPerPipelineLayout; MaxSampledTexturesPerShaderStage = maxSampledTexturesPerShaderStage; MaxSamplersPerShaderStage = maxSamplersPerShaderStage; MaxStorageBuffersPerShaderStage = maxStorageBuffersPerShaderStage; MaxStorageTexturesPerShaderStage = maxStorageTexturesPerShaderStage; MaxUniformBuffersPerShaderStage = maxUniformBuffersPerShaderStage; MaxUniformBufferBindingSize = maxUniformBufferBindingSize; MaxStorageBufferBindingSize = maxStorageBufferBindingSize; MinUniformBufferOffsetAlignment = minUniformBufferOffsetAlignment; MinStorageBufferOffsetAlignment = minStorageBufferOffsetAlignment; MaxVertexBuffers = maxVertexBuffers; MaxBufferSize = maxBufferSize; MaxVertexAttributes = maxVertexAttributes; MaxVertexBufferArrayStride = maxVertexBufferArrayStride; MaxInterStageShaderComponents = maxInterStageShaderComponents; MaxInterStageShaderVariables = maxInterStageShaderVariables; MaxColorAttachments = maxColorAttachments; MaxColorAttachmentBytesPerSample = maxColorAttachmentBytesPerSample; MaxComputeWorkgroupStorageSize = maxComputeWorkgroupStorageSize; MaxComputeInvocationsPerWorkgroup = maxComputeInvocationsPerWorkgroup; MaxComputeWorkgroupSizeX = maxComputeWorkgroupSizeX; MaxComputeWorkgroupSizeY = maxComputeWorkgroupSizeY; MaxComputeWorkgroupSizeZ = maxComputeWorkgroupSizeZ; MaxComputeWorkgroupsPerDimension = maxComputeWorkgroupsPerDimension }
+        val mutable public MaxStorageBuffersInVertexStage : uint32
+        val mutable public MaxStorageTexturesInVertexStage : uint32
+        val mutable public MaxStorageBuffersInFragmentStage : uint32
+        val mutable public MaxStorageTexturesInFragmentStage : uint32
+        new(nextInChain : nativeint, maxTextureDimension1D : uint32, maxTextureDimension2D : uint32, maxTextureDimension3D : uint32, maxTextureArrayLayers : uint32, maxBindGroups : uint32, maxBindGroupsPlusVertexBuffers : uint32, maxBindingsPerBindGroup : uint32, maxDynamicUniformBuffersPerPipelineLayout : uint32, maxDynamicStorageBuffersPerPipelineLayout : uint32, maxSampledTexturesPerShaderStage : uint32, maxSamplersPerShaderStage : uint32, maxStorageBuffersPerShaderStage : uint32, maxStorageTexturesPerShaderStage : uint32, maxUniformBuffersPerShaderStage : uint32, maxUniformBufferBindingSize : uint64, maxStorageBufferBindingSize : uint64, minUniformBufferOffsetAlignment : uint32, minStorageBufferOffsetAlignment : uint32, maxVertexBuffers : uint32, maxBufferSize : uint64, maxVertexAttributes : uint32, maxVertexBufferArrayStride : uint32, maxInterStageShaderVariables : uint32, maxColorAttachments : uint32, maxColorAttachmentBytesPerSample : uint32, maxComputeWorkgroupStorageSize : uint32, maxComputeInvocationsPerWorkgroup : uint32, maxComputeWorkgroupSizeX : uint32, maxComputeWorkgroupSizeY : uint32, maxComputeWorkgroupSizeZ : uint32, maxComputeWorkgroupsPerDimension : uint32, maxStorageBuffersInVertexStage : uint32, maxStorageTexturesInVertexStage : uint32, maxStorageBuffersInFragmentStage : uint32, maxStorageTexturesInFragmentStage : uint32) = { NextInChain = nextInChain; MaxTextureDimension1D = maxTextureDimension1D; MaxTextureDimension2D = maxTextureDimension2D; MaxTextureDimension3D = maxTextureDimension3D; MaxTextureArrayLayers = maxTextureArrayLayers; MaxBindGroups = maxBindGroups; MaxBindGroupsPlusVertexBuffers = maxBindGroupsPlusVertexBuffers; MaxBindingsPerBindGroup = maxBindingsPerBindGroup; MaxDynamicUniformBuffersPerPipelineLayout = maxDynamicUniformBuffersPerPipelineLayout; MaxDynamicStorageBuffersPerPipelineLayout = maxDynamicStorageBuffersPerPipelineLayout; MaxSampledTexturesPerShaderStage = maxSampledTexturesPerShaderStage; MaxSamplersPerShaderStage = maxSamplersPerShaderStage; MaxStorageBuffersPerShaderStage = maxStorageBuffersPerShaderStage; MaxStorageTexturesPerShaderStage = maxStorageTexturesPerShaderStage; MaxUniformBuffersPerShaderStage = maxUniformBuffersPerShaderStage; MaxUniformBufferBindingSize = maxUniformBufferBindingSize; MaxStorageBufferBindingSize = maxStorageBufferBindingSize; MinUniformBufferOffsetAlignment = minUniformBufferOffsetAlignment; MinStorageBufferOffsetAlignment = minStorageBufferOffsetAlignment; MaxVertexBuffers = maxVertexBuffers; MaxBufferSize = maxBufferSize; MaxVertexAttributes = maxVertexAttributes; MaxVertexBufferArrayStride = maxVertexBufferArrayStride; MaxInterStageShaderVariables = maxInterStageShaderVariables; MaxColorAttachments = maxColorAttachments; MaxColorAttachmentBytesPerSample = maxColorAttachmentBytesPerSample; MaxComputeWorkgroupStorageSize = maxComputeWorkgroupStorageSize; MaxComputeInvocationsPerWorkgroup = maxComputeInvocationsPerWorkgroup; MaxComputeWorkgroupSizeX = maxComputeWorkgroupSizeX; MaxComputeWorkgroupSizeY = maxComputeWorkgroupSizeY; MaxComputeWorkgroupSizeZ = maxComputeWorkgroupSizeZ; MaxComputeWorkgroupsPerDimension = maxComputeWorkgroupsPerDimension; MaxStorageBuffersInVertexStage = maxStorageBuffersInVertexStage; MaxStorageTexturesInVertexStage = maxStorageTexturesInVertexStage; MaxStorageBuffersInFragmentStage = maxStorageBuffersInFragmentStage; MaxStorageTexturesInFragmentStage = maxStorageTexturesInFragmentStage }
+        new(maxTextureDimension1D : uint32, maxTextureDimension2D : uint32, maxTextureDimension3D : uint32, maxTextureArrayLayers : uint32, maxBindGroups : uint32, maxBindGroupsPlusVertexBuffers : uint32, maxBindingsPerBindGroup : uint32, maxDynamicUniformBuffersPerPipelineLayout : uint32, maxDynamicStorageBuffersPerPipelineLayout : uint32, maxSampledTexturesPerShaderStage : uint32, maxSamplersPerShaderStage : uint32, maxStorageBuffersPerShaderStage : uint32, maxStorageTexturesPerShaderStage : uint32, maxUniformBuffersPerShaderStage : uint32, maxUniformBufferBindingSize : uint64, maxStorageBufferBindingSize : uint64, minUniformBufferOffsetAlignment : uint32, minStorageBufferOffsetAlignment : uint32, maxVertexBuffers : uint32, maxBufferSize : uint64, maxVertexAttributes : uint32, maxVertexBufferArrayStride : uint32, maxInterStageShaderVariables : uint32, maxColorAttachments : uint32, maxColorAttachmentBytesPerSample : uint32, maxComputeWorkgroupStorageSize : uint32, maxComputeInvocationsPerWorkgroup : uint32, maxComputeWorkgroupSizeX : uint32, maxComputeWorkgroupSizeY : uint32, maxComputeWorkgroupSizeZ : uint32, maxComputeWorkgroupsPerDimension : uint32, maxStorageBuffersInVertexStage : uint32, maxStorageTexturesInVertexStage : uint32, maxStorageBuffersInFragmentStage : uint32, maxStorageTexturesInFragmentStage : uint32) = Limits(0n, maxTextureDimension1D, maxTextureDimension2D, maxTextureDimension3D, maxTextureArrayLayers, maxBindGroups, maxBindGroupsPlusVertexBuffers, maxBindingsPerBindGroup, maxDynamicUniformBuffersPerPipelineLayout, maxDynamicStorageBuffersPerPipelineLayout, maxSampledTexturesPerShaderStage, maxSamplersPerShaderStage, maxStorageBuffersPerShaderStage, maxStorageTexturesPerShaderStage, maxUniformBuffersPerShaderStage, maxUniformBufferBindingSize, maxStorageBufferBindingSize, minUniformBufferOffsetAlignment, minStorageBufferOffsetAlignment, maxVertexBuffers, maxBufferSize, maxVertexAttributes, maxVertexBufferArrayStride, maxInterStageShaderVariables, maxColorAttachments, maxColorAttachmentBytesPerSample, maxComputeWorkgroupStorageSize, maxComputeInvocationsPerWorkgroup, maxComputeWorkgroupSizeX, maxComputeWorkgroupSizeY, maxComputeWorkgroupSizeZ, maxComputeWorkgroupsPerDimension, maxStorageBuffersInVertexStage, maxStorageTexturesInVertexStage, maxStorageBuffersInFragmentStage, maxStorageTexturesInFragmentStage)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type AdapterPropertiesSubgroups = 
@@ -636,29 +556,30 @@ type DawnTexelCopyBufferRowAlignmentLimits =
         new(minTexelCopyBufferRowAlignment : uint32) = DawnTexelCopyBufferRowAlignmentLimits(0n, Unchecked.defaultof<SType>, minTexelCopyBufferRowAlignment)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
-type RequiredLimits = 
-    struct
-        val mutable public NextInChain : nativeint
-        val mutable public Limits : Limits
-        new(nextInChain : nativeint, limits : Limits) = { NextInChain = nextInChain; Limits = limits }
-        new(limits : Limits) = RequiredLimits(0n, limits)
-    end
-[<Struct; StructLayout(LayoutKind.Sequential)>]
-type SupportedLimits = 
-    struct
-        val mutable public NextInChain : nativeint
-        val mutable public Limits : Limits
-        new(nextInChain : nativeint, limits : Limits) = { NextInChain = nextInChain; Limits = limits }
-        new(limits : Limits) = SupportedLimits(0n, limits)
-    end
-[<Struct; StructLayout(LayoutKind.Sequential)>]
 type SupportedFeatures = 
     struct
         val mutable public FeatureCount : unativeint
         val mutable public Features : nativeptr<FeatureName>
         new(featureCount : unativeint, features : nativeptr<FeatureName>) = { FeatureCount = featureCount; Features = features }
     end
-type LoggingCallback = delegate of typ : LoggingType * message : StringView * userdata : nativeint -> unit
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type SupportedWGSLLanguageFeatures = 
+    struct
+        val mutable public FeatureCount : unativeint
+        val mutable public Features : nativeptr<WGSLLanguageFeatureName>
+        new(featureCount : unativeint, features : nativeptr<WGSLLanguageFeatureName>) = { FeatureCount = featureCount; Features = features }
+    end
+type LoggingCallback = delegate of typ : LoggingType * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type LoggingCallbackInfo = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public Callback : nativeint
+        val mutable public Userdata1 : nativeint
+        val mutable public Userdata2 : nativeint
+        new(nextInChain : nativeint, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
+        new(callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = LoggingCallbackInfo(0n, callback, userdata1, userdata2)
+    end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type Extent2D = 
     struct
@@ -839,8 +760,9 @@ type SharedTextureMemoryIOSurfaceDescriptor =
         val mutable public NextInChain : nativeint
         val mutable public SType : SType
         val mutable public IoSurface : nativeint
-        new(nextInChain : nativeint, sType : SType, ioSurface : nativeint) = { NextInChain = nextInChain; SType = sType; IoSurface = ioSurface }
-        new(ioSurface : nativeint) = SharedTextureMemoryIOSurfaceDescriptor(0n, Unchecked.defaultof<SType>, ioSurface)
+        val mutable public AllowStorageBinding : int
+        new(nextInChain : nativeint, sType : SType, ioSurface : nativeint, allowStorageBinding : int) = { NextInChain = nextInChain; SType = sType; IoSurface = ioSurface; AllowStorageBinding = allowStorageBinding }
+        new(ioSurface : nativeint, allowStorageBinding : int) = SharedTextureMemoryIOSurfaceDescriptor(0n, Unchecked.defaultof<SType>, ioSurface, allowStorageBinding)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryEGLImageDescriptor = 
@@ -957,6 +879,15 @@ type SharedFenceMTLSharedEventDescriptor =
         new(sharedEvent : nativeint) = SharedFenceMTLSharedEventDescriptor(0n, Unchecked.defaultof<SType>, sharedEvent)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
+type SharedFenceEGLSyncDescriptor = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public SType : SType
+        val mutable public Sync : nativeint
+        new(nextInChain : nativeint, sType : SType, sync : nativeint) = { NextInChain = nextInChain; SType = sType; Sync = sync }
+        new(sync : nativeint) = SharedFenceEGLSyncDescriptor(0n, Unchecked.defaultof<SType>, sync)
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedFenceExportInfo = 
     struct
         val mutable public NextInChain : nativeint
@@ -1010,37 +941,54 @@ type SharedFenceMTLSharedEventExportInfo =
         new(sharedEvent : nativeint) = SharedFenceMTLSharedEventExportInfo(0n, Unchecked.defaultof<SType>, sharedEvent)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
-type FormatCapabilities = 
+type SharedFenceEGLSyncExportInfo = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public SType : SType
+        val mutable public Sync : nativeint
+        new(nextInChain : nativeint, sType : SType, sync : nativeint) = { NextInChain = nextInChain; SType = sType; Sync = sync }
+        new(sync : nativeint) = SharedFenceEGLSyncExportInfo(0n, Unchecked.defaultof<SType>, sync)
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type DawnFormatCapabilities = 
     struct
         val mutable public NextInChain : nativeint
         new(nextInChain : nativeint) = { NextInChain = nextInChain }
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
-type DrmFormatCapabilities = 
+type DawnDrmFormatCapabilities = 
     struct
         val mutable public NextInChain : nativeint
         val mutable public SType : SType
         val mutable public PropertiesCount : unativeint
-        val mutable public Properties : nativeptr<DrmFormatProperties>
-        new(nextInChain : nativeint, sType : SType, propertiesCount : unativeint, properties : nativeptr<DrmFormatProperties>) = { NextInChain = nextInChain; SType = sType; PropertiesCount = propertiesCount; Properties = properties }
-        new(propertiesCount : unativeint, properties : nativeptr<DrmFormatProperties>) = DrmFormatCapabilities(0n, Unchecked.defaultof<SType>, propertiesCount, properties)
+        val mutable public Properties : nativeptr<DawnDrmFormatProperties>
+        new(nextInChain : nativeint, sType : SType, propertiesCount : unativeint, properties : nativeptr<DawnDrmFormatProperties>) = { NextInChain = nextInChain; SType = sType; PropertiesCount = propertiesCount; Properties = properties }
+        new(propertiesCount : unativeint, properties : nativeptr<DawnDrmFormatProperties>) = DawnDrmFormatCapabilities(0n, Unchecked.defaultof<SType>, propertiesCount, properties)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
-type DrmFormatProperties = 
+type DawnDrmFormatProperties = 
     struct
         val mutable public Modifier : uint64
         val mutable public ModifierPlaneCount : uint32
         new(modifier : uint64, modifierPlaneCount : uint32) = { Modifier = modifier; ModifierPlaneCount = modifierPlaneCount }
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
-type ImageCopyBuffer = 
+type TexelCopyBufferInfo = 
     struct
-        val mutable public Layout : TextureDataLayout
+        val mutable public Layout : TexelCopyBufferLayout
         val mutable public Buffer : nativeint
-        new(layout : TextureDataLayout, buffer : nativeint) = { Layout = layout; Buffer = buffer }
+        new(layout : TexelCopyBufferLayout, buffer : nativeint) = { Layout = layout; Buffer = buffer }
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
-type ImageCopyTexture = 
+type TexelCopyBufferLayout = 
+    struct
+        val mutable public Offset : uint64
+        val mutable public BytesPerRow : uint32
+        val mutable public RowsPerImage : uint32
+        new(offset : uint64, bytesPerRow : uint32, rowsPerImage : uint32) = { Offset = offset; BytesPerRow = bytesPerRow; RowsPerImage = rowsPerImage }
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type TexelCopyTextureInfo = 
     struct
         val mutable public Texture : nativeint
         val mutable public MipLevel : uint32
@@ -1072,21 +1020,21 @@ type FutureWaitInfo =
         new(future : Future, completed : int) = { Future = future; Completed = completed }
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
-type InstanceFeatures = 
+type InstanceCapabilities = 
     struct
         val mutable public NextInChain : nativeint
         val mutable public TimedWaitAnyEnable : int
         val mutable public TimedWaitAnyMaxCount : unativeint
         new(nextInChain : nativeint, timedWaitAnyEnable : int, timedWaitAnyMaxCount : unativeint) = { NextInChain = nextInChain; TimedWaitAnyEnable = timedWaitAnyEnable; TimedWaitAnyMaxCount = timedWaitAnyMaxCount }
-        new(timedWaitAnyEnable : int, timedWaitAnyMaxCount : unativeint) = InstanceFeatures(0n, timedWaitAnyEnable, timedWaitAnyMaxCount)
+        new(timedWaitAnyEnable : int, timedWaitAnyMaxCount : unativeint) = InstanceCapabilities(0n, timedWaitAnyEnable, timedWaitAnyMaxCount)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type InstanceDescriptor = 
     struct
         val mutable public NextInChain : nativeint
-        val mutable public Features : InstanceFeatures
-        new(nextInChain : nativeint, features : InstanceFeatures) = { NextInChain = nextInChain; Features = features }
-        new(features : InstanceFeatures) = InstanceDescriptor(0n, features)
+        val mutable public Capabilities : InstanceCapabilities
+        new(nextInChain : nativeint, capabilities : InstanceCapabilities) = { NextInChain = nextInChain; Capabilities = capabilities }
+        new(capabilities : InstanceCapabilities) = InstanceDescriptor(0n, capabilities)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnWireWGSLControl = 
@@ -1100,21 +1048,34 @@ type DawnWireWGSLControl =
         new(enableExperimental : int, enableUnsafe : int, enableTesting : int) = DawnWireWGSLControl(0n, Unchecked.defaultof<SType>, enableExperimental, enableUnsafe, enableTesting)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
+type DawnInjectedInvalidSType = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public SType : SType
+        val mutable public InvalidSType : SType
+        new(nextInChain : nativeint, sType : SType, invalidSType : SType) = { NextInChain = nextInChain; SType = sType; InvalidSType = invalidSType }
+        new(invalidSType : SType) = DawnInjectedInvalidSType(0n, Unchecked.defaultof<SType>, invalidSType)
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
 type VertexAttribute = 
     struct
+        val mutable public NextInChain : nativeint
         val mutable public Format : VertexFormat
         val mutable public Offset : uint64
         val mutable public ShaderLocation : uint32
-        new(format : VertexFormat, offset : uint64, shaderLocation : uint32) = { Format = format; Offset = offset; ShaderLocation = shaderLocation }
+        new(nextInChain : nativeint, format : VertexFormat, offset : uint64, shaderLocation : uint32) = { NextInChain = nextInChain; Format = format; Offset = offset; ShaderLocation = shaderLocation }
+        new(format : VertexFormat, offset : uint64, shaderLocation : uint32) = VertexAttribute(0n, format, offset, shaderLocation)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type VertexBufferLayout = 
     struct
-        val mutable public ArrayStride : uint64
+        val mutable public NextInChain : nativeint
         val mutable public StepMode : VertexStepMode
+        val mutable public ArrayStride : uint64
         val mutable public AttributeCount : unativeint
         val mutable public Attributes : nativeptr<VertexAttribute>
-        new(arrayStride : uint64, stepMode : VertexStepMode, attributeCount : unativeint, attributes : nativeptr<VertexAttribute>) = { ArrayStride = arrayStride; StepMode = stepMode; AttributeCount = attributeCount; Attributes = attributes }
+        new(nextInChain : nativeint, stepMode : VertexStepMode, arrayStride : uint64, attributeCount : unativeint, attributes : nativeptr<VertexAttribute>) = { NextInChain = nextInChain; StepMode = stepMode; ArrayStride = arrayStride; AttributeCount = attributeCount; Attributes = attributes }
+        new(stepMode : VertexStepMode, arrayStride : uint64, attributeCount : unativeint, attributes : nativeptr<VertexAttribute>) = VertexBufferLayout(0n, stepMode, arrayStride, attributeCount, attributes)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type Origin3D = 
@@ -1130,6 +1091,16 @@ type Origin2D =
         val mutable public X : uint32
         val mutable public Y : uint32
         new(x : uint32, y : uint32) = { X = x; Y = y }
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type PassTimestampWrites = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public QuerySet : nativeint
+        val mutable public BeginningOfPassWriteIndex : uint32
+        val mutable public EndOfPassWriteIndex : uint32
+        new(nextInChain : nativeint, querySet : nativeint, beginningOfPassWriteIndex : uint32, endOfPassWriteIndex : uint32) = { NextInChain = nextInChain; QuerySet = querySet; BeginningOfPassWriteIndex = beginningOfPassWriteIndex; EndOfPassWriteIndex = endOfPassWriteIndex }
+        new(querySet : nativeint, beginningOfPassWriteIndex : uint32, endOfPassWriteIndex : uint32) = PassTimestampWrites(0n, querySet, beginningOfPassWriteIndex, endOfPassWriteIndex)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type PipelineLayoutDescriptor = 
@@ -1162,7 +1133,6 @@ type PipelineLayoutStorageAttachment =
         new(nextInChain : nativeint, offset : uint64, format : TextureFormat) = { NextInChain = nextInChain; Offset = offset; Format = format }
         new(offset : uint64, format : TextureFormat) = PipelineLayoutStorageAttachment(0n, offset, format)
     end
-type ProgrammableStageDescriptor = ComputeState
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type ComputeState = 
     struct
@@ -1192,20 +1162,9 @@ type QueueDescriptor =
         new(nextInChain : nativeint, label : StringView) = { NextInChain = nextInChain; Label = label }
         new(label : StringView) = QueueDescriptor(0n, label)
     end
-type QueueWorkDoneCallback = delegate of status : QueueWorkDoneStatus * userdata : nativeint -> unit
-type QueueWorkDoneCallback2 = delegate of status : QueueWorkDoneStatus * userdata1 : nativeint * userdata2 : nativeint -> unit
+type QueueWorkDoneCallback = delegate of status : QueueWorkDoneStatus * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type QueueWorkDoneCallbackInfo = 
-    struct
-        val mutable public NextInChain : nativeint
-        val mutable public Mode : CallbackMode
-        val mutable public Callback : nativeint
-        val mutable public Userdata : nativeint
-        new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata = userdata }
-        new(mode : CallbackMode, callback : nativeint, userdata : nativeint) = QueueWorkDoneCallbackInfo(0n, mode, callback, userdata)
-    end
-[<Struct; StructLayout(LayoutKind.Sequential)>]
-type QueueWorkDoneCallbackInfo2 = 
     struct
         val mutable public NextInChain : nativeint
         val mutable public Mode : CallbackMode
@@ -1213,7 +1172,7 @@ type QueueWorkDoneCallbackInfo2 =
         val mutable public Userdata1 : nativeint
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
-        new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = QueueWorkDoneCallbackInfo2(0n, mode, callback, userdata1, userdata2)
+        new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = QueueWorkDoneCallbackInfo(0n, mode, callback, userdata1, userdata2)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RenderBundleDescriptor = 
@@ -1262,6 +1221,7 @@ type DawnRenderPassColorAttachmentRenderToSingleSampled =
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RenderPassDepthStencilAttachment = 
     struct
+        val mutable public NextInChain : nativeint
         val mutable public View : nativeint
         val mutable public DepthLoadOp : LoadOp
         val mutable public DepthStoreOp : StoreOp
@@ -1271,7 +1231,8 @@ type RenderPassDepthStencilAttachment =
         val mutable public StencilStoreOp : StoreOp
         val mutable public StencilClearValue : uint32
         val mutable public StencilReadOnly : int
-        new(view : nativeint, depthLoadOp : LoadOp, depthStoreOp : StoreOp, depthClearValue : float32, depthReadOnly : int, stencilLoadOp : LoadOp, stencilStoreOp : StoreOp, stencilClearValue : uint32, stencilReadOnly : int) = { View = view; DepthLoadOp = depthLoadOp; DepthStoreOp = depthStoreOp; DepthClearValue = depthClearValue; DepthReadOnly = depthReadOnly; StencilLoadOp = stencilLoadOp; StencilStoreOp = stencilStoreOp; StencilClearValue = stencilClearValue; StencilReadOnly = stencilReadOnly }
+        new(nextInChain : nativeint, view : nativeint, depthLoadOp : LoadOp, depthStoreOp : StoreOp, depthClearValue : float32, depthReadOnly : int, stencilLoadOp : LoadOp, stencilStoreOp : StoreOp, stencilClearValue : uint32, stencilReadOnly : int) = { NextInChain = nextInChain; View = view; DepthLoadOp = depthLoadOp; DepthStoreOp = depthStoreOp; DepthClearValue = depthClearValue; DepthReadOnly = depthReadOnly; StencilLoadOp = stencilLoadOp; StencilStoreOp = stencilStoreOp; StencilClearValue = stencilClearValue; StencilReadOnly = stencilReadOnly }
+        new(view : nativeint, depthLoadOp : LoadOp, depthStoreOp : StoreOp, depthClearValue : float32, depthReadOnly : int, stencilLoadOp : LoadOp, stencilStoreOp : StoreOp, stencilClearValue : uint32, stencilReadOnly : int) = RenderPassDepthStencilAttachment(0n, view, depthLoadOp, depthStoreOp, depthClearValue, depthReadOnly, stencilLoadOp, stencilStoreOp, stencilClearValue, stencilReadOnly)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RenderPassDescriptor = 
@@ -1282,9 +1243,9 @@ type RenderPassDescriptor =
         val mutable public ColorAttachments : nativeptr<RenderPassColorAttachment>
         val mutable public DepthStencilAttachment : nativeptr<RenderPassDepthStencilAttachment>
         val mutable public OcclusionQuerySet : nativeint
-        val mutable public TimestampWrites : nativeptr<RenderPassTimestampWrites>
-        new(nextInChain : nativeint, label : StringView, colorAttachmentCount : unativeint, colorAttachments : nativeptr<RenderPassColorAttachment>, depthStencilAttachment : nativeptr<RenderPassDepthStencilAttachment>, occlusionQuerySet : nativeint, timestampWrites : nativeptr<RenderPassTimestampWrites>) = { NextInChain = nextInChain; Label = label; ColorAttachmentCount = colorAttachmentCount; ColorAttachments = colorAttachments; DepthStencilAttachment = depthStencilAttachment; OcclusionQuerySet = occlusionQuerySet; TimestampWrites = timestampWrites }
-        new(label : StringView, colorAttachmentCount : unativeint, colorAttachments : nativeptr<RenderPassColorAttachment>, depthStencilAttachment : nativeptr<RenderPassDepthStencilAttachment>, occlusionQuerySet : nativeint, timestampWrites : nativeptr<RenderPassTimestampWrites>) = RenderPassDescriptor(0n, label, colorAttachmentCount, colorAttachments, depthStencilAttachment, occlusionQuerySet, timestampWrites)
+        val mutable public TimestampWrites : nativeptr<PassTimestampWrites>
+        new(nextInChain : nativeint, label : StringView, colorAttachmentCount : unativeint, colorAttachments : nativeptr<RenderPassColorAttachment>, depthStencilAttachment : nativeptr<RenderPassDepthStencilAttachment>, occlusionQuerySet : nativeint, timestampWrites : nativeptr<PassTimestampWrites>) = { NextInChain = nextInChain; Label = label; ColorAttachmentCount = colorAttachmentCount; ColorAttachments = colorAttachments; DepthStencilAttachment = depthStencilAttachment; OcclusionQuerySet = occlusionQuerySet; TimestampWrites = timestampWrites }
+        new(label : StringView, colorAttachmentCount : unativeint, colorAttachments : nativeptr<RenderPassColorAttachment>, depthStencilAttachment : nativeptr<RenderPassDepthStencilAttachment>, occlusionQuerySet : nativeint, timestampWrites : nativeptr<PassTimestampWrites>) = RenderPassDescriptor(0n, label, colorAttachmentCount, colorAttachments, depthStencilAttachment, occlusionQuerySet, timestampWrites)
     end
 type RenderPassDescriptorMaxDrawCount = RenderPassMaxDrawCount
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -1331,28 +1292,9 @@ type RenderPassStorageAttachment =
         new(nextInChain : nativeint, offset : uint64, storage : nativeint, loadOp : LoadOp, storeOp : StoreOp, clearValue : Color) = { NextInChain = nextInChain; Offset = offset; Storage = storage; LoadOp = loadOp; StoreOp = storeOp; ClearValue = clearValue }
         new(offset : uint64, storage : nativeint, loadOp : LoadOp, storeOp : StoreOp, clearValue : Color) = RenderPassStorageAttachment(0n, offset, storage, loadOp, storeOp, clearValue)
     end
-[<Struct; StructLayout(LayoutKind.Sequential)>]
-type RenderPassTimestampWrites = 
-    struct
-        val mutable public QuerySet : nativeint
-        val mutable public BeginningOfPassWriteIndex : uint32
-        val mutable public EndOfPassWriteIndex : uint32
-        new(querySet : nativeint, beginningOfPassWriteIndex : uint32, endOfPassWriteIndex : uint32) = { QuerySet = querySet; BeginningOfPassWriteIndex = beginningOfPassWriteIndex; EndOfPassWriteIndex = endOfPassWriteIndex }
-    end
-type RequestDeviceCallback = delegate of status : RequestDeviceStatus * device : nativeint * message : StringView * userdata : nativeint -> unit
-type RequestDeviceCallback2 = delegate of status : RequestDeviceStatus * device : nativeint * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
+type RequestDeviceCallback = delegate of status : RequestDeviceStatus * device : nativeint * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RequestDeviceCallbackInfo = 
-    struct
-        val mutable public NextInChain : nativeint
-        val mutable public Mode : CallbackMode
-        val mutable public Callback : nativeint
-        val mutable public Userdata : nativeint
-        new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata = userdata }
-        new(mode : CallbackMode, callback : nativeint, userdata : nativeint) = RequestDeviceCallbackInfo(0n, mode, callback, userdata)
-    end
-[<Struct; StructLayout(LayoutKind.Sequential)>]
-type RequestDeviceCallbackInfo2 = 
     struct
         val mutable public NextInChain : nativeint
         val mutable public Mode : CallbackMode
@@ -1360,7 +1302,7 @@ type RequestDeviceCallbackInfo2 =
         val mutable public Userdata1 : nativeint
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
-        new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = RequestDeviceCallbackInfo2(0n, mode, callback, userdata1, userdata2)
+        new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = RequestDeviceCallbackInfo(0n, mode, callback, userdata1, userdata2)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type VertexState = 
@@ -1559,15 +1501,14 @@ type SurfaceSourceAndroidNativeWindow =
         new(nextInChain : nativeint, sType : SType, window : nativeint) = { NextInChain = nextInChain; SType = sType; Window = window }
         new(window : nativeint) = SurfaceSourceAndroidNativeWindow(0n, Unchecked.defaultof<SType>, window)
     end
-type SurfaceDescriptorFromCanvasHTMLSelector = SurfaceSourceCanvasHTMLSelector_Emscripten
 [<Struct; StructLayout(LayoutKind.Sequential)>]
-type SurfaceSourceCanvasHTMLSelector_Emscripten = 
+type EmscriptenSurfaceSourceCanvasHTMLSelector = 
     struct
         val mutable public NextInChain : nativeint
         val mutable public SType : SType
         val mutable public Selector : StringView
         new(nextInChain : nativeint, sType : SType, selector : StringView) = { NextInChain = nextInChain; SType = sType; Selector = selector }
-        new(selector : StringView) = SurfaceSourceCanvasHTMLSelector_Emscripten(0n, Unchecked.defaultof<SType>, selector)
+        new(selector : StringView) = EmscriptenSurfaceSourceCanvasHTMLSelector(0n, Unchecked.defaultof<SType>, selector)
     end
 type SurfaceDescriptorFromMetalLayer = SurfaceSourceMetalLayer
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -1642,22 +1583,23 @@ type SurfaceDescriptorFromWindowsSwapChainPanel =
         new(swapChainPanel : nativeint) = SurfaceDescriptorFromWindowsSwapChainPanel(0n, Unchecked.defaultof<SType>, swapChainPanel)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
-type SurfaceTexture = 
-    struct
-        val mutable public Texture : nativeint
-        val mutable public Suboptimal : int
-        val mutable public Status : SurfaceGetCurrentTextureStatus
-        new(texture : nativeint, suboptimal : int, status : SurfaceGetCurrentTextureStatus) = { Texture = texture; Suboptimal = suboptimal; Status = status }
-    end
-[<Struct; StructLayout(LayoutKind.Sequential)>]
-type TextureDataLayout = 
+type SurfaceColorManagement = 
     struct
         val mutable public NextInChain : nativeint
-        val mutable public Offset : uint64
-        val mutable public BytesPerRow : uint32
-        val mutable public RowsPerImage : uint32
-        new(nextInChain : nativeint, offset : uint64, bytesPerRow : uint32, rowsPerImage : uint32) = { NextInChain = nextInChain; Offset = offset; BytesPerRow = bytesPerRow; RowsPerImage = rowsPerImage }
-        new(offset : uint64, bytesPerRow : uint32, rowsPerImage : uint32) = TextureDataLayout(0n, offset, bytesPerRow, rowsPerImage)
+        val mutable public SType : SType
+        val mutable public ColorSpace : PredefinedColorSpace
+        val mutable public ToneMappingMode : ToneMappingMode
+        new(nextInChain : nativeint, sType : SType, colorSpace : PredefinedColorSpace, toneMappingMode : ToneMappingMode) = { NextInChain = nextInChain; SType = sType; ColorSpace = colorSpace; ToneMappingMode = toneMappingMode }
+        new(colorSpace : PredefinedColorSpace, toneMappingMode : ToneMappingMode) = SurfaceColorManagement(0n, Unchecked.defaultof<SType>, colorSpace, toneMappingMode)
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type SurfaceTexture = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public Texture : nativeint
+        val mutable public Status : SurfaceGetCurrentTextureStatus
+        new(nextInChain : nativeint, texture : nativeint, status : SurfaceGetCurrentTextureStatus) = { NextInChain = nextInChain; Texture = texture; Status = status }
+        new(texture : nativeint, status : SurfaceGetCurrentTextureStatus) = SurfaceTexture(0n, texture, status)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type TextureDescriptor = 
@@ -1791,6 +1733,26 @@ type DawnBufferDescriptorErrorInfoFromWireClient =
         new(nextInChain : nativeint, sType : SType, outOfMemory : int) = { NextInChain = nextInChain; SType = sType; OutOfMemory = outOfMemory }
         new(outOfMemory : int) = DawnBufferDescriptorErrorInfoFromWireClient(0n, Unchecked.defaultof<SType>, outOfMemory)
     end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type SubgroupMatrixConfig = 
+    struct
+        val mutable public ComponentType : SubgroupMatrixComponentType
+        val mutable public ResultComponentType : SubgroupMatrixComponentType
+        val mutable public M : uint32
+        val mutable public N : uint32
+        val mutable public K : uint32
+        new(componentType : SubgroupMatrixComponentType, resultComponentType : SubgroupMatrixComponentType, M : uint32, N : uint32, K : uint32) = { ComponentType = componentType; ResultComponentType = resultComponentType; M = M; N = N; K = K }
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type AdapterPropertiesSubgroupMatrixConfigs = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public SType : SType
+        val mutable public ConfigCount : unativeint
+        val mutable public Configs : nativeptr<SubgroupMatrixConfig>
+        new(nextInChain : nativeint, sType : SType, configCount : unativeint, configs : nativeptr<SubgroupMatrixConfig>) = { NextInChain = nextInChain; SType = sType; ConfigCount = configCount; Configs = configs }
+        new(configCount : unativeint, configs : nativeptr<SubgroupMatrixConfig>) = AdapterPropertiesSubgroupMatrixConfigs(0n, Unchecked.defaultof<SType>, configCount, configs)
+    end
 module WebGPU = 
 
     [<DllImport("WebGPUNative", EntryPoint="gpuCreateInstance")>]
@@ -1800,7 +1762,7 @@ module WebGPU =
     [<DllImport("WebGPUNative", EntryPoint="gpuAdapterGetInstance")>]
     extern nativeint AdapterGetInstance(nativeint self)
     [<DllImport("WebGPUNative", EntryPoint="gpuAdapterGetLimits")>]
-    extern Status AdapterGetLimits(nativeint self, SupportedLimits* limits)
+    extern Status AdapterGetLimits(nativeint self, Limits* limits)
     [<DllImport("WebGPUNative", EntryPoint="gpuAdapterGetInfo")>]
     extern Status AdapterGetInfo(nativeint self, AdapterInfo* info)
     [<DllImport("WebGPUNative", EntryPoint="gpuAdapterHasFeature")>]
@@ -1808,15 +1770,11 @@ module WebGPU =
     [<DllImport("WebGPUNative", EntryPoint="gpuAdapterGetFeatures")>]
     extern void AdapterGetFeatures(nativeint self, SupportedFeatures* features)
     [<DllImport("WebGPUNative", EntryPoint="gpuAdapterRequestDevice")>]
-    extern void AdapterRequestDevice(nativeint self, DeviceDescriptor* descriptor, nativeint callback, nativeint userdata)
-    [<DllImport("WebGPUNative", EntryPoint="gpuAdapterRequestDeviceF")>]
-    extern Future AdapterRequestDeviceF(nativeint self, DeviceDescriptor* options, RequestDeviceCallbackInfo callbackInfo)
-    [<DllImport("WebGPUNative", EntryPoint="gpuAdapterRequestDevice2")>]
-    extern Future AdapterRequestDevice2(nativeint self, DeviceDescriptor* options, RequestDeviceCallbackInfo2 callbackInfo)
+    extern Future AdapterRequestDevice(nativeint self, DeviceDescriptor* options, RequestDeviceCallbackInfo callbackInfo)
     [<DllImport("WebGPUNative", EntryPoint="gpuAdapterCreateDevice")>]
     extern nativeint AdapterCreateDevice(nativeint self, DeviceDescriptor* descriptor)
     [<DllImport("WebGPUNative", EntryPoint="gpuAdapterGetFormatCapabilities")>]
-    extern Status AdapterGetFormatCapabilities(nativeint self, TextureFormat format, FormatCapabilities* capabilities)
+    extern Status AdapterGetFormatCapabilities(nativeint self, TextureFormat format, DawnFormatCapabilities* capabilities)
     [<DllImport("WebGPUNative", EntryPoint="gpuAdapterRelease")>]
     extern void AdapterRelease(nativeint self)
     [<DllImport("WebGPUNative", EntryPoint="gpuAdapterAddRef")>]
@@ -1833,37 +1791,16 @@ module WebGPU =
     extern void BindGroupLayoutRelease(nativeint self)
     [<DllImport("WebGPUNative", EntryPoint="gpuBindGroupLayoutAddRef")>]
     extern void BindGroupLayoutAddRef(nativeint self)
-    [<Struct; StructLayout(LayoutKind.Sequential)>]
-    type BufferMapAsyncArgs = 
-        {
-            Self : nativeint
-            Mode : MapMode
-            Offset : unativeint
-            Size : unativeint
-            Callback : nativeint
-            Userdata : nativeint
-        }
-
     [<DllImport("WebGPUNative", EntryPoint="gpuBufferMapAsync")>]
-    extern void _BufferMapAsync(BufferMapAsyncArgs& args)
-    let BufferMapAsync(self : nativeint, mode : MapMode, offset : unativeint, size : unativeint, callback : nativeint, userdata : nativeint) =
-        let mutable args = {
-            BufferMapAsyncArgs.Self = self;
-            BufferMapAsyncArgs.Mode = mode;
-            BufferMapAsyncArgs.Offset = offset;
-            BufferMapAsyncArgs.Size = size;
-            BufferMapAsyncArgs.Callback = callback;
-            BufferMapAsyncArgs.Userdata = userdata;
-        }
-        _BufferMapAsync(&args)
-    [<DllImport("WebGPUNative", EntryPoint="gpuBufferMapAsyncF")>]
-    extern Future BufferMapAsyncF(nativeint self, MapMode mode, unativeint offset, unativeint size, BufferMapCallbackInfo callbackInfo)
-    [<DllImport("WebGPUNative", EntryPoint="gpuBufferMapAsync2")>]
-    extern Future BufferMapAsync2(nativeint self, MapMode mode, unativeint offset, unativeint size, BufferMapCallbackInfo2 callbackInfo)
+    extern Future BufferMapAsync(nativeint self, MapMode mode, unativeint offset, unativeint size, BufferMapCallbackInfo callbackInfo)
     [<DllImport("WebGPUNative", EntryPoint="gpuBufferGetMappedRange")>]
     extern nativeint BufferGetMappedRange(nativeint self, unativeint offset, unativeint size)
     [<DllImport("WebGPUNative", EntryPoint="gpuBufferGetConstMappedRange")>]
     extern nativeint BufferGetConstMappedRange(nativeint self, unativeint offset, unativeint size)
+    [<DllImport("WebGPUNative", EntryPoint="gpuBufferWriteMappedRange")>]
+    extern Status BufferWriteMappedRange(nativeint self, unativeint offset, void* data, unativeint size)
+    [<DllImport("WebGPUNative", EntryPoint="gpuBufferReadMappedRange")>]
+    extern Status BufferReadMappedRange(nativeint self, unativeint offset, void* data, unativeint size)
     [<DllImport("WebGPUNative", EntryPoint="gpuBufferSetLabel")>]
     extern void BufferSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPUNative", EntryPoint="gpuBufferGetUsage")>]
@@ -1916,11 +1853,11 @@ module WebGPU =
         }
         _CommandEncoderCopyBufferToBuffer(&args)
     [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderCopyBufferToTexture")>]
-    extern void CommandEncoderCopyBufferToTexture(nativeint self, ImageCopyBuffer* source, ImageCopyTexture* destination, Extent3D* copySize)
+    extern void CommandEncoderCopyBufferToTexture(nativeint self, TexelCopyBufferInfo* source, TexelCopyTextureInfo* destination, Extent3D* copySize)
     [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderCopyTextureToBuffer")>]
-    extern void CommandEncoderCopyTextureToBuffer(nativeint self, ImageCopyTexture* source, ImageCopyBuffer* destination, Extent3D* copySize)
+    extern void CommandEncoderCopyTextureToBuffer(nativeint self, TexelCopyTextureInfo* source, TexelCopyBufferInfo* destination, Extent3D* copySize)
     [<DllImport("WebGPUNative", EntryPoint="gpuCommandEncoderCopyTextureToTexture")>]
-    extern void CommandEncoderCopyTextureToTexture(nativeint self, ImageCopyTexture* source, ImageCopyTexture* destination, Extent3D* copySize)
+    extern void CommandEncoderCopyTextureToTexture(nativeint self, TexelCopyTextureInfo* source, TexelCopyTextureInfo* destination, Extent3D* copySize)
     [<Struct; StructLayout(LayoutKind.Sequential)>]
     type CommandEncoderClearBufferArgs = 
         {
@@ -2035,6 +1972,8 @@ module WebGPU =
     extern void ComputePassEncoderEnd(nativeint self)
     [<DllImport("WebGPUNative", EntryPoint="gpuComputePassEncoderSetLabel")>]
     extern void ComputePassEncoderSetLabel(nativeint self, StringView label)
+    [<DllImport("WebGPUNative", EntryPoint="gpuComputePassEncoderSetImmediateData")>]
+    extern void ComputePassEncoderSetImmediateData(nativeint self, uint32 offset, void* data, unativeint size)
     [<DllImport("WebGPUNative", EntryPoint="gpuComputePassEncoderRelease")>]
     extern void ComputePassEncoderRelease(nativeint self)
     [<DllImport("WebGPUNative", EntryPoint="gpuComputePassEncoderAddRef")>]
@@ -2060,11 +1999,7 @@ module WebGPU =
     [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateComputePipeline")>]
     extern nativeint DeviceCreateComputePipeline(nativeint self, ComputePipelineDescriptor* descriptor)
     [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateComputePipelineAsync")>]
-    extern void DeviceCreateComputePipelineAsync(nativeint self, ComputePipelineDescriptor* descriptor, nativeint callback, nativeint userdata)
-    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateComputePipelineAsyncF")>]
-    extern Future DeviceCreateComputePipelineAsyncF(nativeint self, ComputePipelineDescriptor* descriptor, CreateComputePipelineAsyncCallbackInfo callbackInfo)
-    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateComputePipelineAsync2")>]
-    extern Future DeviceCreateComputePipelineAsync2(nativeint self, ComputePipelineDescriptor* descriptor, CreateComputePipelineAsyncCallbackInfo2 callbackInfo)
+    extern Future DeviceCreateComputePipelineAsync(nativeint self, ComputePipelineDescriptor* descriptor, CreateComputePipelineAsyncCallbackInfo callbackInfo)
     [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateExternalTexture")>]
     extern nativeint DeviceCreateExternalTexture(nativeint self, ExternalTextureDescriptor* externalTextureDescriptor)
     [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateErrorExternalTexture")>]
@@ -2074,11 +2009,7 @@ module WebGPU =
     [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateQuerySet")>]
     extern nativeint DeviceCreateQuerySet(nativeint self, QuerySetDescriptor* descriptor)
     [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateRenderPipelineAsync")>]
-    extern void DeviceCreateRenderPipelineAsync(nativeint self, RenderPipelineDescriptor* descriptor, nativeint callback, nativeint userdata)
-    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateRenderPipelineAsyncF")>]
-    extern Future DeviceCreateRenderPipelineAsyncF(nativeint self, RenderPipelineDescriptor* descriptor, CreateRenderPipelineAsyncCallbackInfo callbackInfo)
-    [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateRenderPipelineAsync2")>]
-    extern Future DeviceCreateRenderPipelineAsync2(nativeint self, RenderPipelineDescriptor* descriptor, CreateRenderPipelineAsyncCallbackInfo2 callbackInfo)
+    extern Future DeviceCreateRenderPipelineAsync(nativeint self, RenderPipelineDescriptor* descriptor, CreateRenderPipelineAsyncCallbackInfo callbackInfo)
     [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateRenderBundleEncoder")>]
     extern nativeint DeviceCreateRenderBundleEncoder(nativeint self, RenderBundleEncoderDescriptor* descriptor)
     [<DllImport("WebGPUNative", EntryPoint="gpuDeviceCreateRenderPipeline")>]
@@ -2104,7 +2035,7 @@ module WebGPU =
     [<DllImport("WebGPUNative", EntryPoint="gpuDeviceGetAHardwareBufferProperties")>]
     extern Status DeviceGetAHardwareBufferProperties(nativeint self, nativeint handle, AHardwareBufferProperties* properties)
     [<DllImport("WebGPUNative", EntryPoint="gpuDeviceGetLimits")>]
-    extern Status DeviceGetLimits(nativeint self, SupportedLimits* limits)
+    extern Status DeviceGetLimits(nativeint self, Limits* limits)
     [<DllImport("WebGPUNative", EntryPoint="gpuDeviceGetLostFuture")>]
     extern Future DeviceGetLostFuture(nativeint self)
     [<DllImport("WebGPUNative", EntryPoint="gpuDeviceHasFeature")>]
@@ -2124,15 +2055,11 @@ module WebGPU =
     [<DllImport("WebGPUNative", EntryPoint="gpuDeviceTick")>]
     extern void DeviceTick(nativeint self)
     [<DllImport("WebGPUNative", EntryPoint="gpuDeviceSetLoggingCallback")>]
-    extern void DeviceSetLoggingCallback(nativeint self, nativeint callback, nativeint userdata)
+    extern void DeviceSetLoggingCallback(nativeint self, LoggingCallbackInfo callbackInfo)
     [<DllImport("WebGPUNative", EntryPoint="gpuDevicePushErrorScope")>]
     extern void DevicePushErrorScope(nativeint self, ErrorFilter filter)
     [<DllImport("WebGPUNative", EntryPoint="gpuDevicePopErrorScope")>]
-    extern void DevicePopErrorScope(nativeint self, nativeint oldCallback, nativeint userdata)
-    [<DllImport("WebGPUNative", EntryPoint="gpuDevicePopErrorScopeF")>]
-    extern Future DevicePopErrorScopeF(nativeint self, PopErrorScopeCallbackInfo callbackInfo)
-    [<DllImport("WebGPUNative", EntryPoint="gpuDevicePopErrorScope2")>]
-    extern Future DevicePopErrorScope2(nativeint self, PopErrorScopeCallbackInfo2 callbackInfo)
+    extern Future DevicePopErrorScope(nativeint self, PopErrorScopeCallbackInfo callbackInfo)
     [<DllImport("WebGPUNative", EntryPoint="gpuDeviceSetLabel")>]
     extern void DeviceSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPUNative", EntryPoint="gpuDeviceValidateTextureDescriptor")>]
@@ -2215,21 +2142,17 @@ module WebGPU =
         }
         _InstanceWaitAny(&args)
     [<DllImport("WebGPUNative", EntryPoint="gpuInstanceRequestAdapter")>]
-    extern void InstanceRequestAdapter(nativeint self, RequestAdapterOptions* options, nativeint callback, nativeint userdata)
-    [<DllImport("WebGPUNative", EntryPoint="gpuInstanceRequestAdapterF")>]
-    extern Future InstanceRequestAdapterF(nativeint self, RequestAdapterOptions* options, RequestAdapterCallbackInfo callbackInfo)
-    [<DllImport("WebGPUNative", EntryPoint="gpuInstanceRequestAdapter2")>]
-    extern Future InstanceRequestAdapter2(nativeint self, RequestAdapterOptions* options, RequestAdapterCallbackInfo2 callbackInfo)
+    extern Future InstanceRequestAdapter(nativeint self, RequestAdapterOptions* options, RequestAdapterCallbackInfo callbackInfo)
     [<DllImport("WebGPUNative", EntryPoint="gpuInstanceHasWGSLLanguageFeature")>]
-    extern int InstanceHasWGSLLanguageFeature(nativeint self, WGSLFeatureName feature)
-    [<DllImport("WebGPUNative", EntryPoint="gpuInstanceEnumerateWGSLLanguageFeatures")>]
-    extern unativeint InstanceEnumerateWGSLLanguageFeatures(nativeint self, WGSLFeatureName* features)
+    extern int InstanceHasWGSLLanguageFeature(nativeint self, WGSLLanguageFeatureName feature)
+    [<DllImport("WebGPUNative", EntryPoint="gpuInstanceGetWGSLLanguageFeatures")>]
+    extern Status InstanceGetWGSLLanguageFeatures(nativeint self, SupportedWGSLLanguageFeatures* features)
     [<DllImport("WebGPUNative", EntryPoint="gpuInstanceRelease")>]
     extern void InstanceRelease(nativeint self)
     [<DllImport("WebGPUNative", EntryPoint="gpuInstanceAddRef")>]
     extern void InstanceAddRef(nativeint self)
-    [<DllImport("WebGPUNative", EntryPoint="gpuGetInstanceFeatures")>]
-    extern Status GetInstanceFeatures(InstanceFeatures* features)
+    [<DllImport("WebGPUNative", EntryPoint="gpuGetInstanceCapabilities")>]
+    extern Status GetInstanceCapabilities(InstanceCapabilities* capabilities)
     [<DllImport("WebGPUNative", EntryPoint="gpuPipelineLayoutSetLabel")>]
     extern void PipelineLayoutSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPUNative", EntryPoint="gpuPipelineLayoutRelease")>]
@@ -2251,11 +2174,7 @@ module WebGPU =
     [<DllImport("WebGPUNative", EntryPoint="gpuQueueSubmit")>]
     extern void QueueSubmit(nativeint self, unativeint commandCount, nativeint* commands)
     [<DllImport("WebGPUNative", EntryPoint="gpuQueueOnSubmittedWorkDone")>]
-    extern void QueueOnSubmittedWorkDone(nativeint self, nativeint callback, nativeint userdata)
-    [<DllImport("WebGPUNative", EntryPoint="gpuQueueOnSubmittedWorkDoneF")>]
-    extern Future QueueOnSubmittedWorkDoneF(nativeint self, QueueWorkDoneCallbackInfo callbackInfo)
-    [<DllImport("WebGPUNative", EntryPoint="gpuQueueOnSubmittedWorkDone2")>]
-    extern Future QueueOnSubmittedWorkDone2(nativeint self, QueueWorkDoneCallbackInfo2 callbackInfo)
+    extern Future QueueOnSubmittedWorkDone(nativeint self, QueueWorkDoneCallbackInfo callbackInfo)
     [<Struct; StructLayout(LayoutKind.Sequential)>]
     type QueueWriteBufferArgs = 
         {
@@ -2281,16 +2200,16 @@ module WebGPU =
     type QueueWriteTextureArgs = 
         {
             Self : nativeint
-            Destination : nativeptr<ImageCopyTexture>
+            Destination : nativeptr<TexelCopyTextureInfo>
             Data : nativeint
             DataSize : unativeint
-            DataLayout : nativeptr<TextureDataLayout>
+            DataLayout : nativeptr<TexelCopyBufferLayout>
             WriteSize : nativeptr<Extent3D>
         }
 
     [<DllImport("WebGPUNative", EntryPoint="gpuQueueWriteTexture")>]
     extern void _QueueWriteTexture(QueueWriteTextureArgs& args)
-    let QueueWriteTexture(self : nativeint, destination : nativeptr<ImageCopyTexture>, data : nativeint, dataSize : unativeint, dataLayout : nativeptr<TextureDataLayout>, writeSize : nativeptr<Extent3D>) =
+    let QueueWriteTexture(self : nativeint, destination : nativeptr<TexelCopyTextureInfo>, data : nativeint, dataSize : unativeint, dataLayout : nativeptr<TexelCopyBufferLayout>, writeSize : nativeptr<Extent3D>) =
         let mutable args = {
             QueueWriteTextureArgs.Self = self;
             QueueWriteTextureArgs.Destination = destination;
@@ -2301,9 +2220,9 @@ module WebGPU =
         }
         _QueueWriteTexture(&args)
     [<DllImport("WebGPUNative", EntryPoint="gpuQueueCopyTextureForBrowser")>]
-    extern void QueueCopyTextureForBrowser(nativeint self, ImageCopyTexture* source, ImageCopyTexture* destination, Extent3D* copySize, CopyTextureForBrowserOptions* options)
+    extern void QueueCopyTextureForBrowser(nativeint self, TexelCopyTextureInfo* source, TexelCopyTextureInfo* destination, Extent3D* copySize, CopyTextureForBrowserOptions* options)
     [<DllImport("WebGPUNative", EntryPoint="gpuQueueCopyExternalTextureForBrowser")>]
-    extern void QueueCopyExternalTextureForBrowser(nativeint self, ImageCopyExternalTexture* source, ImageCopyTexture* destination, Extent3D* copySize, CopyTextureForBrowserOptions* options)
+    extern void QueueCopyExternalTextureForBrowser(nativeint self, ImageCopyExternalTexture* source, TexelCopyTextureInfo* destination, Extent3D* copySize, CopyTextureForBrowserOptions* options)
     [<DllImport("WebGPUNative", EntryPoint="gpuQueueSetLabel")>]
     extern void QueueSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPUNative", EntryPoint="gpuQueueRelease")>]
@@ -2431,6 +2350,8 @@ module WebGPU =
     extern nativeint RenderBundleEncoderFinish(nativeint self, RenderBundleDescriptor* descriptor)
     [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderSetLabel")>]
     extern void RenderBundleEncoderSetLabel(nativeint self, StringView label)
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderSetImmediateData")>]
+    extern void RenderBundleEncoderSetImmediateData(nativeint self, uint32 offset, void* data, unativeint size)
     [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderRelease")>]
     extern void RenderBundleEncoderRelease(nativeint self)
     [<DllImport("WebGPUNative", EntryPoint="gpuRenderBundleEncoderAddRef")>]
@@ -2637,6 +2558,8 @@ module WebGPU =
     extern void RenderPassEncoderEnd(nativeint self)
     [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderSetLabel")>]
     extern void RenderPassEncoderSetLabel(nativeint self, StringView label)
+    [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderSetImmediateData")>]
+    extern void RenderPassEncoderSetImmediateData(nativeint self, uint32 offset, void* data, unativeint size)
     [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderRelease")>]
     extern void RenderPassEncoderRelease(nativeint self)
     [<DllImport("WebGPUNative", EntryPoint="gpuRenderPassEncoderAddRef")>]
@@ -2656,11 +2579,7 @@ module WebGPU =
     [<DllImport("WebGPUNative", EntryPoint="gpuSamplerAddRef")>]
     extern void SamplerAddRef(nativeint self)
     [<DllImport("WebGPUNative", EntryPoint="gpuShaderModuleGetCompilationInfo")>]
-    extern void ShaderModuleGetCompilationInfo(nativeint self, nativeint callback, nativeint userdata)
-    [<DllImport("WebGPUNative", EntryPoint="gpuShaderModuleGetCompilationInfoF")>]
-    extern Future ShaderModuleGetCompilationInfoF(nativeint self, CompilationInfoCallbackInfo callbackInfo)
-    [<DllImport("WebGPUNative", EntryPoint="gpuShaderModuleGetCompilationInfo2")>]
-    extern Future ShaderModuleGetCompilationInfo2(nativeint self, CompilationInfoCallbackInfo2 callbackInfo)
+    extern Future ShaderModuleGetCompilationInfo(nativeint self, CompilationInfoCallbackInfo callbackInfo)
     [<DllImport("WebGPUNative", EntryPoint="gpuShaderModuleSetLabel")>]
     extern void ShaderModuleSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPUNative", EntryPoint="gpuShaderModuleRelease")>]
@@ -2723,11 +2642,6 @@ type WebGPUCallbacks() =
     static let requestAdapterCallbackDelegate = System.Delegate.CreateDelegate(typeof<RequestAdapterCallback>, typeof<WebGPUCallbacks>.GetMethod "RequestAdapterCallback")
     static let requestAdapterCallbackGC = GCHandle.Alloc(requestAdapterCallbackDelegate)
     static let requestAdapterCallbackPtr = Marshal.GetFunctionPointerForDelegate(requestAdapterCallbackDelegate)
-    static let requestAdapterCallback2Callbacks = Dictionary<nativeint, RequestAdapterCallback2>()
-    static let mutable requestAdapterCallback2Current = 0n
-    static let requestAdapterCallback2Delegate = System.Delegate.CreateDelegate(typeof<RequestAdapterCallback2>, typeof<WebGPUCallbacks>.GetMethod "RequestAdapterCallback2")
-    static let requestAdapterCallback2GC = GCHandle.Alloc(requestAdapterCallback2Delegate)
-    static let requestAdapterCallback2Ptr = Marshal.GetFunctionPointerForDelegate(requestAdapterCallback2Delegate)
     static let dawnLoadCacheDataFunctionCallbacks = Dictionary<nativeint, DawnLoadCacheDataFunction>()
     static let mutable dawnLoadCacheDataFunctionCurrent = 0n
     static let dawnLoadCacheDataFunctionDelegate = System.Delegate.CreateDelegate(typeof<DawnLoadCacheDataFunction>, typeof<WebGPUCallbacks>.GetMethod "DawnLoadCacheDataFunction")
@@ -2748,61 +2662,26 @@ type WebGPUCallbacks() =
     static let bufferMapCallbackDelegate = System.Delegate.CreateDelegate(typeof<BufferMapCallback>, typeof<WebGPUCallbacks>.GetMethod "BufferMapCallback")
     static let bufferMapCallbackGC = GCHandle.Alloc(bufferMapCallbackDelegate)
     static let bufferMapCallbackPtr = Marshal.GetFunctionPointerForDelegate(bufferMapCallbackDelegate)
-    static let bufferMapCallback2Callbacks = Dictionary<nativeint, BufferMapCallback2>()
-    static let mutable bufferMapCallback2Current = 0n
-    static let bufferMapCallback2Delegate = System.Delegate.CreateDelegate(typeof<BufferMapCallback2>, typeof<WebGPUCallbacks>.GetMethod "BufferMapCallback2")
-    static let bufferMapCallback2GC = GCHandle.Alloc(bufferMapCallback2Delegate)
-    static let bufferMapCallback2Ptr = Marshal.GetFunctionPointerForDelegate(bufferMapCallback2Delegate)
     static let compilationInfoCallbackCallbacks = Dictionary<nativeint, CompilationInfoCallback>()
     static let mutable compilationInfoCallbackCurrent = 0n
     static let compilationInfoCallbackDelegate = System.Delegate.CreateDelegate(typeof<CompilationInfoCallback>, typeof<WebGPUCallbacks>.GetMethod "CompilationInfoCallback")
     static let compilationInfoCallbackGC = GCHandle.Alloc(compilationInfoCallbackDelegate)
     static let compilationInfoCallbackPtr = Marshal.GetFunctionPointerForDelegate(compilationInfoCallbackDelegate)
-    static let compilationInfoCallback2Callbacks = Dictionary<nativeint, CompilationInfoCallback2>()
-    static let mutable compilationInfoCallback2Current = 0n
-    static let compilationInfoCallback2Delegate = System.Delegate.CreateDelegate(typeof<CompilationInfoCallback2>, typeof<WebGPUCallbacks>.GetMethod "CompilationInfoCallback2")
-    static let compilationInfoCallback2GC = GCHandle.Alloc(compilationInfoCallback2Delegate)
-    static let compilationInfoCallback2Ptr = Marshal.GetFunctionPointerForDelegate(compilationInfoCallback2Delegate)
     static let createComputePipelineAsyncCallbackCallbacks = Dictionary<nativeint, CreateComputePipelineAsyncCallback>()
     static let mutable createComputePipelineAsyncCallbackCurrent = 0n
     static let createComputePipelineAsyncCallbackDelegate = System.Delegate.CreateDelegate(typeof<CreateComputePipelineAsyncCallback>, typeof<WebGPUCallbacks>.GetMethod "CreateComputePipelineAsyncCallback")
     static let createComputePipelineAsyncCallbackGC = GCHandle.Alloc(createComputePipelineAsyncCallbackDelegate)
     static let createComputePipelineAsyncCallbackPtr = Marshal.GetFunctionPointerForDelegate(createComputePipelineAsyncCallbackDelegate)
-    static let createComputePipelineAsyncCallback2Callbacks = Dictionary<nativeint, CreateComputePipelineAsyncCallback2>()
-    static let mutable createComputePipelineAsyncCallback2Current = 0n
-    static let createComputePipelineAsyncCallback2Delegate = System.Delegate.CreateDelegate(typeof<CreateComputePipelineAsyncCallback2>, typeof<WebGPUCallbacks>.GetMethod "CreateComputePipelineAsyncCallback2")
-    static let createComputePipelineAsyncCallback2GC = GCHandle.Alloc(createComputePipelineAsyncCallback2Delegate)
-    static let createComputePipelineAsyncCallback2Ptr = Marshal.GetFunctionPointerForDelegate(createComputePipelineAsyncCallback2Delegate)
     static let createRenderPipelineAsyncCallbackCallbacks = Dictionary<nativeint, CreateRenderPipelineAsyncCallback>()
     static let mutable createRenderPipelineAsyncCallbackCurrent = 0n
     static let createRenderPipelineAsyncCallbackDelegate = System.Delegate.CreateDelegate(typeof<CreateRenderPipelineAsyncCallback>, typeof<WebGPUCallbacks>.GetMethod "CreateRenderPipelineAsyncCallback")
     static let createRenderPipelineAsyncCallbackGC = GCHandle.Alloc(createRenderPipelineAsyncCallbackDelegate)
     static let createRenderPipelineAsyncCallbackPtr = Marshal.GetFunctionPointerForDelegate(createRenderPipelineAsyncCallbackDelegate)
-    static let createRenderPipelineAsyncCallback2Callbacks = Dictionary<nativeint, CreateRenderPipelineAsyncCallback2>()
-    static let mutable createRenderPipelineAsyncCallback2Current = 0n
-    static let createRenderPipelineAsyncCallback2Delegate = System.Delegate.CreateDelegate(typeof<CreateRenderPipelineAsyncCallback2>, typeof<WebGPUCallbacks>.GetMethod "CreateRenderPipelineAsyncCallback2")
-    static let createRenderPipelineAsyncCallback2GC = GCHandle.Alloc(createRenderPipelineAsyncCallback2Delegate)
-    static let createRenderPipelineAsyncCallback2Ptr = Marshal.GetFunctionPointerForDelegate(createRenderPipelineAsyncCallback2Delegate)
     static let deviceLostCallbackCallbacks = Dictionary<nativeint, DeviceLostCallback>()
     static let mutable deviceLostCallbackCurrent = 0n
     static let deviceLostCallbackDelegate = System.Delegate.CreateDelegate(typeof<DeviceLostCallback>, typeof<WebGPUCallbacks>.GetMethod "DeviceLostCallback")
     static let deviceLostCallbackGC = GCHandle.Alloc(deviceLostCallbackDelegate)
     static let deviceLostCallbackPtr = Marshal.GetFunctionPointerForDelegate(deviceLostCallbackDelegate)
-    static let deviceLostCallbackNewCallbacks = Dictionary<nativeint, DeviceLostCallbackNew>()
-    static let mutable deviceLostCallbackNewCurrent = 0n
-    static let deviceLostCallbackNewDelegate = System.Delegate.CreateDelegate(typeof<DeviceLostCallbackNew>, typeof<WebGPUCallbacks>.GetMethod "DeviceLostCallbackNew")
-    static let deviceLostCallbackNewGC = GCHandle.Alloc(deviceLostCallbackNewDelegate)
-    static let deviceLostCallbackNewPtr = Marshal.GetFunctionPointerForDelegate(deviceLostCallbackNewDelegate)
-    static let deviceLostCallback2Callbacks = Dictionary<nativeint, DeviceLostCallback2>()
-    static let mutable deviceLostCallback2Current = 0n
-    static let deviceLostCallback2Delegate = System.Delegate.CreateDelegate(typeof<DeviceLostCallback2>, typeof<WebGPUCallbacks>.GetMethod "DeviceLostCallback2")
-    static let deviceLostCallback2GC = GCHandle.Alloc(deviceLostCallback2Delegate)
-    static let deviceLostCallback2Ptr = Marshal.GetFunctionPointerForDelegate(deviceLostCallback2Delegate)
-    static let errorCallbackCallbacks = Dictionary<nativeint, ErrorCallback>()
-    static let mutable errorCallbackCurrent = 0n
-    static let errorCallbackDelegate = System.Delegate.CreateDelegate(typeof<ErrorCallback>, typeof<WebGPUCallbacks>.GetMethod "ErrorCallback")
-    static let errorCallbackGC = GCHandle.Alloc(errorCallbackDelegate)
-    static let errorCallbackPtr = Marshal.GetFunctionPointerForDelegate(errorCallbackDelegate)
     static let uncapturedErrorCallbackCallbacks = Dictionary<nativeint, UncapturedErrorCallback>()
     static let mutable uncapturedErrorCallbackCurrent = 0n
     static let uncapturedErrorCallbackDelegate = System.Delegate.CreateDelegate(typeof<UncapturedErrorCallback>, typeof<WebGPUCallbacks>.GetMethod "UncapturedErrorCallback")
@@ -2813,11 +2692,6 @@ type WebGPUCallbacks() =
     static let popErrorScopeCallbackDelegate = System.Delegate.CreateDelegate(typeof<PopErrorScopeCallback>, typeof<WebGPUCallbacks>.GetMethod "PopErrorScopeCallback")
     static let popErrorScopeCallbackGC = GCHandle.Alloc(popErrorScopeCallbackDelegate)
     static let popErrorScopeCallbackPtr = Marshal.GetFunctionPointerForDelegate(popErrorScopeCallbackDelegate)
-    static let popErrorScopeCallback2Callbacks = Dictionary<nativeint, PopErrorScopeCallback2>()
-    static let mutable popErrorScopeCallback2Current = 0n
-    static let popErrorScopeCallback2Delegate = System.Delegate.CreateDelegate(typeof<PopErrorScopeCallback2>, typeof<WebGPUCallbacks>.GetMethod "PopErrorScopeCallback2")
-    static let popErrorScopeCallback2GC = GCHandle.Alloc(popErrorScopeCallback2Delegate)
-    static let popErrorScopeCallback2Ptr = Marshal.GetFunctionPointerForDelegate(popErrorScopeCallback2Delegate)
     static let loggingCallbackCallbacks = Dictionary<nativeint, LoggingCallback>()
     static let mutable loggingCallbackCurrent = 0n
     static let loggingCallbackDelegate = System.Delegate.CreateDelegate(typeof<LoggingCallback>, typeof<WebGPUCallbacks>.GetMethod "LoggingCallback")
@@ -2828,46 +2702,15 @@ type WebGPUCallbacks() =
     static let queueWorkDoneCallbackDelegate = System.Delegate.CreateDelegate(typeof<QueueWorkDoneCallback>, typeof<WebGPUCallbacks>.GetMethod "QueueWorkDoneCallback")
     static let queueWorkDoneCallbackGC = GCHandle.Alloc(queueWorkDoneCallbackDelegate)
     static let queueWorkDoneCallbackPtr = Marshal.GetFunctionPointerForDelegate(queueWorkDoneCallbackDelegate)
-    static let queueWorkDoneCallback2Callbacks = Dictionary<nativeint, QueueWorkDoneCallback2>()
-    static let mutable queueWorkDoneCallback2Current = 0n
-    static let queueWorkDoneCallback2Delegate = System.Delegate.CreateDelegate(typeof<QueueWorkDoneCallback2>, typeof<WebGPUCallbacks>.GetMethod "QueueWorkDoneCallback2")
-    static let queueWorkDoneCallback2GC = GCHandle.Alloc(queueWorkDoneCallback2Delegate)
-    static let queueWorkDoneCallback2Ptr = Marshal.GetFunctionPointerForDelegate(queueWorkDoneCallback2Delegate)
     static let requestDeviceCallbackCallbacks = Dictionary<nativeint, RequestDeviceCallback>()
     static let mutable requestDeviceCallbackCurrent = 0n
     static let requestDeviceCallbackDelegate = System.Delegate.CreateDelegate(typeof<RequestDeviceCallback>, typeof<WebGPUCallbacks>.GetMethod "RequestDeviceCallback")
     static let requestDeviceCallbackGC = GCHandle.Alloc(requestDeviceCallbackDelegate)
     static let requestDeviceCallbackPtr = Marshal.GetFunctionPointerForDelegate(requestDeviceCallbackDelegate)
-    static let requestDeviceCallback2Callbacks = Dictionary<nativeint, RequestDeviceCallback2>()
-    static let mutable requestDeviceCallback2Current = 0n
-    static let requestDeviceCallback2Delegate = System.Delegate.CreateDelegate(typeof<RequestDeviceCallback2>, typeof<WebGPUCallbacks>.GetMethod "RequestDeviceCallback2")
-    static let requestDeviceCallback2GC = GCHandle.Alloc(requestDeviceCallback2Delegate)
-    static let requestDeviceCallback2Ptr = Marshal.GetFunctionPointerForDelegate(requestDeviceCallback2Delegate)
-    static member RequestAdapterCallback(status : RequestAdapterStatus, adapter : nativeint, message : StringView, userdata : nativeint) =
+    static member RequestAdapterCallback(status : RequestAdapterStatus, adapter : nativeint, message : StringView, userdata1 : nativeint, userdata2 : nativeint) =
         let callback = 
             lock requestAdapterCallbackCallbacks (fun () ->
-                match requestAdapterCallbackCallbacks.TryGetValue(userdata) with
-                | (true, cb) ->
-                    Some cb
-                | _ ->
-                    None
-            )
-        match callback with
-        | Some cb -> cb.Invoke(status, adapter, message, 0n)
-        | None -> Unchecked.defaultof<_>
-
-    static member Register(cb : RequestAdapterCallback) =
-        lock requestAdapterCallbackCallbacks (fun () ->
-            let id = requestAdapterCallbackCurrent
-            requestAdapterCallbackCurrent <- requestAdapterCallbackCurrent + 1n
-            requestAdapterCallbackCallbacks.[id] <- cb
-            let disp = { new System.IDisposable with member x.Dispose() = requestAdapterCallbackCallbacks.Remove(id) |> ignore }
-            struct(requestAdapterCallbackPtr, id, disp)
-        )
-    static member RequestAdapterCallback2(status : RequestAdapterStatus, adapter : nativeint, message : StringView, userdata1 : nativeint, userdata2 : nativeint) =
-        let callback = 
-            lock requestAdapterCallback2Callbacks (fun () ->
-                match requestAdapterCallback2Callbacks.TryGetValue(userdata1) with
+                match requestAdapterCallbackCallbacks.TryGetValue(userdata1) with
                 | (true, cb) ->
                     Some cb
                 | _ ->
@@ -2877,13 +2720,13 @@ type WebGPUCallbacks() =
         | Some cb -> cb.Invoke(status, adapter, message, 0n, 0n)
         | None -> Unchecked.defaultof<_>
 
-    static member Register(cb : RequestAdapterCallback2) =
-        lock requestAdapterCallback2Callbacks (fun () ->
-            let id = requestAdapterCallback2Current
-            requestAdapterCallback2Current <- requestAdapterCallback2Current + 1n
-            requestAdapterCallback2Callbacks.[id] <- cb
-            let disp = { new System.IDisposable with member x.Dispose() = requestAdapterCallback2Callbacks.Remove(id) |> ignore }
-            struct(requestAdapterCallback2Ptr, id, disp)
+    static member Register(cb : RequestAdapterCallback) =
+        lock requestAdapterCallbackCallbacks (fun () ->
+            let id = requestAdapterCallbackCurrent
+            requestAdapterCallbackCurrent <- requestAdapterCallbackCurrent + 1n
+            requestAdapterCallbackCallbacks.[id] <- cb
+            let disp = { new System.IDisposable with member x.Dispose() = requestAdapterCallbackCallbacks.Remove(id) |> ignore }
+            struct(requestAdapterCallbackPtr, id, disp)
         )
     static member DawnLoadCacheDataFunction(key : nativeint, keySize : unativeint, value : nativeint, valueSize : unativeint, userdata : nativeint) =
         let callback = 
@@ -2948,17 +2791,17 @@ type WebGPUCallbacks() =
             let disp = { new System.IDisposable with member x.Dispose() = callbackCallbacks.Remove(id) |> ignore }
             struct(callbackPtr, id, disp)
         )
-    static member BufferMapCallback(status : BufferMapAsyncStatus, userdata : nativeint) =
+    static member BufferMapCallback(status : MapAsyncStatus, message : StringView, userdata1 : nativeint, userdata2 : nativeint) =
         let callback = 
             lock bufferMapCallbackCallbacks (fun () ->
-                match bufferMapCallbackCallbacks.TryGetValue(userdata) with
+                match bufferMapCallbackCallbacks.TryGetValue(userdata1) with
                 | (true, cb) ->
                     Some cb
                 | _ ->
                     None
             )
         match callback with
-        | Some cb -> cb.Invoke(status, 0n)
+        | Some cb -> cb.Invoke(status, message, 0n, 0n)
         | None -> Unchecked.defaultof<_>
 
     static member Register(cb : BufferMapCallback) =
@@ -2969,38 +2812,17 @@ type WebGPUCallbacks() =
             let disp = { new System.IDisposable with member x.Dispose() = bufferMapCallbackCallbacks.Remove(id) |> ignore }
             struct(bufferMapCallbackPtr, id, disp)
         )
-    static member BufferMapCallback2(status : MapAsyncStatus, message : StringView, userdata1 : nativeint, userdata2 : nativeint) =
-        let callback = 
-            lock bufferMapCallback2Callbacks (fun () ->
-                match bufferMapCallback2Callbacks.TryGetValue(userdata1) with
-                | (true, cb) ->
-                    Some cb
-                | _ ->
-                    None
-            )
-        match callback with
-        | Some cb -> cb.Invoke(status, message, 0n, 0n)
-        | None -> Unchecked.defaultof<_>
-
-    static member Register(cb : BufferMapCallback2) =
-        lock bufferMapCallback2Callbacks (fun () ->
-            let id = bufferMapCallback2Current
-            bufferMapCallback2Current <- bufferMapCallback2Current + 1n
-            bufferMapCallback2Callbacks.[id] <- cb
-            let disp = { new System.IDisposable with member x.Dispose() = bufferMapCallback2Callbacks.Remove(id) |> ignore }
-            struct(bufferMapCallback2Ptr, id, disp)
-        )
-    static member CompilationInfoCallback(status : CompilationInfoRequestStatus, compilationInfo : nativeptr<CompilationInfo>, userdata : nativeint) =
+    static member CompilationInfoCallback(status : CompilationInfoRequestStatus, compilationInfo : nativeptr<CompilationInfo>, userdata1 : nativeint, userdata2 : nativeint) =
         let callback = 
             lock compilationInfoCallbackCallbacks (fun () ->
-                match compilationInfoCallbackCallbacks.TryGetValue(userdata) with
+                match compilationInfoCallbackCallbacks.TryGetValue(userdata1) with
                 | (true, cb) ->
                     Some cb
                 | _ ->
                     None
             )
         match callback with
-        | Some cb -> cb.Invoke(status, compilationInfo, 0n)
+        | Some cb -> cb.Invoke(status, compilationInfo, 0n, 0n)
         | None -> Unchecked.defaultof<_>
 
     static member Register(cb : CompilationInfoCallback) =
@@ -3011,38 +2833,17 @@ type WebGPUCallbacks() =
             let disp = { new System.IDisposable with member x.Dispose() = compilationInfoCallbackCallbacks.Remove(id) |> ignore }
             struct(compilationInfoCallbackPtr, id, disp)
         )
-    static member CompilationInfoCallback2(status : CompilationInfoRequestStatus, compilationInfo : nativeptr<CompilationInfo>, userdata1 : nativeint, userdata2 : nativeint) =
-        let callback = 
-            lock compilationInfoCallback2Callbacks (fun () ->
-                match compilationInfoCallback2Callbacks.TryGetValue(userdata1) with
-                | (true, cb) ->
-                    Some cb
-                | _ ->
-                    None
-            )
-        match callback with
-        | Some cb -> cb.Invoke(status, compilationInfo, 0n, 0n)
-        | None -> Unchecked.defaultof<_>
-
-    static member Register(cb : CompilationInfoCallback2) =
-        lock compilationInfoCallback2Callbacks (fun () ->
-            let id = compilationInfoCallback2Current
-            compilationInfoCallback2Current <- compilationInfoCallback2Current + 1n
-            compilationInfoCallback2Callbacks.[id] <- cb
-            let disp = { new System.IDisposable with member x.Dispose() = compilationInfoCallback2Callbacks.Remove(id) |> ignore }
-            struct(compilationInfoCallback2Ptr, id, disp)
-        )
-    static member CreateComputePipelineAsyncCallback(status : CreatePipelineAsyncStatus, pipeline : nativeint, message : StringView, userdata : nativeint) =
+    static member CreateComputePipelineAsyncCallback(status : CreatePipelineAsyncStatus, pipeline : nativeint, message : StringView, userdata1 : nativeint, userdata2 : nativeint) =
         let callback = 
             lock createComputePipelineAsyncCallbackCallbacks (fun () ->
-                match createComputePipelineAsyncCallbackCallbacks.TryGetValue(userdata) with
+                match createComputePipelineAsyncCallbackCallbacks.TryGetValue(userdata1) with
                 | (true, cb) ->
                     Some cb
                 | _ ->
                     None
             )
         match callback with
-        | Some cb -> cb.Invoke(status, pipeline, message, 0n)
+        | Some cb -> cb.Invoke(status, pipeline, message, 0n, 0n)
         | None -> Unchecked.defaultof<_>
 
     static member Register(cb : CreateComputePipelineAsyncCallback) =
@@ -3053,10 +2854,10 @@ type WebGPUCallbacks() =
             let disp = { new System.IDisposable with member x.Dispose() = createComputePipelineAsyncCallbackCallbacks.Remove(id) |> ignore }
             struct(createComputePipelineAsyncCallbackPtr, id, disp)
         )
-    static member CreateComputePipelineAsyncCallback2(status : CreatePipelineAsyncStatus, pipeline : nativeint, message : StringView, userdata1 : nativeint, userdata2 : nativeint) =
+    static member CreateRenderPipelineAsyncCallback(status : CreatePipelineAsyncStatus, pipeline : nativeint, message : StringView, userdata1 : nativeint, userdata2 : nativeint) =
         let callback = 
-            lock createComputePipelineAsyncCallback2Callbacks (fun () ->
-                match createComputePipelineAsyncCallback2Callbacks.TryGetValue(userdata1) with
+            lock createRenderPipelineAsyncCallbackCallbacks (fun () ->
+                match createRenderPipelineAsyncCallbackCallbacks.TryGetValue(userdata1) with
                 | (true, cb) ->
                     Some cb
                 | _ ->
@@ -3064,27 +2865,6 @@ type WebGPUCallbacks() =
             )
         match callback with
         | Some cb -> cb.Invoke(status, pipeline, message, 0n, 0n)
-        | None -> Unchecked.defaultof<_>
-
-    static member Register(cb : CreateComputePipelineAsyncCallback2) =
-        lock createComputePipelineAsyncCallback2Callbacks (fun () ->
-            let id = createComputePipelineAsyncCallback2Current
-            createComputePipelineAsyncCallback2Current <- createComputePipelineAsyncCallback2Current + 1n
-            createComputePipelineAsyncCallback2Callbacks.[id] <- cb
-            let disp = { new System.IDisposable with member x.Dispose() = createComputePipelineAsyncCallback2Callbacks.Remove(id) |> ignore }
-            struct(createComputePipelineAsyncCallback2Ptr, id, disp)
-        )
-    static member CreateRenderPipelineAsyncCallback(status : CreatePipelineAsyncStatus, pipeline : nativeint, message : StringView, userdata : nativeint) =
-        let callback = 
-            lock createRenderPipelineAsyncCallbackCallbacks (fun () ->
-                match createRenderPipelineAsyncCallbackCallbacks.TryGetValue(userdata) with
-                | (true, cb) ->
-                    Some cb
-                | _ ->
-                    None
-            )
-        match callback with
-        | Some cb -> cb.Invoke(status, pipeline, message, 0n)
         | None -> Unchecked.defaultof<_>
 
     static member Register(cb : CreateRenderPipelineAsyncCallback) =
@@ -3095,73 +2875,10 @@ type WebGPUCallbacks() =
             let disp = { new System.IDisposable with member x.Dispose() = createRenderPipelineAsyncCallbackCallbacks.Remove(id) |> ignore }
             struct(createRenderPipelineAsyncCallbackPtr, id, disp)
         )
-    static member CreateRenderPipelineAsyncCallback2(status : CreatePipelineAsyncStatus, pipeline : nativeint, message : StringView, userdata1 : nativeint, userdata2 : nativeint) =
-        let callback = 
-            lock createRenderPipelineAsyncCallback2Callbacks (fun () ->
-                match createRenderPipelineAsyncCallback2Callbacks.TryGetValue(userdata1) with
-                | (true, cb) ->
-                    Some cb
-                | _ ->
-                    None
-            )
-        match callback with
-        | Some cb -> cb.Invoke(status, pipeline, message, 0n, 0n)
-        | None -> Unchecked.defaultof<_>
-
-    static member Register(cb : CreateRenderPipelineAsyncCallback2) =
-        lock createRenderPipelineAsyncCallback2Callbacks (fun () ->
-            let id = createRenderPipelineAsyncCallback2Current
-            createRenderPipelineAsyncCallback2Current <- createRenderPipelineAsyncCallback2Current + 1n
-            createRenderPipelineAsyncCallback2Callbacks.[id] <- cb
-            let disp = { new System.IDisposable with member x.Dispose() = createRenderPipelineAsyncCallback2Callbacks.Remove(id) |> ignore }
-            struct(createRenderPipelineAsyncCallback2Ptr, id, disp)
-        )
-    static member DeviceLostCallback(reason : DeviceLostReason, message : StringView, userdata : nativeint) =
+    static member DeviceLostCallback(device : nativeptr<nativeint>, reason : DeviceLostReason, message : StringView, userdata1 : nativeint, userdata2 : nativeint) =
         let callback = 
             lock deviceLostCallbackCallbacks (fun () ->
-                match deviceLostCallbackCallbacks.TryGetValue(userdata) with
-                | (true, cb) ->
-                    Some cb
-                | _ ->
-                    None
-            )
-        match callback with
-        | Some cb -> cb.Invoke(reason, message, 0n)
-        | None -> Unchecked.defaultof<_>
-
-    static member Register(cb : DeviceLostCallback) =
-        lock deviceLostCallbackCallbacks (fun () ->
-            let id = deviceLostCallbackCurrent
-            deviceLostCallbackCurrent <- deviceLostCallbackCurrent + 1n
-            deviceLostCallbackCallbacks.[id] <- cb
-            let disp = { new System.IDisposable with member x.Dispose() = deviceLostCallbackCallbacks.Remove(id) |> ignore }
-            struct(deviceLostCallbackPtr, id, disp)
-        )
-    static member DeviceLostCallbackNew(device : nativeptr<nativeint>, reason : DeviceLostReason, message : StringView, userdata : nativeint) =
-        let callback = 
-            lock deviceLostCallbackNewCallbacks (fun () ->
-                match deviceLostCallbackNewCallbacks.TryGetValue(userdata) with
-                | (true, cb) ->
-                    Some cb
-                | _ ->
-                    None
-            )
-        match callback with
-        | Some cb -> cb.Invoke(device, reason, message, 0n)
-        | None -> Unchecked.defaultof<_>
-
-    static member Register(cb : DeviceLostCallbackNew) =
-        lock deviceLostCallbackNewCallbacks (fun () ->
-            let id = deviceLostCallbackNewCurrent
-            deviceLostCallbackNewCurrent <- deviceLostCallbackNewCurrent + 1n
-            deviceLostCallbackNewCallbacks.[id] <- cb
-            let disp = { new System.IDisposable with member x.Dispose() = deviceLostCallbackNewCallbacks.Remove(id) |> ignore }
-            struct(deviceLostCallbackNewPtr, id, disp)
-        )
-    static member DeviceLostCallback2(device : nativeptr<nativeint>, reason : DeviceLostReason, message : StringView, userdata1 : nativeint, userdata2 : nativeint) =
-        let callback = 
-            lock deviceLostCallback2Callbacks (fun () ->
-                match deviceLostCallback2Callbacks.TryGetValue(userdata1) with
+                match deviceLostCallbackCallbacks.TryGetValue(userdata1) with
                 | (true, cb) ->
                     Some cb
                 | _ ->
@@ -3171,34 +2888,13 @@ type WebGPUCallbacks() =
         | Some cb -> cb.Invoke(device, reason, message, 0n, 0n)
         | None -> Unchecked.defaultof<_>
 
-    static member Register(cb : DeviceLostCallback2) =
-        lock deviceLostCallback2Callbacks (fun () ->
-            let id = deviceLostCallback2Current
-            deviceLostCallback2Current <- deviceLostCallback2Current + 1n
-            deviceLostCallback2Callbacks.[id] <- cb
-            let disp = { new System.IDisposable with member x.Dispose() = deviceLostCallback2Callbacks.Remove(id) |> ignore }
-            struct(deviceLostCallback2Ptr, id, disp)
-        )
-    static member ErrorCallback(typ : ErrorType, message : StringView, userdata : nativeint) =
-        let callback = 
-            lock errorCallbackCallbacks (fun () ->
-                match errorCallbackCallbacks.TryGetValue(userdata) with
-                | (true, cb) ->
-                    Some cb
-                | _ ->
-                    None
-            )
-        match callback with
-        | Some cb -> cb.Invoke(typ, message, 0n)
-        | None -> Unchecked.defaultof<_>
-
-    static member Register(cb : ErrorCallback) =
-        lock errorCallbackCallbacks (fun () ->
-            let id = errorCallbackCurrent
-            errorCallbackCurrent <- errorCallbackCurrent + 1n
-            errorCallbackCallbacks.[id] <- cb
-            let disp = { new System.IDisposable with member x.Dispose() = errorCallbackCallbacks.Remove(id) |> ignore }
-            struct(errorCallbackPtr, id, disp)
+    static member Register(cb : DeviceLostCallback) =
+        lock deviceLostCallbackCallbacks (fun () ->
+            let id = deviceLostCallbackCurrent
+            deviceLostCallbackCurrent <- deviceLostCallbackCurrent + 1n
+            deviceLostCallbackCallbacks.[id] <- cb
+            let disp = { new System.IDisposable with member x.Dispose() = deviceLostCallbackCallbacks.Remove(id) |> ignore }
+            struct(deviceLostCallbackPtr, id, disp)
         )
     static member UncapturedErrorCallback(device : nativeptr<nativeint>, typ : ErrorType, message : StringView, userdata1 : nativeint, userdata2 : nativeint) =
         let callback = 
@@ -3221,17 +2917,17 @@ type WebGPUCallbacks() =
             let disp = { new System.IDisposable with member x.Dispose() = uncapturedErrorCallbackCallbacks.Remove(id) |> ignore }
             struct(uncapturedErrorCallbackPtr, id, disp)
         )
-    static member PopErrorScopeCallback(status : PopErrorScopeStatus, typ : ErrorType, message : StringView, userdata : nativeint) =
+    static member PopErrorScopeCallback(status : PopErrorScopeStatus, typ : ErrorType, message : StringView, userdata1 : nativeint, userdata2 : nativeint) =
         let callback = 
             lock popErrorScopeCallbackCallbacks (fun () ->
-                match popErrorScopeCallbackCallbacks.TryGetValue(userdata) with
+                match popErrorScopeCallbackCallbacks.TryGetValue(userdata1) with
                 | (true, cb) ->
                     Some cb
                 | _ ->
                     None
             )
         match callback with
-        | Some cb -> cb.Invoke(status, typ, message, 0n)
+        | Some cb -> cb.Invoke(status, typ, message, 0n, 0n)
         | None -> Unchecked.defaultof<_>
 
     static member Register(cb : PopErrorScopeCallback) =
@@ -3242,38 +2938,17 @@ type WebGPUCallbacks() =
             let disp = { new System.IDisposable with member x.Dispose() = popErrorScopeCallbackCallbacks.Remove(id) |> ignore }
             struct(popErrorScopeCallbackPtr, id, disp)
         )
-    static member PopErrorScopeCallback2(status : PopErrorScopeStatus, typ : ErrorType, message : StringView, userdata1 : nativeint, userdata2 : nativeint) =
-        let callback = 
-            lock popErrorScopeCallback2Callbacks (fun () ->
-                match popErrorScopeCallback2Callbacks.TryGetValue(userdata1) with
-                | (true, cb) ->
-                    Some cb
-                | _ ->
-                    None
-            )
-        match callback with
-        | Some cb -> cb.Invoke(status, typ, message, 0n, 0n)
-        | None -> Unchecked.defaultof<_>
-
-    static member Register(cb : PopErrorScopeCallback2) =
-        lock popErrorScopeCallback2Callbacks (fun () ->
-            let id = popErrorScopeCallback2Current
-            popErrorScopeCallback2Current <- popErrorScopeCallback2Current + 1n
-            popErrorScopeCallback2Callbacks.[id] <- cb
-            let disp = { new System.IDisposable with member x.Dispose() = popErrorScopeCallback2Callbacks.Remove(id) |> ignore }
-            struct(popErrorScopeCallback2Ptr, id, disp)
-        )
-    static member LoggingCallback(typ : LoggingType, message : StringView, userdata : nativeint) =
+    static member LoggingCallback(typ : LoggingType, message : StringView, userdata1 : nativeint, userdata2 : nativeint) =
         let callback = 
             lock loggingCallbackCallbacks (fun () ->
-                match loggingCallbackCallbacks.TryGetValue(userdata) with
+                match loggingCallbackCallbacks.TryGetValue(userdata1) with
                 | (true, cb) ->
                     Some cb
                 | _ ->
                     None
             )
         match callback with
-        | Some cb -> cb.Invoke(typ, message, 0n)
+        | Some cb -> cb.Invoke(typ, message, 0n, 0n)
         | None -> Unchecked.defaultof<_>
 
     static member Register(cb : LoggingCallback) =
@@ -3284,17 +2959,17 @@ type WebGPUCallbacks() =
             let disp = { new System.IDisposable with member x.Dispose() = loggingCallbackCallbacks.Remove(id) |> ignore }
             struct(loggingCallbackPtr, id, disp)
         )
-    static member QueueWorkDoneCallback(status : QueueWorkDoneStatus, userdata : nativeint) =
+    static member QueueWorkDoneCallback(status : QueueWorkDoneStatus, userdata1 : nativeint, userdata2 : nativeint) =
         let callback = 
             lock queueWorkDoneCallbackCallbacks (fun () ->
-                match queueWorkDoneCallbackCallbacks.TryGetValue(userdata) with
+                match queueWorkDoneCallbackCallbacks.TryGetValue(userdata1) with
                 | (true, cb) ->
                     Some cb
                 | _ ->
                     None
             )
         match callback with
-        | Some cb -> cb.Invoke(status, 0n)
+        | Some cb -> cb.Invoke(status, 0n, 0n)
         | None -> Unchecked.defaultof<_>
 
     static member Register(cb : QueueWorkDoneCallback) =
@@ -3305,52 +2980,10 @@ type WebGPUCallbacks() =
             let disp = { new System.IDisposable with member x.Dispose() = queueWorkDoneCallbackCallbacks.Remove(id) |> ignore }
             struct(queueWorkDoneCallbackPtr, id, disp)
         )
-    static member QueueWorkDoneCallback2(status : QueueWorkDoneStatus, userdata1 : nativeint, userdata2 : nativeint) =
-        let callback = 
-            lock queueWorkDoneCallback2Callbacks (fun () ->
-                match queueWorkDoneCallback2Callbacks.TryGetValue(userdata1) with
-                | (true, cb) ->
-                    Some cb
-                | _ ->
-                    None
-            )
-        match callback with
-        | Some cb -> cb.Invoke(status, 0n, 0n)
-        | None -> Unchecked.defaultof<_>
-
-    static member Register(cb : QueueWorkDoneCallback2) =
-        lock queueWorkDoneCallback2Callbacks (fun () ->
-            let id = queueWorkDoneCallback2Current
-            queueWorkDoneCallback2Current <- queueWorkDoneCallback2Current + 1n
-            queueWorkDoneCallback2Callbacks.[id] <- cb
-            let disp = { new System.IDisposable with member x.Dispose() = queueWorkDoneCallback2Callbacks.Remove(id) |> ignore }
-            struct(queueWorkDoneCallback2Ptr, id, disp)
-        )
-    static member RequestDeviceCallback(status : RequestDeviceStatus, device : nativeint, message : StringView, userdata : nativeint) =
+    static member RequestDeviceCallback(status : RequestDeviceStatus, device : nativeint, message : StringView, userdata1 : nativeint, userdata2 : nativeint) =
         let callback = 
             lock requestDeviceCallbackCallbacks (fun () ->
-                match requestDeviceCallbackCallbacks.TryGetValue(userdata) with
-                | (true, cb) ->
-                    Some cb
-                | _ ->
-                    None
-            )
-        match callback with
-        | Some cb -> cb.Invoke(status, device, message, 0n)
-        | None -> Unchecked.defaultof<_>
-
-    static member Register(cb : RequestDeviceCallback) =
-        lock requestDeviceCallbackCallbacks (fun () ->
-            let id = requestDeviceCallbackCurrent
-            requestDeviceCallbackCurrent <- requestDeviceCallbackCurrent + 1n
-            requestDeviceCallbackCallbacks.[id] <- cb
-            let disp = { new System.IDisposable with member x.Dispose() = requestDeviceCallbackCallbacks.Remove(id) |> ignore }
-            struct(requestDeviceCallbackPtr, id, disp)
-        )
-    static member RequestDeviceCallback2(status : RequestDeviceStatus, device : nativeint, message : StringView, userdata1 : nativeint, userdata2 : nativeint) =
-        let callback = 
-            lock requestDeviceCallback2Callbacks (fun () ->
-                match requestDeviceCallback2Callbacks.TryGetValue(userdata1) with
+                match requestDeviceCallbackCallbacks.TryGetValue(userdata1) with
                 | (true, cb) ->
                     Some cb
                 | _ ->
@@ -3360,11 +2993,11 @@ type WebGPUCallbacks() =
         | Some cb -> cb.Invoke(status, device, message, 0n, 0n)
         | None -> Unchecked.defaultof<_>
 
-    static member Register(cb : RequestDeviceCallback2) =
-        lock requestDeviceCallback2Callbacks (fun () ->
-            let id = requestDeviceCallback2Current
-            requestDeviceCallback2Current <- requestDeviceCallback2Current + 1n
-            requestDeviceCallback2Callbacks.[id] <- cb
-            let disp = { new System.IDisposable with member x.Dispose() = requestDeviceCallback2Callbacks.Remove(id) |> ignore }
-            struct(requestDeviceCallback2Ptr, id, disp)
+    static member Register(cb : RequestDeviceCallback) =
+        lock requestDeviceCallbackCallbacks (fun () ->
+            let id = requestDeviceCallbackCurrent
+            requestDeviceCallbackCurrent <- requestDeviceCallbackCurrent + 1n
+            requestDeviceCallbackCallbacks.[id] <- cb
+            let disp = { new System.IDisposable with member x.Dispose() = requestDeviceCallbackCallbacks.Remove(id) |> ignore }
+            struct(requestDeviceCallbackPtr, id, disp)
         )

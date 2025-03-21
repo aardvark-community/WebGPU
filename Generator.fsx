@@ -437,7 +437,7 @@ for kv in doc.RootElement.EnumerateObject() do
             ()
     
 
-let nonExistentTypes = Set.empty //Set.ofList ["external texture binding layout"; "logging callback"; "external texture"; "image copy external texture"; "copy texture for browser options"]
+let nonExistentTypes = Set.empty // Set.ofList ["INTERNAL_HAVE_EMDAWNWEBGPU_HEADER"]
 
 
 let all =
@@ -457,6 +457,9 @@ let all =
             Some (Object { o with Methods = meths })
             // else
             //     None
+        | Struct def ->
+            if def.Name = "INTERNAL_HAVE_EMDAWNWEBGPU_HEADER" then None
+            else Some a
         | _ ->
             Some a
     )
@@ -1710,6 +1713,7 @@ module Frontend =
             let rootName = 
                 if chained then
                     match s.ChainRoots with
+                    | [] -> "Hans"
                     | [a] -> a
                     | roots -> List.head roots //failwithf "bad roots: %A" roots
                 else s.Name
@@ -1739,7 +1743,7 @@ module Frontend =
                             yield ")"
                         ]
                     else
-                        "let nextInChain = 0n" :: b
+                        "let nextInChain = 0n" :: "let sType = SType.DawnInjectedInvalidSType" :: b
             } :: marshal
         elif extensible then
             {
@@ -1907,6 +1911,7 @@ module Frontend =
                         let rootName = 
                             if chained then
                                 match s.ChainRoots with
+                                | [] -> "Hans"
                                 | [a] -> a
                                 | roots -> List.head roots //failwithf "bad roots: %A" roots
                             else s.Name
@@ -2063,6 +2068,7 @@ module Frontend =
                         let rootName = 
                             if chained then
                                 match s.ChainRoots with
+                                | [] -> "Hans"
                                 | [a] -> a
                                 | roots -> List.head roots //failwithf "bad roots: %A" roots
                             else s.Name
@@ -2306,14 +2312,14 @@ module Frontend =
                     printfn "        enc.CopyBufferToBuffer(buffer, offset, tmp, 0L, size)"
                     printfn "        use cmd = enc.Finish { Label = null }"
                     printfn "        queue.Submit [| cmd |]"
-                    printfn "        let f = queue.OnSubmittedWorkDone2 { Mode = CallbackMode.WaitAnyOnly; Callback = QueueWorkDoneCallback2 (fun _ _ -> ()) }"
+                    printfn "        let f = queue.OnSubmittedWorkDone { Mode = CallbackMode.WaitAnyOnly; Callback = QueueWorkDoneCallback (fun _ _ -> ()) }"
                     printfn "        device.Instance.WaitAny([| { FutureWaitInfo.Future = f; Completed = false } |], 1000000000L) |> ignore"
-                    printfn "        let info : BufferMapCallbackInfo2 ="
+                    printfn "        let info : BufferMapCallbackInfo ="
                     printfn "           {"
                     printfn "               Mode = CallbackMode.WaitAnyOnly"
-                    printfn "               Callback = BufferMapCallback2(fun d status msg -> ())"
+                    printfn "               Callback = BufferMapCallback(fun d status msg -> ())"
                     printfn "           }"
-                    printfn "        let f = tmp.MapAsync2(MapMode.Read, 0L, size, info)"
+                    printfn "        let f = tmp.MapAsync(MapMode.Read, 0L, size, info)"
                     printfn "        device.Instance.WaitAny([| { FutureWaitInfo.Future = f; Completed = false } |], 1000000000L) |> ignore"
                     printfn "        let ptr = tmp.GetConstMappedRange(0L, size)"
                     printfn "        System.Runtime.InteropServices.Marshal.Copy(ptr, arr, 0, arr.Length)"
