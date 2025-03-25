@@ -150,8 +150,8 @@ type ImageExtensions private() =
                     1
         } |> ignore
     
-    static member internal CopyImageToTexture2d(this : CommandEncoder, data : nativeint, tex : Texture, dstLevel : int, dstOffset : V2i, size : V2i, volumeInfo : Type -> int -> Col.Format -> list<Range1i * Choice<VolumeInfo, obj>>) =
-        ImageExtensions.CopyImageToTexture(this, data, tex, dstLevel, dstOffset.XYO, size.XYI, fun elemType elemSize fmt ->
+    static member internal CopyImageToTexture2d(this : CommandEncoder, data : nativeint, tex : Texture, dstLevel : int, dstSlice : int, dstOffset : V2i, size : V2i, volumeInfo : Type -> int -> Col.Format -> list<Range1i * Choice<VolumeInfo, obj>>) =
+        ImageExtensions.CopyImageToTexture(this, data, tex, dstLevel, V3i(dstOffset, dstSlice), size.XYI, fun elemType elemSize fmt ->
             volumeInfo elemType elemSize fmt |> List.map (fun (r, i) ->
                 match i with
                 | Choice1Of2 vi ->
@@ -170,14 +170,16 @@ type ImageExtensions private() =
             
             
         )
+    
+    
     [<Extension>]
-    static member CopyImageToTexture(this : CommandEncoder, data : PixImage, tex : Texture, dstLevel : int) =
+    static member CopyImageToTexture(this : CommandEncoder, data : PixImage, tex : Texture, dstLevel : int, dstSlice : int) =
         data.Visit {
             new IPixImageVisitor<_> with
                 member x.Visit (image: PixImage<'i>) =
                     let gc = GCHandle.Alloc(image.Volume.Data, GCHandleType.Pinned)
                     let ptr = gc.AddrOfPinnedObject()
-                    ImageExtensions.CopyImageToTexture2d(this, ptr, tex, dstLevel, V2i.Zero, data.Size, fun typ _ c ->
+                    ImageExtensions.CopyImageToTexture2d(this, ptr, tex, dstLevel, dstSlice, V2i.Zero, data.Size, fun typ _ c ->
                         if typ <> typeof<'i> then failwithf $"bad channel-type {typeof<'i>} (expected {typ})"
                         
                         if c = image.Format then
@@ -204,6 +206,50 @@ type ImageExtensions private() =
                                         else failwith $"bad channel-type {typ}"
                                         
                                     [Range1i(0, 2), Choice1Of2 image.Volume.Info; Range1i(3,3), Choice2Of2 value]
+                                | _ ->
+                                    failwith $"bad format {image.Format} (expected {c})"
+                            | _ ->
+                                failwith $"bad format {image.Format} (expected {c})"
+                            
+                    )
+                    gc.Free()
+                    1
+        } |> ignore
+
+    [<Extension>]
+    static member CopyImageToTexture(this : CommandEncoder, data : PixVolume, tex : Texture, dstLevel : int) =
+        data.Visit {
+            new IPixVolumeVisitor<_> with
+                member x.Visit (image: PixVolume<'i>) =
+                    let gc = GCHandle.Alloc(image.Tensor4.Data, GCHandleType.Pinned)
+                    let ptr = gc.AddrOfPinnedObject()
+                    ImageExtensions.CopyImageToTexture(this, ptr, tex, dstLevel, V3i.Zero, data.Size, fun typ _ c ->
+                        if typ <> typeof<'i> then failwithf $"bad channel-type {typeof<'i>} (expected {typ})"
+                        
+                        if c = image.Format then
+                            [Range1i(0, c.ChannelCount() - 1), Choice1Of2 image.Tensor4.Info]
+                        else
+                            match c with
+                            | Col.Format.RGBA ->
+                                match image.Format with
+                                | Col.Format.BGRA ->
+                                    let info = image.Tensor4.Info
+                                    let getChannel i = info.SubTensor4(V4l(0,0,0,i), V4l(info.SX, info.SY, info.SZ, 1L))
+                                    
+                                    [
+                                        Range1i(0, 0), Choice1Of2 (getChannel 2)
+                                        Range1i(1, 1), Choice1Of2 (getChannel 1)
+                                        Range1i(2, 2), Choice1Of2 (getChannel 0)
+                                        Range1i(3, 3), Choice1Of2 (getChannel 3)
+                                    ]
+                                | Col.Format.RGB ->
+                                    let value =
+                                        if typ = typeof<byte> then 255uy :> obj
+                                        elif typ = typeof<int8> then 0y :> obj
+                                        elif typ = typeof<float32> then 1.0f :> obj
+                                        else failwith $"bad channel-type {typ}"
+                                        
+                                    [Range1i(0, 2), Choice1Of2 image.Tensor4.Info; Range1i(3,3), Choice2Of2 value]
                                 | _ ->
                                     failwith $"bad format {image.Format} (expected {c})"
                             | _ ->

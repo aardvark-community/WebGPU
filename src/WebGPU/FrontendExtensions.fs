@@ -213,6 +213,13 @@ type WebGPUExtensions private() =
             else
                 DeviceLostCallbackInfo.Null
         
+        let errCb : UncapturedErrorCallbackInfo =
+            {
+                Callback = UncapturedErrorCallback(fun _ device typ str ->
+                    Report.ErrorNoPrefix($"{typ} ERROR: {str}")
+                )
+            }
+        
         let realOptions =
             {
                 Next = options.Next
@@ -221,7 +228,7 @@ type WebGPUExtensions private() =
                 RequiredLimits = options.RequiredLimits
                 DefaultQueue = options.DefaultQueue
                 DeviceLostCallbackInfo = err
-                UncapturedErrorCallbackInfo = UncapturedErrorCallbackInfo.Null
+                UncapturedErrorCallbackInfo = errCb
             }
         
         let info : RequestDeviceCallbackInfo =
@@ -436,21 +443,32 @@ type BufferRangeExtensions private() =
         }
         
     [<Extension>]
-    static member CreateView(tex : Texture, usage : TextureUsage) =
-        tex.CreateView {
-            Next = null
-            Label = null
-            Format = tex.Format
-            Dimension =
+    static member CreateView(tex : Texture, usage : TextureUsage, ?viewDimension : TextureViewDimension) =
+        
+        let viewDimension =
+            match viewDimension with
+            | Some d -> d
+            | None ->
                 match tex.Dimension with
                 | TextureDimension.D1D -> TextureViewDimension.D1D
                 | TextureDimension.D2D -> TextureViewDimension.D2D
                 | TextureDimension.D3D -> TextureViewDimension.D3D
                 | _ -> failwith "bad dim"
+        
+        let layerCount =
+            match viewDimension with
+            | TextureViewDimension.Cube -> 6
+            | _ -> 1
+        
+        tex.CreateView {
+            Next = null
+            Label = null
+            Format = tex.Format
+            Dimension = viewDimension
             BaseMipLevel = 0
             MipLevelCount = tex.MipLevelCount
             BaseArrayLayer = 0
-            ArrayLayerCount = 1
+            ArrayLayerCount = layerCount
             Aspect = TextureAspect.All
             Usage = usage
         }

@@ -97,6 +97,7 @@ module Translations =
 
                 //Aardvark.Rendering.TextureFormat.Bgr8 = 1234
                 Aardvark.Rendering.TextureFormat.Bgra8, WebGPU.TextureFormat.BGRA8Unorm
+                Aardvark.Rendering.TextureFormat.Rgb8, WebGPU.TextureFormat.RGBA8Unorm
                 //Aardvark.Rendering.TextureFormat.R3G3B2,
                 //Aardvark.Rendering.TextureFormat.Rgb4 = 32847
                 //Aardvark.Rendering.TextureFormat.Rgb5 = 32848

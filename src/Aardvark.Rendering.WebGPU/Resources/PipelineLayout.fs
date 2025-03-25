@@ -69,6 +69,9 @@ type WebGPUPipelineLayoutExtensions private() =
                 | WGSL.WGSLType.Int(true,_) -> TextureSampleType.Sint
                 | WGSL.WGSLType.Int(false,_) -> TextureSampleType.Uint
                 | WGSL.WGSLType.Float _ -> TextureSampleType.Float
+                | WGSL.WGSLType.Vec(_, WGSL.WGSLType.Float _) -> TextureSampleType.Float
+                | WGSL.WGSLType.Vec(_, WGSL.WGSLType.Int(true,_)) -> TextureSampleType.Sint
+                | WGSL.WGSLType.Vec(_, WGSL.WGSLType.Int(false,_)) -> TextureSampleType.Uint
                 | _ -> TextureSampleType.Undefined
             
             let viewDimension =

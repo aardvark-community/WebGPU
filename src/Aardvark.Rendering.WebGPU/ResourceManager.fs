@@ -2,7 +2,6 @@ namespace Aardvark.Rendering.WebGPU
 
 open System
 open System.Threading
-open FShade.Intrinsics
 open FSharp.Data.Adaptive
 open Aardvark.Rendering
 open Aardvark.Base
@@ -174,6 +173,13 @@ type ResourceManager(device : Device) =
     let uboCache = ConcurrentDict<FShade.WGSL.WGSLUniformBuffer * list<IAdaptiveValue>, AdaptiveResource<Buffer>>(Dict())
     let bindGroupsCache = ConcurrentDict<MapExt<int, BindGroupLayout> * array<list<AdaptiveBindGroupEntry>>, AdaptiveResource<BindGroup[]>>(Dict())
     
+    let blitters = Dict<TextureFormat, Blitter>()
+    
+    let getBlitter (fmt : TextureFormat) =
+        lock blitters (fun () ->
+            blitters.GetOrCreate(fmt, fun fmt -> new Blitter(device, fmt))    
+        )
+    
     static let acquire (v : IAdaptiveValue) =
         match v with
         | :? IAdaptiveResource as r -> r.Acquire()
@@ -263,7 +269,7 @@ type ResourceManager(device : Device) =
                     if ownsHandle then
                         let value = value.GetValueUntyped token :?> IBuffer
                         match value with
-                        | :? Buffer as b ->
+                        | :? Buffer ->
                             false
                         | _ ->
                             let size = value.GetSizeInBytes()
@@ -288,22 +294,211 @@ type ResourceManager(device : Device) =
         x.CreateBuffer(usage, value :> IAdaptiveValue)
         
     member private x.CreateTexture(value : IAdaptiveValue) =
-        
-        
         { new AdaptiveResource<Texture>() with
             member x.Create(cmd, token) =
                 match value.GetValueUntyped token with
                 | :? FileTexture as t ->
-                    failwith ""
-                | :? INativeTexture as t ->
+                    let img = PixImage.Load(t.FileName)
+                    let fmt = TextureFormat.ofPixFormat img.PixFormat t.TextureParams |> Translations.TextureFormat.ofAardvark
                     
-                    failwith ""
+                    let levels =
+                        if t.TextureParams.wantMipMaps then
+                            mipMapLevels2d img.Size
+                        else
+                            1
+                            
+                    let tex =
+                        device.CreateTexture {
+                            Next = null
+                            Label = null
+                            Usage = TextureUsage.StorageBinding ||| TextureUsage.TextureBinding ||| TextureUsage.CopyDst ||| TextureUsage.CopySrc
+                            Dimension = TextureDimension.D2D
+                            Size = { Width = img.Size.X; Height = img.Size.Y; DepthOrArrayLayers = 1 }
+                            Format = fmt
+                            MipLevelCount = levels
+                            SampleCount = 1
+                            ViewFormats = [| fmt |]
+                        }
+                        
+                    cmd.CopyImageToTexture(img, tex, 0, 0)
+                        
+                    if levels > 1 then
+                        let blitter = getBlitter fmt
+                        for l in 1 .. levels - 1 do
+                            blitter.Enqueue(cmd, tex, l - 1, tex, l)
+                        
+                    tex
+                
+                | :? INativeTexture as t ->
+                    let fmt = Translations.TextureFormat.ofAardvark t.Format
+                    let level0 = t.[0,0]
+                    
+                    
+                    let levels, generate =
+                        if t.WantMipMaps then
+                            if t.MipMapLevels > 1 then
+                                t.MipMapLevels, false
+                            else
+                                let levels = 
+                                    match t.Dimension with
+                                    | TextureDimension.Texture1D -> mipMapLevels1d level0.Size.X
+                                    | TextureDimension.Texture2D | TextureDimension.TextureCube -> mipMapLevels2d level0.Size.XY
+                                    | _ -> mipMapLevels3d level0.Size.XYZ
+                                levels, true
+                        else
+                            1, false
+                    
+                    let dim =
+                        match t.Dimension with
+                        | TextureDimension.Texture1D -> TextureDimension.D1D
+                        | TextureDimension.Texture2D -> TextureDimension.D2D
+                        | TextureDimension.TextureCube -> TextureDimension.D2D
+                        | _ -> TextureDimension.D3D
+                        
+                    let texSize =
+                        match t.Dimension with
+                        | TextureDimension.Texture1D ->V3i(level0.Size.X, t.Count, 1)
+                        | TextureDimension.Texture2D -> V3i(level0.Size.XY, t.Count)
+                        | TextureDimension.TextureCube -> V3i(level0.Size.XY, 6*t.Count)
+                        | _ -> level0.Size
+                    
+                    
+                    let tex =
+                        device.CreateTexture {
+                            Next = null
+                            Label = null
+                            Usage = TextureUsage.StorageBinding ||| TextureUsage.TextureBinding ||| TextureUsage.CopyDst ||| TextureUsage.CopySrc
+                            Dimension = dim
+                            Size = { Width = texSize.X; Height = texSize.Y; DepthOrArrayLayers = texSize.Z }
+                            Format = fmt
+                            MipLevelCount = levels
+                            SampleCount = 1
+                            ViewFormats = [| fmt |]
+                        }
+                        
+                    
+                    cmd.CopyImageToTexture(t, tex)
+                            
+                    if generate then
+                        let blitter = getBlitter fmt
+                        for l in 1 .. levels - 1 do
+                            blitter.Enqueue(cmd, tex, l - 1, tex, l)
+                        
+                    tex
+                    
                 | :? PixTexture2d as t ->
-                    failwith ""
+                    let fmt = TextureFormat.ofPixFormat t.PixImageMipMap.[0].PixFormat t.TextureParams |> Translations.TextureFormat.ofAardvark
+                    let level0 = t.PixImageMipMap.[0]
+                    
+                    let levels, generate =
+                        if t.TextureParams.wantMipMaps then
+                            if t.PixImageMipMap.LevelCount > 1 then
+                                t.PixImageMipMap.LevelCount, false
+                            else
+                                mipMapLevels2d level0.Size.XY, true
+                        else
+                            1, false
+                    
+                    let tex =
+                        device.CreateTexture {
+                            Next = null
+                            Label = null
+                            Usage = TextureUsage.StorageBinding ||| TextureUsage.TextureBinding ||| TextureUsage.CopyDst ||| TextureUsage.CopySrc
+                            Dimension = TextureDimension.D2D
+                            Size = { Width = level0.Size.X; Height = level0.Size.Y; DepthOrArrayLayers = 1 }
+                            Format = fmt
+                            MipLevelCount = levels
+                            SampleCount = 1
+                            ViewFormats = [| fmt |]
+                        }
+                        
+                    let copyLevels = min levels t.PixImageMipMap.LevelCount
+                    for l in 0 .. copyLevels - 1 do
+                        cmd.CopyImageToTexture(t.PixImageMipMap.[l], tex, l, 0)
+                            
+                    if generate then
+                        let blitter = getBlitter fmt
+                        for l in 1 .. levels - 1 do
+                            blitter.Enqueue(cmd, tex, l - 1, tex, l)
+                        
+                    tex
+                
                 | :? PixTexture3d as t ->
-                    failwith ""
+                    let fmt = TextureFormat.ofPixFormat t.PixVolume.PixFormat t.TextureParams |> Translations.TextureFormat.ofAardvark
+                    let level0 = t.PixVolume
+                    
+                    let levels =
+                        if t.TextureParams.wantMipMaps then
+                            mipMapLevels3d level0.Size
+                        else
+                            1
+                    
+                    let tex =
+                        device.CreateTexture {
+                            Next = null
+                            Label = null
+                            Usage = TextureUsage.StorageBinding ||| TextureUsage.TextureBinding ||| TextureUsage.CopyDst ||| TextureUsage.CopySrc
+                            Dimension = TextureDimension.D3D
+                            Size = { Width = level0.Size.X; Height = level0.Size.Y; DepthOrArrayLayers = level0.Size.Z }
+                            Format = fmt
+                            MipLevelCount = levels
+                            SampleCount = 1
+                            ViewFormats = [| fmt |]
+                        }
+                        
+                    cmd.CopyImageToTexture(t.PixVolume, tex, 0)
+                            
+                    if levels > 1 then
+                        let blitter = getBlitter fmt
+                        for l in 1 .. levels - 1 do
+                            blitter.Enqueue(cmd, tex, l - 1, tex, l)
+                        
+                    tex
+                    
                 | :? PixTextureCube as t ->
-                    failwith ""
+                    let fmt = TextureFormat.ofPixFormat t.PixCube.PixFormat t.TextureParams |> Translations.TextureFormat.ofAardvark
+                    let anyFace = t.PixCube.[CubeSide.NegativeX]
+                    
+                    let levels, generate =
+                        if t.TextureParams.wantMipMaps then
+                            if anyFace.LevelCount > 1 then
+                                anyFace.LevelCount, false
+                            else
+                                mipMapLevels2d anyFace.BaseSize, true
+                        else
+                            1, false
+                    
+                    let tex =
+                        device.CreateTexture {
+                            Next = null
+                            Label = null
+                            Usage = TextureUsage.StorageBinding ||| TextureUsage.TextureBinding ||| TextureUsage.CopyDst ||| TextureUsage.CopySrc
+                            Dimension = TextureDimension.D2D
+                            Size = { Width = anyFace.BaseSize.X; Height = anyFace.BaseSize.Y; DepthOrArrayLayers = 6 }
+                            Format = fmt
+                            MipLevelCount = levels
+                            SampleCount = 1
+                            ViewFormats = [| fmt |]
+                        }
+                        
+                    let copyLevels = min levels anyFace.LevelCount
+                    
+                    let slices = [| 0;1; 3;2; 4;5 |]
+                    
+                    for f in 0 .. 5 do
+                        let face = unbox<CubeSide> f
+                        let slice = slices.[f]
+                        for l in 0 .. copyLevels - 1 do
+                            cmd.CopyImageToTexture(t.PixCube.[face].[l], tex, l, slice)
+                            
+                    if generate then
+                        let blitter = getBlitter fmt
+                        for l in 1 .. levels - 1 do
+                            blitter.Enqueue(cmd, tex, l - 1, tex, l)
+                        
+                            
+                    tex
+                
                 | :? Texture as t ->
                     t.AddRef()
                     t
@@ -319,7 +514,7 @@ type ResourceManager(device : Device) =
                 handle.Dispose()
         }
          
-    member x.CreateStorageTextureView(tex : AdaptiveResource<Texture>, level : int, usage : TextureUsage) =
+    member x.CreateStorageTextureView(tex : AdaptiveResource<Texture>, level : int) =
         { new AdaptiveResource<TextureView>() with
             member x.Create(cmd, token) =
                 let tex = tex.GetHandle(cmd, token)
@@ -337,11 +532,11 @@ type ResourceManager(device : Device) =
                 tex.Release()
         }
          
-    member x.CreateSampledTextureView(tex : AdaptiveResource<Texture>, usage : TextureUsage) =
+    member x.CreateSampledTextureView(tex : AdaptiveResource<Texture>, viewDimension : TextureViewDimension) =
         { new AdaptiveResource<TextureView>() with
             member x.Create(cmd, token) =
                 let tex = tex.GetHandle(cmd, token)
-                tex.CreateView(TextureUsage.TextureBinding)
+                tex.CreateView(TextureUsage.TextureBinding, viewDimension)
                 
             member x.TryUpdate(handle, cmd, token) =
                 tex.TryUpdate(cmd, token)
@@ -632,16 +827,24 @@ type ResourceManager(device : Device) =
             match uniforms.TryGetUniform(Ag.Scope.Root, Symbol.Create tex.imageName) with
             | Some data ->
                 let texture = x.CreateTexture(data)
-                let view = x.CreateStorageTextureView(texture, 0, TextureUsage.StorageBinding ||| TextureUsage.CopyDst ||| TextureUsage.CopySrc)
+                let view = x.CreateStorageTextureView(texture, 0)
                 groupBindings.[tex.imageGroup] <- (AdaptiveBindGroupEntry.TextureView(tex.imageBinding, view)) :: groupBindings.[tex.imageGroup]
             | None ->
                 ()
         
         for KeyValue(name, tex) in iface.textures do
-            match uniforms.TryGetUniform(Ag.Scope.Root, Symbol.Create tex.textureName) with
+            let sem = tex.textureNames |> List.head // TODO: multiple????
+            let viewDim =
+                match tex.textureType.dimension with
+                | FShade.SamplerDimension.Sampler1d -> TextureViewDimension.D1D
+                | FShade.SamplerDimension.Sampler2d -> TextureViewDimension.D2D
+                | FShade.SamplerDimension.SamplerCube -> TextureViewDimension.Cube
+                | _ -> TextureViewDimension.D3D
+                
+            match uniforms.TryGetUniform(Ag.Scope.Root, Symbol.Create sem) with
             | Some data ->
                 let texture = x.CreateTexture(data)
-                let view = x.CreateStorageTextureView(texture, 0, TextureUsage.TextureBinding ||| TextureUsage.CopyDst ||| TextureUsage.CopySrc)
+                let view = x.CreateSampledTextureView(texture, viewDim)
                 groupBindings.[tex.textureGroup] <- (AdaptiveBindGroupEntry.TextureView(tex.textureBinding, view)) :: groupBindings.[tex.textureGroup]
             | None ->
                 ()

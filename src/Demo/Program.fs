@@ -13,75 +13,6 @@ open global.WebGPU
 open FSharp.Data.Adaptive
 
 #nowarn "9"
-//
-// type MyGLFW() =
-//
-//     inherit Silk.NET.GLFW.Glfw(MyGLFW.Context)
-//
-//     static let ctx =
-//         lazy (
-//             let lib = Aardvark.LoadLibrary(typeof<Instance>.Assembly, "libglfw.3.dylib")
-//             {
-//                 new Silk.NET.Core.Contexts.INativeContext with
-//                     member x.Dispose() = ()
-//                     member this.GetProcAddress(proc,slot) = Aardvark.GetProcAddress(lib, proc)
-//                     member this.TryGetProcAddress(proc,addr,slot) =
-//                         let ptr = Aardvark.GetProcAddress(lib, proc)
-//                         if ptr = 0n then false
-//                         else
-//                             addr <- ptr
-//                             true
-//             }
-//         )
-//     static member Context = ctx.Value
-//
-// module Window =
-//     open Silk.NET.GLFW
-//     
-//     let glfw =
-//         lazy (
-//             let glfw = new MyGLFW() :> Glfw
-//             glfw.Init() |> ignore
-//             glfw
-//         )
-//     
-//     let create () =
-//         let glfw = glfw.Value
-//         glfw.DefaultWindowHints()
-//         // let retina =
-//         //     if RuntimeInformation.IsOSPlatform OSPlatform.OSX then true
-//         //     else false
-//         //glfw.WindowHint(unbox<WindowHintBool> 0x00023001, retina)
-//         glfw.WindowHint(WindowHintBool.TransparentFramebuffer, false)
-//         glfw.WindowHint(WindowHintBool.Visible, false)
-//         glfw.WindowHint(WindowHintBool.Resizable, true)
-//         glfw.WindowHint(WindowHintInt.RefreshRate, 0)
-//         glfw.WindowHint(WindowHintBool.FocusOnShow, true)
-//         glfw.WindowHint(WindowHintClientApi.ClientApi, ClientApi.NoApi)
-//         let win = glfw.CreateWindow(1024, 768, "Winnie", NativePtr.ofNativeInt 0n, NativePtr.ofNativeInt 0n)
-//         if NativePtr.toNativeInt win = 0n then
-//             let description = "Could not create window"
-//
-//             let msg = $"[GLFW] {description}"
-//             Report.Error msg
-//             failwith msg
-//         win
-//         
-//     let run (render : V2i -> unit) (win : nativeptr<WindowHandle>) =
-//         let glfw = glfw.Value
-//         glfw.ShowWindow(win)
-//         let mutable run = true
-//         glfw.SetWindowCloseCallback(win, GlfwCallbacks.WindowCloseCallback(fun _ ->
-//             run <- false
-//             glfw.HideWindow(win)
-//             glfw.PostEmptyEvent()
-//         )) |> ignore
-//         while run do
-//             glfw.PollEvents()
-//             let (w, h) = glfw.GetWindowSize(win)
-//             render(V2i(w,h))
-
-
 type Blitter(device : Device, format : TextureFormat) =
     
     static let localSizeX = 8
@@ -216,6 +147,21 @@ type Blitter(device : Device, format : TextureFormat) =
 module Shader =
     open FShade
     
+    let sammy2 =
+        sampler2d {
+            texture uniform?DiffuseColorTexture
+            addressU WrapMode.Wrap
+            addressV WrapMode.Wrap
+            filter Filter.Anisotropic
+            maxAnisotropy 16
+        }
+    
+    let sammm (v : Effects.Vertex) =
+        fragment {
+            let dx = ddx v.tc
+            let dy = ddy v.tc
+            return sammy2.SampleGrad(v.tc,dx, dy)
+        }
     
     type Vertex =
         {
@@ -225,11 +171,7 @@ module Shader =
             [<Color>] col : V4d
         }
         
-    let vertex (v : Vertex) =
-        vertex {
-            return { v with pos =  uniform.ModelViewProjTrafo * v.pos }
-        }
-        
+
     let tex =
         sampler2dShadow {
             texture uniform?DiffuseColorTexture
@@ -242,12 +184,38 @@ module Shader =
     [<ReflectedDefinition>]
     let sammy (s : Sampler2dShadow) (tc : V2d) =
         s.Sample(tc, 0.5)
-        
+ 
+
+    let env =
+        samplerCube {
+            texture uniform?EnvMap
+            addressU WrapMode.Wrap
+            addressV WrapMode.Wrap
+            addressW WrapMode.Wrap
+            filter Filter.MinMagMipLinear
+        }
+
+    let envMap (v : Effects.Vertex) =
+        fragment {
+            let vp = uniform.ProjTrafoInv * V4d(v.pos.X, v.pos.Y, -1.0, 1.0)
+            let vp = vp.XYZ / vp.W
+            let dir = (uniform.ViewTrafoInv * V4d(vp, 0.0)).XYZ |> Vec.normalize
+            return env.Sample(dir)
+        }
+
+    let reverseTrafo (v : Effects.Vertex) =
+        vertex {
+            let wp = uniform.ViewProjTrafoInv * v.pos
+            return { v with wp = wp / wp.W }
+        }
+           
     let fragment (v : Vertex) =
         fragment {
             return V4d(1.0, 0.0, 0.0, 1.0) //Vec.normalize v.n * 0.5 + V3d.Half, 1.0)
         }
 
+    
+    
     [<LocalSize(X = 64)>]
     let computer (x : int) (a : int[]) (b : int[]) (c : int[]) =
         compute {
@@ -493,23 +461,86 @@ module Shader =
             BindGroupLayouts = groupLayouts
             ImmediateDataRangeByteSize = 0
         }
-            
+
 module Scene =
     open FSharp.Data.Adaptive
     open Aardvark.SceneGraph
     open Aardvark.Rendering.WebGPU
+    
+    type Marker = Marker
+    
+    let getImage =
+        let names = typeof<Marker>.Assembly.GetManifestResourceNames()
+        let load (name : string) =
+            let name = names |> Array.find (fun str -> str.EndsWith name)
+            use s = typeof<Marker>.Assembly.GetManifestResourceStream(name)
+            PixImage.Load(s)
+
+        load
+    
+    let skybox (name : string) =
+        
+        AVal.custom (fun _ ->
+            let env =
+                let names = typeof<Marker>.Assembly.GetManifestResourceNames()
+                let trafo t (img : PixImage) = img.TransformedPixImage t
+
+                PixCube [|
+                    PixImageMipMap(
+                        getImage (name.Replace("$", "rt"))
+                        |> trafo ImageTrafo.Rot90
+                    )
+                    PixImageMipMap(
+                        getImage (name.Replace("$", "lf"))
+                        |> trafo ImageTrafo.Rot270
+                    )
+                
+                    PixImageMipMap(
+                        getImage (name.Replace("$", "bk"))
+                    )
+                    PixImageMipMap(
+                        getImage (name.Replace("$", "ft"))
+                        |> trafo ImageTrafo.Rot180
+                    )
+                
+                    PixImageMipMap(
+                        getImage (name.Replace("$", "up"))
+                        |> trafo ImageTrafo.Rot90
+                    )
+                    PixImageMipMap(
+                        getImage (name.Replace("$", "dn"))
+                        |> trafo ImageTrafo.Rot90
+                    )
+                |]
+
+            PixTextureCube(env, TextureParams.empty) :> ITexture
+        )
+    
+    
     let scene (size : aval<V2i>) (view : aval<Trafo3d>)  =
-        Sg.box' C4b.Red Box3d.Unit
-        |> Sg.shader {
-            do! DefaultSurfaces.trafo
-            //do! DefaultSurfaces.constantColor C4f.White
-            do! DefaultSurfaces.simpleLighting
-        }
+        Sg.ofList [
+            Sg.farPlaneQuad
+            |> Sg.texture "EnvMap" (skybox "miramar_$.png")
+            |> Sg.shader {
+                do! Shader.reverseTrafo
+                do! Shader.envMap
+            }
+        
+        
+            Sg.box' C4b.Green Box3d.Unit
+            |> Sg.shader {
+                do! DefaultSurfaces.trafo
+                do! Shader.sammm
+                //do! DefaultSurfaces.constantColor C4f.White
+                //do! DefaultSurfaces.simpleLighting
+            }
+            |> Sg.diffuseFileTexture "/Users/schorsch/Desktop/GettyImages-121786088-58a4cc5a5f9b58a3c955c5fb.jpg" true
+        ]
         |> Sg.viewTrafo view
         |> Sg.projTrafo (size |> AVal.map (fun s -> Frustum.perspective 90.0 0.1 100.0 (float s.X / float s.Y) |> Frustum.projTrafo))
     
     let renderTask (size : aval<V2i>) (view : aval<Trafo3d>) (device : Device) =
-        let rt = Runtime(device) 
+        //let rt = Runtime(device) 
         let signature = device.CreateFramebufferSignature(1, Map.ofList [0, { Name = DefaultSemantic.Colors; Format = TextureFormat.Bgra8 }], Some TextureFormat.Depth24Stencil8)
         let objs = Aardvark.SceneGraph.Semantics.RenderObjectSemantics.Semantic.renderObjects Ag.Scope.Root (scene size view)
         //let objs = objs |> ASet.force |> ASet.ofSeq)
@@ -530,7 +561,7 @@ let main _argv =
     
     let task = 
         RenderTask.ofList [
-            new ClearTask(app.Device, win.FramebufferSignature, AVal.constant (clear { color C4f.Black; depth 1.0; stencil 0 }))
+            new ClearTask(app.Device, win.FramebufferSignature, AVal.constant (clear { color C4f.Red; depth 1.0; stencil 0 }))
             Scene.renderTask win.Sizes cam app.Device
         ]
         
