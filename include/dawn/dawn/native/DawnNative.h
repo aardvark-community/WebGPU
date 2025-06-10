@@ -315,25 +315,35 @@ class DAWN_NATIVE_EXPORT MemoryDump {
 };
 DAWN_NATIVE_EXPORT void DumpMemoryStatistics(WGPUDevice device, MemoryDump* dump);
 
-// Unlike memory dumps which include detailed information about allocations, this only returns the
-// total estimated memory usage, and is intended for background tracing for UMA.
-DAWN_NATIVE_EXPORT uint64_t ComputeEstimatedMemoryUsage(WGPUDevice device);
-
-// Same as ComputeEstimatedMemoryUsage but with more details:
-// - total memory usage of textures.
-// - total memory usage of buffers.
-// - total memory usage of depth/stencil textures.
-// - total memory usage of MSAA textures.
-// TODO(chromium:402138745): Remove the old ComputeEstimatedMemoryUsage() once all call sites are
-// updated to use the newer function.
+// Intended for background tracing for UMA that returns the estimated memory usage.
 struct DAWN_NATIVE_EXPORT MemoryUsageInfo {
+    // Total memory usage.
     uint64_t totalUsage;
+    // Total depth stencil textures' memory.
     uint64_t depthStencilTexturesUsage;
+    // Total MSAA textures' memory.
     uint64_t msaaTexturesUsage;
+    // Number of MSAA textures.
+    uint64_t msaaTexturesCount;
+    // Largest MSAA texture's memory.
+    uint64_t largestMsaaTextureUsage;
+    // Total textures' memory.
     uint64_t texturesUsage;
+    // Total buffers' memory.
     uint64_t buffersUsage;
 };
 DAWN_NATIVE_EXPORT MemoryUsageInfo ComputeEstimatedMemoryUsageInfo(WGPUDevice device);
+
+// Memory information gathered from backend specific allocators.
+// - memory allocated by clients for objects such as buffers, textures.
+// - heap memory used by the allocator for allocations.
+struct DAWN_NATIVE_EXPORT AllocatorMemoryInfo {
+    uint64_t totalUsedMemory = 0;
+    uint64_t totalAllocatedMemory = 0;
+    uint64_t totalLazyAllocatedMemory = 0;
+    uint64_t totalLazyUsedMemory = 0;
+};
+DAWN_NATIVE_EXPORT AllocatorMemoryInfo GetAllocatorMemoryInfo(WGPUDevice device);
 
 // Free any unused GPU memory like staging buffers, cached resources, etc. Returns true if there are
 // still objects to delete and ReduceMemoryUsage() should be run again after a short delay to allow

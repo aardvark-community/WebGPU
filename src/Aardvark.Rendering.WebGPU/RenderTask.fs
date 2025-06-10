@@ -88,8 +88,8 @@ type RenderTask(device : Device, signature : IFramebufferSignature, objects : as
             renc.End()
             use render = cmd.Finish { Label = null}
             
-            device.Queue.Submit [| update; render |]
-            device.Queue.Wait().Wait()
+            let t = device.Queue.Submit [| update; render |]
+            t.Wait()
             frameId <- frameId + 1UL
         )
     
@@ -202,8 +202,8 @@ type ClearTask(device : Device, signature : IFramebufferSignature, values : aval
             
             renc.End()
             use cmd = enc.Finish { Label = null}
-            device.Queue.Submit [| cmd |]
-            device.Queue.Wait().Wait()
+            let t = device.Queue.Submit [| cmd |]
+            t.Wait()
             
             frameId <- frameId + 1UL
         )

@@ -144,7 +144,7 @@ type WebGPUShaderExtensions private() =
                     Label = null
                     Next = null
                     BindGroupLayouts = entries
-                    ImmediateDataRangeByteSize = 0
+                    ImmediateSize = 0
                 }
             
             new ShaderProgram(shaderModule, wgsl, groupLayouts, pipelineLayout, samplers)   

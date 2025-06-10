@@ -11,10 +11,10 @@ REM git clone https://github.com/google/dawn.git
 pushd dawn
 git init
 git remote add origin https://github.com/google/dawn.git
-git fetch --depth 1 origin 8c461652008ed60dc7756ab692c4e4f38dad8dd6
+git fetch --depth 1 origin 3d47c8a32f07bdc91840ae56d94c247a66b6c47f
 git reset --hard FETCH_HEAD
 
-REM git checkout 8c461652008ed60dc7756ab692c4e4f38dad8dd6
+REM git checkout 3d47c8a32f07bdc91840ae56d94c247a66b6c47f
 
 python tools\fetch_dawn_dependencies.py --use-test-deps
 

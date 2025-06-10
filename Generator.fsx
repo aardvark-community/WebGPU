@@ -2103,7 +2103,7 @@ module Frontend =
                     
                 let thisName =
                     if o.Name = "device" then "device"
-                    else "_"
+                    else "this"
                     
                     
                 if o.Name = "buffer" then printfn "[<DebuggerTypeProxy(typeof<BufferProxy>)>]"
@@ -2117,6 +2117,7 @@ module Frontend =
                 if not isDeviceChild && o.Name <> "device" then
                     printfn "    static let device = Unchecked.defaultof<Device>"
                     
+                    
                 
                 let nullArgs = args @ ["asd"] |> List.map (fun _ -> "Unchecked.defaultof<_>") |> String.concat ", " 
                 printfn $"    static let nullptr = new {pascalCase o.Name}({nullArgs})"
@@ -2124,8 +2125,7 @@ module Frontend =
                 
                 if o.Name = "device" then
                     printfn "    let mutable runtime : Aardvark.Rendering.IRuntime = Unchecked.defaultof<_>"
-                
-                
+        
                 let (|SimpleGetter|_|) (m : FunctionDef) =
                     match m.Args with
                     | [] when m.Name.StartsWith "get " && m.Return.TypeName <> "future" ->
@@ -2171,6 +2171,35 @@ module Frontend =
                     | _ ->
                         ()
                 
+                if o.Name = "command encoder" then
+                    printfn "    let mutable afterRun : ResizeArray<unit -> System.Threading.Tasks.Task> = null"
+                    printfn "    let mutable cleanup : ResizeArray<unit -> unit> = null"
+                    printfn "    member x.AddCleanup(action : unit -> unit) ="
+                    printfn "        if isNull cleanup then cleanup <- ResizeArray()"
+                    printfn "        cleanup.Add(action)"
+                    printfn "    member x.AddAfterRun(action : unit -> System.Threading.Tasks.Task) ="
+                    printfn "        if isNull afterRun then afterRun <- ResizeArray()"
+                    printfn "        afterRun.Add(action)"
+                elif o.Name = "command buffer" then
+                    printfn "    let mutable cleanup : ResizeArray<unit -> unit> = null"
+                    printfn "    let mutable afterRun : ResizeArray<unit -> System.Threading.Tasks.Task> = null"
+                    printfn "    member internal x.Cleanup"
+                    printfn "        with get() = cleanup"
+                    printfn "        and set(v) = cleanup <- v"
+                    printfn "    member internal x.AfterRun"
+                    printfn "        with get() = afterRun"
+                    printfn "        and set(v) = afterRun <- v"
+                    printfn "    member internal x.RunCleanup() = "
+                    printfn "        if not (isNull cleanup) then"
+                    printfn "            for a in cleanup do a()"
+                    printfn "            cleanup <- null"
+                    printfn "    member internal x.RunCompleted() = "
+                    printfn "        task {"
+                    printfn "            if not (isNull afterRun) then"
+                    printfn "                for a in afterRun do do! a()"
+                    printfn "                afterRun <- null"
+                    printfn "        }"
+                    
                 printfn "    member x.Handle = handle"
                 
                 
@@ -2257,7 +2286,12 @@ module Frontend =
                             |> String.concat ", "
                                     
                         let methName = o.Name + " " + m.Name
-                        printfn $"    member {thisName}.{pascalCase m.Name}({argdef}) : {frontendName false ret.FrontendField.Type} ="
+                        
+                        let typeAnnotation =
+                            if o.Name = "queue" && m.Name = "submit" then " : System.Threading.Tasks.Task"
+                            else $" : {frontendName false ret.FrontendField.Type}"
+                        
+                        printfn $"    member {thisName}.{pascalCase m.Name}({argdef}){typeAnnotation} ="
                         
                         let body = 
                             pinArgs mm (fun pinned ->
@@ -2286,8 +2320,31 @@ module Frontend =
                                 //     [call]
                             )
                         
-                        for b in body do
-                            printfn "        %s" b
+                        if m.Name = "finish" && o.Name = "command encoder" then
+                            
+                            printfn "        let res ="
+                            for b in body do
+                                printfn "            %s" b
+                            printfn "        res.Cleanup <- cleanup"
+                            printfn "        res.AfterRun <- afterRun"
+                            printfn "        cleanup <- null"
+                            printfn "        afterRun <- null"
+                            printfn "        res"
+                            
+                        else
+                            for b in body do
+                                printfn "        %s" b
+                    
+                            
+                            if m.Name = "submit" && o.Name = "queue" then
+                                printfn "        let tcs = System.Threading.Tasks.TaskCompletionSource<unit>()"
+                                //printfn "        let cleanup() = for c in commands do c.RunCompleted()"
+                                printfn "        this.OnSubmittedWorkDone { Mode = CallbackMode.AllowProcessEvents; Callback = QueueWorkDoneCallback(fun d _ _ -> d.Dispose(); tcs.SetResult()) } |> ignore"
+                                printfn "        task {"
+                                printfn "            do! tcs.Task"
+                                printfn "            for c in commands do do! c.RunCompleted()"
+                                printfn "        } :> System.Threading.Tasks.Task"
+                            
                 
                 if o.Name = "device" then
                     printfn "    member x.Instance : Instance = x.Adapter.Instance"
@@ -2296,6 +2353,8 @@ module Frontend =
                 if hasRelease then
                     printfn "    member private x.Dispose(disposing : bool) ="
                     printfn "        if disposing then System.GC.SuppressFinalize(x)"
+                    if o.Name = "command buffer" then
+                        printfn "        x.RunCleanup()"
                     printfn "        x.Release()"
                     printfn "    member x.Dispose() = x.Dispose(true)"
                     printfn "    override x.Finalize() = x.Dispose(false)"
@@ -2311,8 +2370,8 @@ module Frontend =
                     printfn "        use enc = buffer.Device.CreateCommandEncoder { Label = null; Next = null }"
                     printfn "        enc.CopyBufferToBuffer(buffer, offset, tmp, 0L, size)"
                     printfn "        use cmd = enc.Finish { Label = null }"
-                    printfn "        queue.Submit [| cmd |]"
-                    printfn "        let f = queue.OnSubmittedWorkDone { Mode = CallbackMode.WaitAnyOnly; Callback = QueueWorkDoneCallback (fun _ _ -> ()) }"
+                    printfn "        queue.Submit [| cmd |] |> ignore"
+                    printfn "        let f = queue.OnSubmittedWorkDone { Mode = CallbackMode.WaitAnyOnly; Callback = QueueWorkDoneCallback (fun _ _ _ -> ()) }"
                     printfn "        device.Instance.WaitAny([| { FutureWaitInfo.Future = f; Completed = false } |], 1000000000L) |> ignore"
                     printfn "        let info : BufferMapCallbackInfo ="
                     printfn "           {"

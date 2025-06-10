@@ -15,8 +15,8 @@ typedef struct DawnProcTable {
     WGPUProcGetProcAddress getProcAddress;
     WGPUProcSharedBufferMemoryEndAccessStateFreeMembers sharedBufferMemoryEndAccessStateFreeMembers;
     WGPUProcSharedTextureMemoryEndAccessStateFreeMembers sharedTextureMemoryEndAccessStateFreeMembers;
-    WGPUProcSupportedWGSLLanguageFeaturesFreeMembers supportedWGSLLanguageFeaturesFreeMembers;
     WGPUProcSupportedFeaturesFreeMembers supportedFeaturesFreeMembers;
+    WGPUProcSupportedWGSLLanguageFeaturesFreeMembers supportedWGSLLanguageFeaturesFreeMembers;
     WGPUProcSurfaceCapabilitiesFreeMembers surfaceCapabilitiesFreeMembers;
 
     WGPUProcAdapterCreateDevice adapterCreateDevice;
@@ -40,8 +40,8 @@ typedef struct DawnProcTable {
 
     WGPUProcBufferDestroy bufferDestroy;
     WGPUProcBufferGetConstMappedRange bufferGetConstMappedRange;
-    WGPUProcBufferGetMapState bufferGetMapState;
     WGPUProcBufferGetMappedRange bufferGetMappedRange;
+    WGPUProcBufferGetMapState bufferGetMapState;
     WGPUProcBufferGetSize bufferGetSize;
     WGPUProcBufferGetUsage bufferGetUsage;
     WGPUProcBufferMapAsync bufferMapAsync;
@@ -115,9 +115,9 @@ typedef struct DawnProcTable {
     WGPUProcDeviceCreateTexture deviceCreateTexture;
     WGPUProcDeviceDestroy deviceDestroy;
     WGPUProcDeviceForceLoss deviceForceLoss;
-    WGPUProcDeviceGetAHardwareBufferProperties deviceGetAHardwareBufferProperties;
     WGPUProcDeviceGetAdapter deviceGetAdapter;
     WGPUProcDeviceGetAdapterInfo deviceGetAdapterInfo;
+    WGPUProcDeviceGetAHardwareBufferProperties deviceGetAHardwareBufferProperties;
     WGPUProcDeviceGetFeatures deviceGetFeatures;
     WGPUProcDeviceGetLimits deviceGetLimits;
     WGPUProcDeviceGetLostFuture deviceGetLostFuture;

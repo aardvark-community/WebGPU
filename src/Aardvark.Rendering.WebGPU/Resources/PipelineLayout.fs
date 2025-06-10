@@ -104,9 +104,11 @@ type WebGPUPipelineLayoutExtensions private() =
                         match g with
                         | Some g -> g
                         | None -> MapExt.empty
+                        
+                        
                     g |> MapExt.add b.ssbBinding (
                         BindGroupLayoutEntry.Buffer(b.ssbBinding, stages, {
-                            BufferBindingLayout.Type = BufferBindingType.Storage
+                            BufferBindingLayout.Type = BufferBindingType.ReadOnlyStorage
                             BufferBindingLayout.HasDynamicOffset = false
                             BufferBindingLayout.MinBindingSize = 0L
                         })
@@ -158,7 +160,7 @@ type WebGPUPipelineLayoutExtensions private() =
                 Next = null
                 Label = null
                 BindGroupLayouts = groupLayouts
-                ImmediateDataRangeByteSize = 0
+                ImmediateSize = 0
             }
         
         PipelineLayout(layout, groupLayouts)

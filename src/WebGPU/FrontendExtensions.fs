@@ -233,7 +233,7 @@ type WebGPUExtensions private() =
         
         let info : RequestDeviceCallbackInfo =
             {
-                Mode = CallbackMode.AllowProcessEvents
+                Mode = CallbackMode.WaitAnyOnly
                 Callback =
                     RequestDeviceCallback(fun disp status device message ->
                         disp.Dispose()
@@ -243,7 +243,12 @@ type WebGPUExtensions private() =
                     )
             }
         
-        this.RequestDevice(realOptions, info) |> ignore
+        let f = this.RequestDevice(realOptions, info)
+        let info : FutureWaitInfo = { Future = f; Completed = false }
+        let mutable status = WaitStatus.TimedOut
+        while status <> WaitStatus.Success do
+            status <- this.Instance.WaitAny([|info|], 0L)
+            
         task {
             let! dev = tcs.Task
             
@@ -301,10 +306,10 @@ type WebGPUExtensions private() =
         this.OnSubmittedWorkDone {
             QueueWorkDoneCallbackInfo.Mode = CallbackMode.AllowSpontaneous
             Callback =
-                QueueWorkDoneCallback(fun d s ->
+                QueueWorkDoneCallback(fun d s msg ->
                     match s with
                     | QueueWorkDoneStatus.Success -> tcs.SetResult()
-                    | _ -> tcs.SetException(Exception (sprintf "could not wait for queue: %A" s))
+                    | _ -> tcs.SetException(Exception (sprintf "could not wait for queue %A: %s" s msg))
                 )
         } |> ignore
         tcs.Task
@@ -400,9 +405,8 @@ type BufferRangeExtensions private() =
             use enc = device.CreateCommandEncoder { Label = null; Next = null }
             enc.CopyBufferToBuffer(tmp, 0L, result, 0L, size)
             use cmd = enc.Finish { Label = null }
-            device.Queue.Submit [| cmd |]
             task {
-                do! device.Queue.Wait()
+                do! device.Queue.Submit [| cmd |]
                 return result
             }
             
@@ -559,6 +563,7 @@ module ``F# Extensions`` =
                 Sampler = SamplerBindingLayout.Null
                 Texture = TextureBindingLayout.Null
                 StorageTexture = StorageTextureBindingLayout.Null
+                BindingArraySize = 0
             }
             
         static member Sampler(binding : int, visibility : ShaderStage, bindingType : SamplerBindingType) =
@@ -570,6 +575,7 @@ module ``F# Extensions`` =
                 Sampler = { Type = bindingType }
                 Texture = TextureBindingLayout.Null
                 StorageTexture = StorageTextureBindingLayout.Null
+                BindingArraySize = 0
             }
     
         static member Texture(binding : int, visibility : ShaderStage, layout : TextureBindingLayout) =
@@ -581,6 +587,7 @@ module ``F# Extensions`` =
                 Sampler = SamplerBindingLayout.Null  
                 Texture = layout
                 StorageTexture = StorageTextureBindingLayout.Null
+                BindingArraySize = 0
             }
     
     
@@ -593,6 +600,7 @@ module ``F# Extensions`` =
                 Sampler = SamplerBindingLayout.Null  
                 Texture = TextureBindingLayout.Null
                 StorageTexture = layout
+                BindingArraySize = 0
             }
     type CompilationInfo with
         member x.HasErrors = x.Messages |> Array.exists (fun m -> m.Type <= CompilationMessageType.Error)

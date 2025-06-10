@@ -1,14 +1,10 @@
 ﻿
-open System.Diagnostics
 open Aardvark.Application
 open Aardvark.Application.Slim
 open Aardvark.Base
-open Aardvark.Data
 open Aardvark.Rendering
 open System.Threading
-open Aardvark.Rendering.DefaultSemantic
 open Aardvark.Rendering.WebGPU
-open Microsoft.FSharp.NativeInterop
 open global.WebGPU
 open FSharp.Data.Adaptive
 
@@ -78,7 +74,7 @@ type Blitter(device : Device, format : TextureFormat) =
             Next = null
             Label = "BlitterLayout"
             BindGroupLayouts = [|groupLayout |]
-            ImmediateDataRangeByteSize = 0
+            ImmediateSize = 0
         }
     
     let pipeline =
@@ -195,12 +191,16 @@ module Shader =
             filter Filter.MinMagMipLinear
         }
 
+    type UniformScope with
+        member x.Hansi : V4d[] = uniform?StorageBuffer?Hansi
+        member x.HansiIndex : int = uniform?HansiIndex
+    
     let envMap (v : Effects.Vertex) =
         fragment {
             let vp = uniform.ProjTrafoInv * V4d(v.pos.X, v.pos.Y, -1.0, 1.0)
             let vp = vp.XYZ / vp.W
             let dir = (uniform.ViewTrafoInv * V4d(vp, 0.0)).XYZ |> Vec.normalize
-            return env.Sample(dir)
+            return env.Sample(dir) * uniform.Hansi.[uniform.HansiIndex]
         }
 
     let reverseTrafo (v : Effects.Vertex) =
@@ -437,7 +437,7 @@ module Shader =
         
        
         let groupLayouts =
-            groupDescriptors |> MapExt.map (fun gi bindings ->
+            groupDescriptors |> MapExt.map (fun _gi bindings ->
                 device.CreateBindGroupLayout {
                     Label = null
                     Entries = bindings |> MapExt.values |> Array.ofSeq
@@ -459,13 +459,11 @@ module Shader =
             Next = null
             Label = null
             BindGroupLayouts = groupLayouts
-            ImmediateDataRangeByteSize = 0
+            ImmediateSize = 0
         }
 
 module Scene =
-    open FSharp.Data.Adaptive
     open Aardvark.SceneGraph
-    open Aardvark.Rendering.WebGPU
     
     type Marker = Marker
     
@@ -479,10 +477,8 @@ module Scene =
         load
     
     let skybox (name : string) =
-        
         AVal.custom (fun _ ->
             let env =
-                let names = typeof<Marker>.Assembly.GetManifestResourceNames()
                 let trafo t (img : PixImage) = img.TransformedPixImage t
 
                 PixCube [|
@@ -517,7 +513,10 @@ module Scene =
         )
     
     
-    let scene (size : aval<V2i>) (view : aval<Trafo3d>)  =
+    let scene (hi : aval<int>) (size : aval<V2i>) (view : aval<Trafo3d>)  =
+        
+        
+        
         Sg.ofList [
             Sg.farPlaneQuad
             |> Sg.texture "EnvMap" (skybox "miramar_$.png")
@@ -525,6 +524,8 @@ module Scene =
                 do! Shader.reverseTrafo
                 do! Shader.envMap
             }
+            |> Sg.uniform "HansiIndex" hi
+            |> Sg.uniform' "Hansi" [| V4f.IIII; V4f.IOOI; V4f.OIOI; V4f.OOII |]
         
         
             Sg.box' C4b.Green Box3d.Unit
@@ -534,15 +535,15 @@ module Scene =
                 //do! DefaultSurfaces.constantColor C4f.White
                 //do! DefaultSurfaces.simpleLighting
             }
-            |> Sg.diffuseFileTexture "/Users/schorsch/Desktop/GettyImages-121786088-58a4cc5a5f9b58a3c955c5fb.jpg" true
+            |> Sg.diffuseFileTexture "/Users/schorsch/Desktop/stuff/GettyImages-121786088-58a4cc5a5f9b58a3c955c5fb.jpg" true
         ]
         |> Sg.viewTrafo view
         |> Sg.projTrafo (size |> AVal.map (fun s -> Frustum.perspective 90.0 0.1 100.0 (float s.X / float s.Y) |> Frustum.projTrafo))
     
-    let renderTask (size : aval<V2i>) (view : aval<Trafo3d>) (device : Device) =
+    let renderTask (hi : aval<int>) (size : aval<V2i>) (view : aval<Trafo3d>) (device : Device) =
         //let rt = Runtime(device) 
         let signature = device.CreateFramebufferSignature(1, Map.ofList [0, { Name = DefaultSemantic.Colors; Format = TextureFormat.Bgra8 }], Some TextureFormat.Depth24Stencil8)
-        let objs = Aardvark.SceneGraph.Semantics.RenderObjectSemantics.Semantic.renderObjects Ag.Scope.Root (scene size view)
+        let objs = Aardvark.SceneGraph.Semantics.RenderObjectSemantics.Semantic.renderObjects Ag.Scope.Root (scene hi size view)
         //let objs = objs |> ASet.force |> ASet.ofSeq)
         let task = new RenderTask(device, signature, objs)
         task
@@ -553,16 +554,40 @@ let main _argv =
     
     let app = WebGPUApplication.Create(true).Result
     let win = app.CreateGameWindow(vsync = true)
+    //
+    // let data = Array.init 1024 byte
+    // let temp = Array.zeroCreate<byte> data.Length
+    // let buffer = app.Device.CreateBuffer { Label = null; Next = null; MappedAtCreation = false; Size = 1024L; Usage = BufferUsage.CopySrc ||| BufferUsage.CopyDst }
+    //
+    //
+    //
+    // use enc = app.Device.CreateCommandEncoder { Label = null; Next = null }
+    // enc.Upload(data, buffer, 0)
+    // enc.Download(buffer, 0, System.Memory temp)
+    // use cmd = enc.Finish { Label = null }
+    // let t = app.Device.Queue.Submit [| cmd |]
+    // t.Wait()
+    // printfn "%A" (data = temp)
+    // exit 0
     
     let cam =
         CameraView.lookAt (V3d(4,3,2)) V3d.Zero V3d.OOI
         |> DefaultCameraController.control win.Mouse win.Keyboard win.Time
         |> AVal.map CameraView.viewTrafo
     
+    let hi = cval 0
+    win.Keyboard.DownWithRepeats.Values.Add (fun k ->
+        match k with
+        | Keys.Space ->
+            transact (fun () -> hi.Value <- (hi.Value + 1) % 4)
+        | _ ->
+            ()
+    )
+    
     let task = 
         RenderTask.ofList [
             new ClearTask(app.Device, win.FramebufferSignature, AVal.constant (clear { color C4f.Red; depth 1.0; stencil 0 }))
-            Scene.renderTask win.Sizes cam app.Device
+            Scene.renderTask hi win.Sizes cam app.Device
         ]
         
     win.RenderTask <- task

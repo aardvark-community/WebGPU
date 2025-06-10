@@ -38,44 +38,6 @@
 namespace wgpu {
 
   template <typename CharT, typename Traits>
-  std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, WGSLLanguageFeatureName value) {
-      switch (value) {
-      case WGSLLanguageFeatureName::ReadonlyAndReadwriteStorageTextures:
-        o << "WGSLLanguageFeatureName::ReadonlyAndReadwriteStorageTextures";
-        break;
-      case WGSLLanguageFeatureName::Packed4x8IntegerDotProduct:
-        o << "WGSLLanguageFeatureName::Packed4x8IntegerDotProduct";
-        break;
-      case WGSLLanguageFeatureName::UnrestrictedPointerParameters:
-        o << "WGSLLanguageFeatureName::UnrestrictedPointerParameters";
-        break;
-      case WGSLLanguageFeatureName::PointerCompositeAccess:
-        o << "WGSLLanguageFeatureName::PointerCompositeAccess";
-        break;
-      case WGSLLanguageFeatureName::SizedBindingArray:
-        o << "WGSLLanguageFeatureName::SizedBindingArray";
-        break;
-      case WGSLLanguageFeatureName::ChromiumTestingUnimplemented:
-        o << "WGSLLanguageFeatureName::ChromiumTestingUnimplemented";
-        break;
-      case WGSLLanguageFeatureName::ChromiumTestingUnsafeExperimental:
-        o << "WGSLLanguageFeatureName::ChromiumTestingUnsafeExperimental";
-        break;
-      case WGSLLanguageFeatureName::ChromiumTestingExperimental:
-        o << "WGSLLanguageFeatureName::ChromiumTestingExperimental";
-        break;
-      case WGSLLanguageFeatureName::ChromiumTestingShippedWithKillswitch:
-        o << "WGSLLanguageFeatureName::ChromiumTestingShippedWithKillswitch";
-        break;
-      case WGSLLanguageFeatureName::ChromiumTestingShipped:
-        o << "WGSLLanguageFeatureName::ChromiumTestingShipped";
-        break;
-          default:
-            o << "WGSLLanguageFeatureName::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<WGSLLanguageFeatureName>::type>(value);
-      }
-      return o;
-  }
-  template <typename CharT, typename Traits>
   std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, AdapterType value) {
       switch (value) {
       case AdapterType::DiscreteGPU:
@@ -353,8 +315,8 @@ namespace wgpu {
       case CompilationInfoRequestStatus::Success:
         o << "CompilationInfoRequestStatus::Success";
         break;
-      case CompilationInfoRequestStatus::InstanceDropped:
-        o << "CompilationInfoRequestStatus::InstanceDropped";
+      case CompilationInfoRequestStatus::CallbackCancelled:
+        o << "CompilationInfoRequestStatus::CallbackCancelled";
         break;
           default:
             o << "CompilationInfoRequestStatus::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<CompilationInfoRequestStatus>::type>(value);
@@ -407,8 +369,8 @@ namespace wgpu {
       case CreatePipelineAsyncStatus::Success:
         o << "CreatePipelineAsyncStatus::Success";
         break;
-      case CreatePipelineAsyncStatus::InstanceDropped:
-        o << "CreatePipelineAsyncStatus::InstanceDropped";
+      case CreatePipelineAsyncStatus::CallbackCancelled:
+        o << "CreatePipelineAsyncStatus::CallbackCancelled";
         break;
       case CreatePipelineAsyncStatus::ValidationError:
         o << "CreatePipelineAsyncStatus::ValidationError";
@@ -450,8 +412,8 @@ namespace wgpu {
       case DeviceLostReason::Destroyed:
         o << "DeviceLostReason::Destroyed";
         break;
-      case DeviceLostReason::InstanceDropped:
-        o << "DeviceLostReason::InstanceDropped";
+      case DeviceLostReason::CallbackCancelled:
+        o << "DeviceLostReason::CallbackCancelled";
         break;
       case DeviceLostReason::FailedCreation:
         o << "DeviceLostReason::FailedCreation";
@@ -553,11 +515,17 @@ namespace wgpu {
       case FeatureName::TextureCompressionBC:
         o << "FeatureName::TextureCompressionBC";
         break;
+      case FeatureName::TextureCompressionBCSliced3D:
+        o << "FeatureName::TextureCompressionBCSliced3D";
+        break;
       case FeatureName::TextureCompressionETC2:
         o << "FeatureName::TextureCompressionETC2";
         break;
       case FeatureName::TextureCompressionASTC:
         o << "FeatureName::TextureCompressionASTC";
+        break;
+      case FeatureName::TextureCompressionASTCSliced3D:
+        o << "FeatureName::TextureCompressionASTCSliced3D";
         break;
       case FeatureName::IndirectFirstInstance:
         o << "FeatureName::IndirectFirstInstance";
@@ -604,17 +572,11 @@ namespace wgpu {
       case FeatureName::ImplicitDeviceSynchronization:
         o << "FeatureName::ImplicitDeviceSynchronization";
         break;
-      case FeatureName::ChromiumExperimentalImmediateData:
-        o << "FeatureName::ChromiumExperimentalImmediateData";
-        break;
       case FeatureName::TransientAttachments:
         o << "FeatureName::TransientAttachments";
         break;
       case FeatureName::MSAARenderToSingleSampled:
         o << "FeatureName::MSAARenderToSingleSampled";
-        break;
-      case FeatureName::SubgroupsF16:
-        o << "FeatureName::SubgroupsF16";
         break;
       case FeatureName::D3D11MultithreadProtected:
         o << "FeatureName::D3D11MultithreadProtected";
@@ -763,6 +725,12 @@ namespace wgpu {
       case FeatureName::SharedFenceEGLSync:
         o << "FeatureName::SharedFenceEGLSync";
         break;
+      case FeatureName::DawnDeviceAllocatorControl:
+        o << "FeatureName::DawnDeviceAllocatorControl";
+        break;
+      case FeatureName::TextureFormatsTier1:
+        o << "FeatureName::TextureFormatsTier1";
+        break;
           default:
             o << "FeatureName::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<FeatureName>::type>(value);
       }
@@ -865,8 +833,8 @@ namespace wgpu {
       case MapAsyncStatus::Success:
         o << "MapAsyncStatus::Success";
         break;
-      case MapAsyncStatus::InstanceDropped:
-        o << "MapAsyncStatus::InstanceDropped";
+      case MapAsyncStatus::CallbackCancelled:
+        o << "MapAsyncStatus::CallbackCancelled";
         break;
       case MapAsyncStatus::Error:
         o << "MapAsyncStatus::Error";
@@ -902,8 +870,8 @@ namespace wgpu {
       case PopErrorScopeStatus::Success:
         o << "PopErrorScopeStatus::Success";
         break;
-      case PopErrorScopeStatus::InstanceDropped:
-        o << "PopErrorScopeStatus::InstanceDropped";
+      case PopErrorScopeStatus::CallbackCancelled:
+        o << "PopErrorScopeStatus::CallbackCancelled";
         break;
       case PopErrorScopeStatus::Error:
         o << "PopErrorScopeStatus::Error";
@@ -933,6 +901,9 @@ namespace wgpu {
   template <typename CharT, typename Traits>
   std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, PresentMode value) {
       switch (value) {
+      case PresentMode::Undefined:
+        o << "PresentMode::Undefined";
+        break;
       case PresentMode::Fifo:
         o << "PresentMode::Fifo";
         break;
@@ -996,8 +967,8 @@ namespace wgpu {
       case QueueWorkDoneStatus::Success:
         o << "QueueWorkDoneStatus::Success";
         break;
-      case QueueWorkDoneStatus::InstanceDropped:
-        o << "QueueWorkDoneStatus::InstanceDropped";
+      case QueueWorkDoneStatus::CallbackCancelled:
+        o << "QueueWorkDoneStatus::CallbackCancelled";
         break;
       case QueueWorkDoneStatus::Error:
         o << "QueueWorkDoneStatus::Error";
@@ -1013,8 +984,8 @@ namespace wgpu {
       case RequestAdapterStatus::Success:
         o << "RequestAdapterStatus::Success";
         break;
-      case RequestAdapterStatus::InstanceDropped:
-        o << "RequestAdapterStatus::InstanceDropped";
+      case RequestAdapterStatus::CallbackCancelled:
+        o << "RequestAdapterStatus::CallbackCancelled";
         break;
       case RequestAdapterStatus::Unavailable:
         o << "RequestAdapterStatus::Unavailable";
@@ -1033,250 +1004,14 @@ namespace wgpu {
       case RequestDeviceStatus::Success:
         o << "RequestDeviceStatus::Success";
         break;
-      case RequestDeviceStatus::InstanceDropped:
-        o << "RequestDeviceStatus::InstanceDropped";
+      case RequestDeviceStatus::CallbackCancelled:
+        o << "RequestDeviceStatus::CallbackCancelled";
         break;
       case RequestDeviceStatus::Error:
         o << "RequestDeviceStatus::Error";
         break;
           default:
             o << "RequestDeviceStatus::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<RequestDeviceStatus>::type>(value);
-      }
-      return o;
-  }
-  template <typename CharT, typename Traits>
-  std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, SType value) {
-      switch (value) {
-      case SType::ShaderSourceSPIRV:
-        o << "SType::ShaderSourceSPIRV";
-        break;
-      case SType::ShaderSourceWGSL:
-        o << "SType::ShaderSourceWGSL";
-        break;
-      case SType::RenderPassMaxDrawCount:
-        o << "SType::RenderPassMaxDrawCount";
-        break;
-      case SType::SurfaceSourceMetalLayer:
-        o << "SType::SurfaceSourceMetalLayer";
-        break;
-      case SType::SurfaceSourceWindowsHWND:
-        o << "SType::SurfaceSourceWindowsHWND";
-        break;
-      case SType::SurfaceSourceXlibWindow:
-        o << "SType::SurfaceSourceXlibWindow";
-        break;
-      case SType::SurfaceSourceWaylandSurface:
-        o << "SType::SurfaceSourceWaylandSurface";
-        break;
-      case SType::SurfaceSourceAndroidNativeWindow:
-        o << "SType::SurfaceSourceAndroidNativeWindow";
-        break;
-      case SType::SurfaceSourceXCBWindow:
-        o << "SType::SurfaceSourceXCBWindow";
-        break;
-      case SType::AdapterPropertiesSubgroups:
-        o << "SType::AdapterPropertiesSubgroups";
-        break;
-      case SType::TextureBindingViewDimensionDescriptor:
-        o << "SType::TextureBindingViewDimensionDescriptor";
-        break;
-      case SType::SurfaceDescriptorFromWindowsCoreWindow:
-        o << "SType::SurfaceDescriptorFromWindowsCoreWindow";
-        break;
-      case SType::ExternalTextureBindingEntry:
-        o << "SType::ExternalTextureBindingEntry";
-        break;
-      case SType::ExternalTextureBindingLayout:
-        o << "SType::ExternalTextureBindingLayout";
-        break;
-      case SType::SurfaceDescriptorFromWindowsSwapChainPanel:
-        o << "SType::SurfaceDescriptorFromWindowsSwapChainPanel";
-        break;
-      case SType::DawnTextureInternalUsageDescriptor:
-        o << "SType::DawnTextureInternalUsageDescriptor";
-        break;
-      case SType::DawnEncoderInternalUsageDescriptor:
-        o << "SType::DawnEncoderInternalUsageDescriptor";
-        break;
-      case SType::DawnInstanceDescriptor:
-        o << "SType::DawnInstanceDescriptor";
-        break;
-      case SType::DawnCacheDeviceDescriptor:
-        o << "SType::DawnCacheDeviceDescriptor";
-        break;
-      case SType::DawnAdapterPropertiesPowerPreference:
-        o << "SType::DawnAdapterPropertiesPowerPreference";
-        break;
-      case SType::DawnBufferDescriptorErrorInfoFromWireClient:
-        o << "SType::DawnBufferDescriptorErrorInfoFromWireClient";
-        break;
-      case SType::DawnTogglesDescriptor:
-        o << "SType::DawnTogglesDescriptor";
-        break;
-      case SType::DawnShaderModuleSPIRVOptionsDescriptor:
-        o << "SType::DawnShaderModuleSPIRVOptionsDescriptor";
-        break;
-      case SType::RequestAdapterOptionsLUID:
-        o << "SType::RequestAdapterOptionsLUID";
-        break;
-      case SType::RequestAdapterOptionsGetGLProc:
-        o << "SType::RequestAdapterOptionsGetGLProc";
-        break;
-      case SType::RequestAdapterOptionsD3D11Device:
-        o << "SType::RequestAdapterOptionsD3D11Device";
-        break;
-      case SType::DawnRenderPassColorAttachmentRenderToSingleSampled:
-        o << "SType::DawnRenderPassColorAttachmentRenderToSingleSampled";
-        break;
-      case SType::RenderPassPixelLocalStorage:
-        o << "SType::RenderPassPixelLocalStorage";
-        break;
-      case SType::PipelineLayoutPixelLocalStorage:
-        o << "SType::PipelineLayoutPixelLocalStorage";
-        break;
-      case SType::BufferHostMappedPointer:
-        o << "SType::BufferHostMappedPointer";
-        break;
-      case SType::DawnExperimentalSubgroupLimits:
-        o << "SType::DawnExperimentalSubgroupLimits";
-        break;
-      case SType::AdapterPropertiesMemoryHeaps:
-        o << "SType::AdapterPropertiesMemoryHeaps";
-        break;
-      case SType::AdapterPropertiesD3D:
-        o << "SType::AdapterPropertiesD3D";
-        break;
-      case SType::AdapterPropertiesVk:
-        o << "SType::AdapterPropertiesVk";
-        break;
-      case SType::DawnWireWGSLControl:
-        o << "SType::DawnWireWGSLControl";
-        break;
-      case SType::DawnWGSLBlocklist:
-        o << "SType::DawnWGSLBlocklist";
-        break;
-      case SType::DawnDrmFormatCapabilities:
-        o << "SType::DawnDrmFormatCapabilities";
-        break;
-      case SType::ShaderModuleCompilationOptions:
-        o << "SType::ShaderModuleCompilationOptions";
-        break;
-      case SType::ColorTargetStateExpandResolveTextureDawn:
-        o << "SType::ColorTargetStateExpandResolveTextureDawn";
-        break;
-      case SType::RenderPassDescriptorExpandResolveRect:
-        o << "SType::RenderPassDescriptorExpandResolveRect";
-        break;
-      case SType::SharedTextureMemoryVkDedicatedAllocationDescriptor:
-        o << "SType::SharedTextureMemoryVkDedicatedAllocationDescriptor";
-        break;
-      case SType::SharedTextureMemoryAHardwareBufferDescriptor:
-        o << "SType::SharedTextureMemoryAHardwareBufferDescriptor";
-        break;
-      case SType::SharedTextureMemoryDmaBufDescriptor:
-        o << "SType::SharedTextureMemoryDmaBufDescriptor";
-        break;
-      case SType::SharedTextureMemoryOpaqueFDDescriptor:
-        o << "SType::SharedTextureMemoryOpaqueFDDescriptor";
-        break;
-      case SType::SharedTextureMemoryZirconHandleDescriptor:
-        o << "SType::SharedTextureMemoryZirconHandleDescriptor";
-        break;
-      case SType::SharedTextureMemoryDXGISharedHandleDescriptor:
-        o << "SType::SharedTextureMemoryDXGISharedHandleDescriptor";
-        break;
-      case SType::SharedTextureMemoryD3D11Texture2DDescriptor:
-        o << "SType::SharedTextureMemoryD3D11Texture2DDescriptor";
-        break;
-      case SType::SharedTextureMemoryIOSurfaceDescriptor:
-        o << "SType::SharedTextureMemoryIOSurfaceDescriptor";
-        break;
-      case SType::SharedTextureMemoryEGLImageDescriptor:
-        o << "SType::SharedTextureMemoryEGLImageDescriptor";
-        break;
-      case SType::SharedTextureMemoryInitializedBeginState:
-        o << "SType::SharedTextureMemoryInitializedBeginState";
-        break;
-      case SType::SharedTextureMemoryInitializedEndState:
-        o << "SType::SharedTextureMemoryInitializedEndState";
-        break;
-      case SType::SharedTextureMemoryVkImageLayoutBeginState:
-        o << "SType::SharedTextureMemoryVkImageLayoutBeginState";
-        break;
-      case SType::SharedTextureMemoryVkImageLayoutEndState:
-        o << "SType::SharedTextureMemoryVkImageLayoutEndState";
-        break;
-      case SType::SharedTextureMemoryD3DSwapchainBeginState:
-        o << "SType::SharedTextureMemoryD3DSwapchainBeginState";
-        break;
-      case SType::SharedFenceVkSemaphoreOpaqueFDDescriptor:
-        o << "SType::SharedFenceVkSemaphoreOpaqueFDDescriptor";
-        break;
-      case SType::SharedFenceVkSemaphoreOpaqueFDExportInfo:
-        o << "SType::SharedFenceVkSemaphoreOpaqueFDExportInfo";
-        break;
-      case SType::SharedFenceSyncFDDescriptor:
-        o << "SType::SharedFenceSyncFDDescriptor";
-        break;
-      case SType::SharedFenceSyncFDExportInfo:
-        o << "SType::SharedFenceSyncFDExportInfo";
-        break;
-      case SType::SharedFenceVkSemaphoreZirconHandleDescriptor:
-        o << "SType::SharedFenceVkSemaphoreZirconHandleDescriptor";
-        break;
-      case SType::SharedFenceVkSemaphoreZirconHandleExportInfo:
-        o << "SType::SharedFenceVkSemaphoreZirconHandleExportInfo";
-        break;
-      case SType::SharedFenceDXGISharedHandleDescriptor:
-        o << "SType::SharedFenceDXGISharedHandleDescriptor";
-        break;
-      case SType::SharedFenceDXGISharedHandleExportInfo:
-        o << "SType::SharedFenceDXGISharedHandleExportInfo";
-        break;
-      case SType::SharedFenceMTLSharedEventDescriptor:
-        o << "SType::SharedFenceMTLSharedEventDescriptor";
-        break;
-      case SType::SharedFenceMTLSharedEventExportInfo:
-        o << "SType::SharedFenceMTLSharedEventExportInfo";
-        break;
-      case SType::SharedBufferMemoryD3D12ResourceDescriptor:
-        o << "SType::SharedBufferMemoryD3D12ResourceDescriptor";
-        break;
-      case SType::StaticSamplerBindingLayout:
-        o << "SType::StaticSamplerBindingLayout";
-        break;
-      case SType::YCbCrVkDescriptor:
-        o << "SType::YCbCrVkDescriptor";
-        break;
-      case SType::SharedTextureMemoryAHardwareBufferProperties:
-        o << "SType::SharedTextureMemoryAHardwareBufferProperties";
-        break;
-      case SType::AHardwareBufferProperties:
-        o << "SType::AHardwareBufferProperties";
-        break;
-      case SType::DawnExperimentalImmediateDataLimits:
-        o << "SType::DawnExperimentalImmediateDataLimits";
-        break;
-      case SType::DawnTexelCopyBufferRowAlignmentLimits:
-        o << "SType::DawnTexelCopyBufferRowAlignmentLimits";
-        break;
-      case SType::AdapterPropertiesSubgroupMatrixConfigs:
-        o << "SType::AdapterPropertiesSubgroupMatrixConfigs";
-        break;
-      case SType::SharedFenceEGLSyncDescriptor:
-        o << "SType::SharedFenceEGLSyncDescriptor";
-        break;
-      case SType::SharedFenceEGLSyncExportInfo:
-        o << "SType::SharedFenceEGLSyncExportInfo";
-        break;
-      case SType::DawnInjectedInvalidSType:
-        o << "SType::DawnInjectedInvalidSType";
-        break;
-      case SType::DawnCompilationMessageUtf16:
-        o << "SType::DawnCompilationMessageUtf16";
-        break;
-          default:
-            o << "SType::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<SType>::type>(value);
       }
       return o;
   }
@@ -1415,6 +1150,251 @@ namespace wgpu {
         break;
           default:
             o << "StoreOp::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<StoreOp>::type>(value);
+      }
+      return o;
+  }
+  template <typename CharT, typename Traits>
+  std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, SType value) {
+      switch (value) {
+      case SType::ShaderSourceSPIRV:
+        o << "SType::ShaderSourceSPIRV";
+        break;
+      case SType::ShaderSourceWGSL:
+        o << "SType::ShaderSourceWGSL";
+        break;
+      case SType::RenderPassMaxDrawCount:
+        o << "SType::RenderPassMaxDrawCount";
+        break;
+      case SType::SurfaceSourceMetalLayer:
+        o << "SType::SurfaceSourceMetalLayer";
+        break;
+      case SType::SurfaceSourceWindowsHWND:
+        o << "SType::SurfaceSourceWindowsHWND";
+        break;
+      case SType::SurfaceSourceXlibWindow:
+        o << "SType::SurfaceSourceXlibWindow";
+        break;
+      case SType::SurfaceSourceWaylandSurface:
+        o << "SType::SurfaceSourceWaylandSurface";
+        break;
+      case SType::SurfaceSourceAndroidNativeWindow:
+        o << "SType::SurfaceSourceAndroidNativeWindow";
+        break;
+      case SType::SurfaceSourceXCBWindow:
+        o << "SType::SurfaceSourceXCBWindow";
+        break;
+      case SType::TextureBindingViewDimensionDescriptor:
+        o << "SType::TextureBindingViewDimensionDescriptor";
+        break;
+      case SType::SurfaceDescriptorFromWindowsCoreWindow:
+        o << "SType::SurfaceDescriptorFromWindowsCoreWindow";
+        break;
+      case SType::ExternalTextureBindingEntry:
+        o << "SType::ExternalTextureBindingEntry";
+        break;
+      case SType::ExternalTextureBindingLayout:
+        o << "SType::ExternalTextureBindingLayout";
+        break;
+      case SType::SurfaceDescriptorFromWindowsUWPSwapChainPanel:
+        o << "SType::SurfaceDescriptorFromWindowsUWPSwapChainPanel";
+        break;
+      case SType::DawnTextureInternalUsageDescriptor:
+        o << "SType::DawnTextureInternalUsageDescriptor";
+        break;
+      case SType::DawnEncoderInternalUsageDescriptor:
+        o << "SType::DawnEncoderInternalUsageDescriptor";
+        break;
+      case SType::DawnInstanceDescriptor:
+        o << "SType::DawnInstanceDescriptor";
+        break;
+      case SType::DawnCacheDeviceDescriptor:
+        o << "SType::DawnCacheDeviceDescriptor";
+        break;
+      case SType::DawnAdapterPropertiesPowerPreference:
+        o << "SType::DawnAdapterPropertiesPowerPreference";
+        break;
+      case SType::DawnBufferDescriptorErrorInfoFromWireClient:
+        o << "SType::DawnBufferDescriptorErrorInfoFromWireClient";
+        break;
+      case SType::DawnTogglesDescriptor:
+        o << "SType::DawnTogglesDescriptor";
+        break;
+      case SType::DawnShaderModuleSPIRVOptionsDescriptor:
+        o << "SType::DawnShaderModuleSPIRVOptionsDescriptor";
+        break;
+      case SType::RequestAdapterOptionsLUID:
+        o << "SType::RequestAdapterOptionsLUID";
+        break;
+      case SType::RequestAdapterOptionsGetGLProc:
+        o << "SType::RequestAdapterOptionsGetGLProc";
+        break;
+      case SType::RequestAdapterOptionsD3D11Device:
+        o << "SType::RequestAdapterOptionsD3D11Device";
+        break;
+      case SType::DawnRenderPassColorAttachmentRenderToSingleSampled:
+        o << "SType::DawnRenderPassColorAttachmentRenderToSingleSampled";
+        break;
+      case SType::RenderPassPixelLocalStorage:
+        o << "SType::RenderPassPixelLocalStorage";
+        break;
+      case SType::PipelineLayoutPixelLocalStorage:
+        o << "SType::PipelineLayoutPixelLocalStorage";
+        break;
+      case SType::BufferHostMappedPointer:
+        o << "SType::BufferHostMappedPointer";
+        break;
+      case SType::AdapterPropertiesMemoryHeaps:
+        o << "SType::AdapterPropertiesMemoryHeaps";
+        break;
+      case SType::AdapterPropertiesD3D:
+        o << "SType::AdapterPropertiesD3D";
+        break;
+      case SType::AdapterPropertiesVk:
+        o << "SType::AdapterPropertiesVk";
+        break;
+      case SType::DawnWireWGSLControl:
+        o << "SType::DawnWireWGSLControl";
+        break;
+      case SType::DawnWGSLBlocklist:
+        o << "SType::DawnWGSLBlocklist";
+        break;
+      case SType::DawnDrmFormatCapabilities:
+        o << "SType::DawnDrmFormatCapabilities";
+        break;
+      case SType::ShaderModuleCompilationOptions:
+        o << "SType::ShaderModuleCompilationOptions";
+        break;
+      case SType::ColorTargetStateExpandResolveTextureDawn:
+        o << "SType::ColorTargetStateExpandResolveTextureDawn";
+        break;
+      case SType::RenderPassDescriptorExpandResolveRect:
+        o << "SType::RenderPassDescriptorExpandResolveRect";
+        break;
+      case SType::SharedTextureMemoryVkDedicatedAllocationDescriptor:
+        o << "SType::SharedTextureMemoryVkDedicatedAllocationDescriptor";
+        break;
+      case SType::SharedTextureMemoryAHardwareBufferDescriptor:
+        o << "SType::SharedTextureMemoryAHardwareBufferDescriptor";
+        break;
+      case SType::SharedTextureMemoryDmaBufDescriptor:
+        o << "SType::SharedTextureMemoryDmaBufDescriptor";
+        break;
+      case SType::SharedTextureMemoryOpaqueFDDescriptor:
+        o << "SType::SharedTextureMemoryOpaqueFDDescriptor";
+        break;
+      case SType::SharedTextureMemoryZirconHandleDescriptor:
+        o << "SType::SharedTextureMemoryZirconHandleDescriptor";
+        break;
+      case SType::SharedTextureMemoryDXGISharedHandleDescriptor:
+        o << "SType::SharedTextureMemoryDXGISharedHandleDescriptor";
+        break;
+      case SType::SharedTextureMemoryD3D11Texture2DDescriptor:
+        o << "SType::SharedTextureMemoryD3D11Texture2DDescriptor";
+        break;
+      case SType::SharedTextureMemoryIOSurfaceDescriptor:
+        o << "SType::SharedTextureMemoryIOSurfaceDescriptor";
+        break;
+      case SType::SharedTextureMemoryEGLImageDescriptor:
+        o << "SType::SharedTextureMemoryEGLImageDescriptor";
+        break;
+      case SType::SharedTextureMemoryInitializedBeginState:
+        o << "SType::SharedTextureMemoryInitializedBeginState";
+        break;
+      case SType::SharedTextureMemoryInitializedEndState:
+        o << "SType::SharedTextureMemoryInitializedEndState";
+        break;
+      case SType::SharedTextureMemoryVkImageLayoutBeginState:
+        o << "SType::SharedTextureMemoryVkImageLayoutBeginState";
+        break;
+      case SType::SharedTextureMemoryVkImageLayoutEndState:
+        o << "SType::SharedTextureMemoryVkImageLayoutEndState";
+        break;
+      case SType::SharedTextureMemoryD3DSwapchainBeginState:
+        o << "SType::SharedTextureMemoryD3DSwapchainBeginState";
+        break;
+      case SType::SharedFenceVkSemaphoreOpaqueFDDescriptor:
+        o << "SType::SharedFenceVkSemaphoreOpaqueFDDescriptor";
+        break;
+      case SType::SharedFenceVkSemaphoreOpaqueFDExportInfo:
+        o << "SType::SharedFenceVkSemaphoreOpaqueFDExportInfo";
+        break;
+      case SType::SharedFenceSyncFDDescriptor:
+        o << "SType::SharedFenceSyncFDDescriptor";
+        break;
+      case SType::SharedFenceSyncFDExportInfo:
+        o << "SType::SharedFenceSyncFDExportInfo";
+        break;
+      case SType::SharedFenceVkSemaphoreZirconHandleDescriptor:
+        o << "SType::SharedFenceVkSemaphoreZirconHandleDescriptor";
+        break;
+      case SType::SharedFenceVkSemaphoreZirconHandleExportInfo:
+        o << "SType::SharedFenceVkSemaphoreZirconHandleExportInfo";
+        break;
+      case SType::SharedFenceDXGISharedHandleDescriptor:
+        o << "SType::SharedFenceDXGISharedHandleDescriptor";
+        break;
+      case SType::SharedFenceDXGISharedHandleExportInfo:
+        o << "SType::SharedFenceDXGISharedHandleExportInfo";
+        break;
+      case SType::SharedFenceMTLSharedEventDescriptor:
+        o << "SType::SharedFenceMTLSharedEventDescriptor";
+        break;
+      case SType::SharedFenceMTLSharedEventExportInfo:
+        o << "SType::SharedFenceMTLSharedEventExportInfo";
+        break;
+      case SType::SharedBufferMemoryD3D12ResourceDescriptor:
+        o << "SType::SharedBufferMemoryD3D12ResourceDescriptor";
+        break;
+      case SType::StaticSamplerBindingLayout:
+        o << "SType::StaticSamplerBindingLayout";
+        break;
+      case SType::YCbCrVkDescriptor:
+        o << "SType::YCbCrVkDescriptor";
+        break;
+      case SType::SharedTextureMemoryAHardwareBufferProperties:
+        o << "SType::SharedTextureMemoryAHardwareBufferProperties";
+        break;
+      case SType::AHardwareBufferProperties:
+        o << "SType::AHardwareBufferProperties";
+        break;
+      case SType::DawnTexelCopyBufferRowAlignmentLimits:
+        o << "SType::DawnTexelCopyBufferRowAlignmentLimits";
+        break;
+      case SType::AdapterPropertiesSubgroupMatrixConfigs:
+        o << "SType::AdapterPropertiesSubgroupMatrixConfigs";
+        break;
+      case SType::SharedFenceEGLSyncDescriptor:
+        o << "SType::SharedFenceEGLSyncDescriptor";
+        break;
+      case SType::SharedFenceEGLSyncExportInfo:
+        o << "SType::SharedFenceEGLSyncExportInfo";
+        break;
+      case SType::DawnInjectedInvalidSType:
+        o << "SType::DawnInjectedInvalidSType";
+        break;
+      case SType::DawnCompilationMessageUtf16:
+        o << "SType::DawnCompilationMessageUtf16";
+        break;
+      case SType::DawnFakeBufferOOMForTesting:
+        o << "SType::DawnFakeBufferOOMForTesting";
+        break;
+      case SType::SurfaceDescriptorFromWindowsWinUISwapChainPanel:
+        o << "SType::SurfaceDescriptorFromWindowsWinUISwapChainPanel";
+        break;
+      case SType::DawnDeviceAllocatorControl:
+        o << "SType::DawnDeviceAllocatorControl";
+        break;
+      case SType::DawnHostMappedPointerLimits:
+        o << "SType::DawnHostMappedPointerLimits";
+        break;
+      case SType::RenderPassDescriptorResolveRect:
+        o << "SType::RenderPassDescriptorResolveRect";
+        break;
+      case SType::RequestAdapterWebGPUBackendOptions:
+        o << "SType::RequestAdapterWebGPUBackendOptions";
+        break;
+          default:
+            o << "SType::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<SType>::type>(value);
       }
       return o;
   }
@@ -2071,6 +2051,44 @@ namespace wgpu {
         break;
           default:
             o << "WaitStatus::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<WaitStatus>::type>(value);
+      }
+      return o;
+  }
+  template <typename CharT, typename Traits>
+  std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, WGSLLanguageFeatureName value) {
+      switch (value) {
+      case WGSLLanguageFeatureName::ReadonlyAndReadwriteStorageTextures:
+        o << "WGSLLanguageFeatureName::ReadonlyAndReadwriteStorageTextures";
+        break;
+      case WGSLLanguageFeatureName::Packed4x8IntegerDotProduct:
+        o << "WGSLLanguageFeatureName::Packed4x8IntegerDotProduct";
+        break;
+      case WGSLLanguageFeatureName::UnrestrictedPointerParameters:
+        o << "WGSLLanguageFeatureName::UnrestrictedPointerParameters";
+        break;
+      case WGSLLanguageFeatureName::PointerCompositeAccess:
+        o << "WGSLLanguageFeatureName::PointerCompositeAccess";
+        break;
+      case WGSLLanguageFeatureName::SizedBindingArray:
+        o << "WGSLLanguageFeatureName::SizedBindingArray";
+        break;
+      case WGSLLanguageFeatureName::ChromiumTestingUnimplemented:
+        o << "WGSLLanguageFeatureName::ChromiumTestingUnimplemented";
+        break;
+      case WGSLLanguageFeatureName::ChromiumTestingUnsafeExperimental:
+        o << "WGSLLanguageFeatureName::ChromiumTestingUnsafeExperimental";
+        break;
+      case WGSLLanguageFeatureName::ChromiumTestingExperimental:
+        o << "WGSLLanguageFeatureName::ChromiumTestingExperimental";
+        break;
+      case WGSLLanguageFeatureName::ChromiumTestingShippedWithKillswitch:
+        o << "WGSLLanguageFeatureName::ChromiumTestingShippedWithKillswitch";
+        break;
+      case WGSLLanguageFeatureName::ChromiumTestingShipped:
+        o << "WGSLLanguageFeatureName::ChromiumTestingShipped";
+        break;
+          default:
+            o << "WGSLLanguageFeatureName::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<WGSLLanguageFeatureName>::type>(value);
       }
       return o;
   }

@@ -192,6 +192,45 @@ type WebGPUBufferExtensions private() =
         
     
     [<Extension>]
+    static member Download<'a when 'a : unmanaged>(this : CommandEncoder, src : Buffer, srcOffset : int64, dst : System.Memory<'a>) =
+        let size = int64 dst.Length * int64 sizeof<'a>
+        let tmp = src.Device.CreateBuffer { Next = null; Label = null; Size = size; Usage = BufferUsage.MapRead ||| BufferUsage.CopyDst; MappedAtCreation = false }
+
+        this.CopyBufferToBuffer(src, srcOffset, tmp, 0L, size)
+        this.AddAfterRun (fun () ->
+            task {
+                do! tmp.Mapped(MapMode.Read, fun ptr ->
+                    let src = System.Span<'a>(NativePtr.toVoidPtr (NativePtr.ofNativeInt<byte> ptr), dst.Length)
+                    src.CopyTo dst.Span
+                )
+            }
+        )
+        this.AddCleanup (fun () ->
+            tmp.Dispose()
+        )
+        
+    [<Extension>]
+    static member Download<'a when 'a : unmanaged>(this : CommandEncoder, src : Buffer, srcOffset : int64, dst : 'a[], dstOffset : int, count : int) =
+        let mem = System.Memory<'a>(dst, dstOffset, count)
+        this.Download(src, srcOffset, mem)
+    
+    [<Extension>]
+    static member Download<'a when 'a : unmanaged>(this : CommandEncoder, src : Buffer, srcOffset : int64, dst : 'a[]) =
+        let mem = System.Memory<'a>(dst, 0, dst.Length)
+        this.Download(src, srcOffset, mem)
+    [<Extension>]
+    static member Download<'a when 'a : unmanaged>(this : CommandEncoder, src : BufferRange, dst : System.Memory<'a>) =
+        this.Download(src.Buffer, src.Offset, dst)
+    
+    [<Extension>]
+    static member Download<'a when 'a : unmanaged>(this : CommandEncoder, src : BufferRange, dst : 'a[], dstOffset : int, count : int) =
+        this.Download(src.Buffer, src.Offset, dst, dstOffset, count)
+        
+    [<Extension>]
+    static member Download<'a when 'a : unmanaged>(this : CommandEncoder, src : BufferRange, dst : 'a[]) =
+        this.Download(src.Buffer, src.Offset, dst, 0, dst.Length)
+        
+    [<Extension>]
     static member Sub(buffer : Buffer, offset : int64, size : int64) =
         if offset < 0L then raise <| ArgumentOutOfRangeException $"offset must be non-negative: {offset}"
         if size < 0L then raise <| ArgumentOutOfRangeException $"size must be non-negative: {size}"

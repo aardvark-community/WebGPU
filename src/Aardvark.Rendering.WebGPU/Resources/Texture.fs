@@ -183,7 +183,7 @@ type Blitter(device : Device, format : TextureFormat) =
             Next = null
             Label = "BlitterLayout"
             BindGroupLayouts = [|groupLayout |]
-            ImmediateDataRangeByteSize = 0
+            ImmediateSize = 0
         }
     
     let pipeline =

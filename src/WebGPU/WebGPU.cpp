@@ -205,9 +205,6 @@ EMSCRIPTEN_KEEPALIVE void gpuComputePassEncoderEnd(WGPUComputePassEncoder self) 
 EMSCRIPTEN_KEEPALIVE void gpuComputePassEncoderSetLabel(WGPUComputePassEncoder self, WGPUStringView label) {
     return wgpuComputePassEncoderSetLabel(self, label);
 }
-EMSCRIPTEN_KEEPALIVE void gpuComputePassEncoderSetImmediateData(WGPUComputePassEncoder self, uint32_t offset, const void* data, size_t size) {
-    return wgpuComputePassEncoderSetImmediateData(self, offset, data, size);
-}
 EMSCRIPTEN_KEEPALIVE void gpuComputePassEncoderRelease(WGPUComputePassEncoder self) {
     return wgpuComputePassEncoderRelease(self);
 }
@@ -480,9 +477,6 @@ EMSCRIPTEN_KEEPALIVE WGPURenderBundle gpuRenderBundleEncoderFinish(WGPURenderBun
 EMSCRIPTEN_KEEPALIVE void gpuRenderBundleEncoderSetLabel(WGPURenderBundleEncoder self, WGPUStringView label) {
     return wgpuRenderBundleEncoderSetLabel(self, label);
 }
-EMSCRIPTEN_KEEPALIVE void gpuRenderBundleEncoderSetImmediateData(WGPURenderBundleEncoder self, uint32_t offset, const void* data, size_t size) {
-    return wgpuRenderBundleEncoderSetImmediateData(self, offset, data, size);
-}
 EMSCRIPTEN_KEEPALIVE void gpuRenderBundleEncoderRelease(WGPURenderBundleEncoder self) {
     return wgpuRenderBundleEncoderRelease(self);
 }
@@ -614,9 +608,6 @@ EMSCRIPTEN_KEEPALIVE void gpuRenderPassEncoderEnd(WGPURenderPassEncoder self) {
 }
 EMSCRIPTEN_KEEPALIVE void gpuRenderPassEncoderSetLabel(WGPURenderPassEncoder self, WGPUStringView label) {
     return wgpuRenderPassEncoderSetLabel(self, label);
-}
-EMSCRIPTEN_KEEPALIVE void gpuRenderPassEncoderSetImmediateData(WGPURenderPassEncoder self, uint32_t offset, const void* data, size_t size) {
-    return wgpuRenderPassEncoderSetImmediateData(self, offset, data, size);
 }
 EMSCRIPTEN_KEEPALIVE void gpuRenderPassEncoderRelease(WGPURenderPassEncoder self) {
     return wgpuRenderPassEncoderRelease(self);
