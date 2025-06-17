@@ -230,6 +230,34 @@ type WebGPUBufferExtensions private() =
     static member Download<'a when 'a : unmanaged>(this : CommandEncoder, src : BufferRange, dst : 'a[]) =
         this.Download(src.Buffer, src.Offset, dst, 0, dst.Length)
         
+        
+    [<Extension>]
+    static member Download<'a when 'a : unmanaged>(this : Device, src : BufferRange, dst : 'a[]) =
+        use enc = this.CreateCommandEncoder { Label = null; Next = null }
+        enc.Download(src.Buffer, src.Offset, dst, 0, dst.Length)
+        use cmd = enc.Finish { Label = null }
+        this.Queue.Submit [| cmd |]
+        
+    
+    [<Extension>]
+    static member Download<'a when 'a : unmanaged>(this : Device, src : BufferRange) =
+        task {
+            let dst = Array.zeroCreate<'a> (int (src.Size / int64 (typeof<'a>.GetCLRSize())))
+            use enc = this.CreateCommandEncoder { Label = null; Next = null }
+            enc.Download(src.Buffer, src.Offset, dst, 0, dst.Length)
+            use cmd = enc.Finish { Label = null }
+            do! this.Queue.Submit [| cmd |]
+            return dst
+        }
+        
+    [<Extension>]
+    static member Download<'a when 'a : unmanaged>(this : Device, src : Buffer, dst : 'a[]) =
+        this.Download<'a>(BufferRange(src, 0L, src.Size), dst)
+        
+    [<Extension>]
+    static member Download<'a when 'a : unmanaged>(this : Device, src : Buffer) =
+        this.Download<'a>(BufferRange(src, 0L, src.Size))
+        
     [<Extension>]
     static member Sub(buffer : Buffer, offset : int64, size : int64) =
         if offset < 0L then raise <| ArgumentOutOfRangeException $"offset must be non-negative: {offset}"

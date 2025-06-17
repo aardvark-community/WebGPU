@@ -129,7 +129,7 @@ type WebGPUShaderExtensions private() =
                 |> List.map (fun (gid, samplers) -> gid, samplers |> List.map snd |> Map.ofList)
                 |> Map.ofList
                 
-            let groupLayouts = device.CreateBindGroupLayouts wgsl.iface
+            let groupLayouts,_ = device.CreateBindGroupLayouts wgsl.iface
             
             let pipelineLayout =
                 let entries = 

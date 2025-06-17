@@ -1543,6 +1543,7 @@ module Assembler =
                                                     ssbBinding = binding
                                                     ssbName = name.Name
                                                     ssbType = WGSLType.ofCType config.doubleAsFloat config.reverseMatrixLogic ct
+                                                    ssbReadOnly = s.stages.Stage = ShaderStage.Compute
                                                 }
                                                 let typ = assembleType config.doubleAsFloat config.reverseMatrixLogic ct
                                                 let! s = State.get
@@ -1789,7 +1790,7 @@ module Assembler =
                 | None ->
                     decorations
             
-            let isBuffer = p.cParamDecorations |> Seq.exists (function ParameterDecoration.StorageBuffer  _-> true | _ -> false)
+            let isBuffer = p.cParamDecorations |> Seq.tryPick (function ParameterDecoration.StorageBuffer(_, w) -> Some (not w) | _ -> None)
             
             let slot =
                 p.cParamDecorations |> Seq.tryPick (function
@@ -1806,20 +1807,22 @@ module Assembler =
                     | Some slot -> State.value (Some slot)
                     | _ -> AssemblerState.newLocation kind p.cParamType |> State.map Some
 
-            if isBuffer then
+            match isBuffer with
+            | Some readOnly -> 
                 match p.cParamType with
-                | CType.CPointer(_,ct) -> 
+                | CType.CPointer(m,ct) ->
                     do! Interface.addStorageBuffer {
                         ssbGroup = bSet
                         ssbBinding = bBinding
                         ssbName = p.cParamName
                         ssbType = WGSLType.ofCType config.doubleAsFloat config.reverseMatrixLogic ct
+                        ssbReadOnly = readOnly
                     }
                 | _ ->
                     failwithf "[GLSL] not a storage buffer type: %A" p.cParamType
                
                 return String.concat " " decorations |> Some
-            else
+            | _ ->
             
                 let layoutParams =
                     match location with

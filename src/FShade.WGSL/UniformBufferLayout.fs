@@ -368,6 +368,7 @@ type WGSLStorageBuffer =
         ssbBinding      : int
         ssbName         : string
         ssbType         : WGSLType
+        ssbReadOnly     : bool
     }
 
 type WGSLUniformBufferField =
@@ -1229,6 +1230,7 @@ module WGSLProgramInterface =
             dst.Write ssb.ssbBinding
             dst.Write ssb.ssbName
             dst.Write ssb.ssbGroup
+            dst.Write (if ssb.ssbReadOnly then 1 else 0)
             WGSLType.serializeInternal dst ssb.ssbType
             
         dst.Write program.uniformBuffers.Count
@@ -1338,12 +1340,14 @@ module WGSLProgramInterface =
                 let ssbBinding = src.ReadInt32()
                 let ssbName = src.ReadString()
                 let ssbSet = src.ReadInt32()
+                let ssbReadOnly = src.ReadInt32() <> 0
                 let ssbType = WGSLType.deserializeInternal src
                 name, {
                     ssbBinding = ssbBinding
                     ssbName = ssbName
                     ssbGroup = ssbSet
                     ssbType = ssbType
+                    ssbReadOnly = ssbReadOnly
                 }
             )   
             |> MapExt.ofList

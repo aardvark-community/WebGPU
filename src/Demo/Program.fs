@@ -548,11 +548,319 @@ module Scene =
         let task = new RenderTask(device, signature, objs)
         task
 
+module ComputeShader =
+    open FShade
+    
+    type UniformScope with
+        member x.Factor : float = uniform?Factor
+    
+    [<LocalSize(X = 64)>]
+    let computer (a : float[]) (b : float[]) (c : float[]) =
+        compute {
+            let id = getGlobalId().X
+            c.[id] <- uniform.Factor * (a.[id] + b.[id])
+        }
+
+open FShade
+open FShade.WGSL
+
+type CompiledComputeShader private (device : Device, pipeline : ComputePipeline, groupLayouts : BindGroupLayout[], groupLayout : WGSLBindGroupLayout, wgsl : WGSL.WGSLProgramInterface) =
+    
+    let defaultSamplers =
+        groupLayout.Entries |> MapExt.map (fun _ entries ->
+            entries |> MapExt.choose (fun _ entry ->
+                match entry with
+                | WGSLBindGroupEntry.Sampler sam ->
+                    let sam = device.CreateSampler sam.samplerState
+                    Some sam
+                | _ ->
+                    None
+            )
+        )
+    
+    let tryGetDefaultSampler (gi : int) (bi : int) =
+        match MapExt.tryFind gi defaultSamplers with
+        | Some entries -> MapExt.tryFind bi entries
+        | None -> None
+        
+    let uniformBufferReaders =
+        groupLayout.Entries |> MapExt.map (fun _ entries ->
+            entries |> MapExt.choose (fun _ entry ->
+                match entry with
+                | WGSLBindGroupEntry.UniformBuffer ub ->
+                    let buffer =
+                        device.CreateBuffer {
+                            Next = null
+                            Label = null
+                            Usage = BufferUsage.Uniform ||| BufferUsage.CopyDst
+                            Size = int64 ub.ubSize
+                            MappedAtCreation = false
+                        }
+                        
+                    let memory =
+                        System.Runtime.InteropServices.Marshal.AllocHGlobal ub.ubSize
+                        
+                        
+                    let update (m : MapExt<string, obj>) =
+                        for f in ub.ubFields do
+                            match MapExt.tryFind f.ufName m with
+                            | Some value ->
+                                let w = UniformWriters.getWriter 0 f.ufType (value.GetType())
+                                w.WriteUnsafeValue(value, memory + nativeint f.ufOffset)
+                            | None ->
+                                Log.warn "missing uniform %s" f.ufName
+                                
+                        device.Queue.WriteBuffer(buffer, 0L, memory, ub.ubSize)
+                                
+                    let free() =
+                        buffer.Dispose()
+                        System.Runtime.InteropServices.Marshal.FreeHGlobal memory
+                                
+                    Some (buffer, update, free)
+                | _ ->
+                    None
+            )
+        )
+        
+        
+    let localSize =
+        match wgsl.shaders with
+        | WGSLProgramShaders.Compute c ->
+            c.shaderDecorations |> List.pick (function WGSLShaderDecoration.WGSLLocalSize s -> Some s | _ -> None)
+        | _ ->
+            failwith "bad program"
+        
+    member x.LocalSize = localSize
+    member x.GroupLayout = groupLayout
+    member x.WGSL = wgsl
+    member x.Pipeline = pipeline
+    
+    member x.Run(workGroups : V3i, inputs : MapExt<string, obj>) =
+        let groups = 
+            groupLayout.Entries |> MapExt.map (fun gi entries ->
+                let cnt = 1 + MapExt.max entries
+                let data =
+                    Array.init cnt (fun bi ->
+                        match MapExt.tryFind bi entries with
+                        | Some entry ->
+                            match entry with
+                            | WGSLBindGroupEntry.StorageBuffer buffer ->
+                                match MapExt.tryFind buffer.ssbName inputs with
+                                | Some (:? Buffer as b) ->
+                                    BindGroupEntry.Buffer(bi, b, 0L, b.Size)
+                                | _ ->
+                                    Log.warn "Missing buffer %s" buffer.ssbName
+                                    BindGroupEntry.Null
+                                    
+                            | WGSLBindGroupEntry.Texture tex ->
+                                match MapExt.tryFind (List.head tex.textureNames) inputs with
+                                | Some (:? Texture as b) ->
+                                    BindGroupEntry.TextureView(bi, b.CreateView(TextureUsage.TextureBinding, 0))
+                                | Some (:? TextureView as b) ->
+                                    BindGroupEntry.TextureView(bi, b)
+                                | _ ->
+                                    Log.warn "Missing buffer %A" tex.textureNames
+                                    BindGroupEntry.Null
+                            | WGSLBindGroupEntry.StorageTexture tex ->
+                                match MapExt.tryFind tex.imageName inputs with
+                                | Some (:? Texture as b) ->
+                                    BindGroupEntry.TextureView(bi, b.CreateView(TextureUsage.StorageBinding, 0))
+                                | Some (:? TextureView as b) ->
+                                    BindGroupEntry.TextureView(bi, b)
+                                | _ ->
+                                    Log.warn "Missing storage image %A" tex.imageName
+                                    BindGroupEntry.Null
+                                    
+                            | WGSLBindGroupEntry.Sampler sam ->
+                                match MapExt.tryFind sam.samplerName inputs with
+                                | Some (:? Sampler as s) ->
+                                    BindGroupEntry.Sampler(bi, s)
+                                | _ ->
+                                    match tryGetDefaultSampler gi bi with
+                                    | Some s -> BindGroupEntry.Sampler(bi, s)
+                                    | None ->
+                                        Log.warn "Missing sampler %s" sam.samplerName
+                                        BindGroupEntry.Null
+                                    
+                            | WGSLBindGroupEntry.UniformBuffer buffer ->
+                                match MapExt.tryFind gi uniformBufferReaders with
+                                | Some e ->
+                                    match MapExt.tryFind bi e with
+                                    | Some (buf, update, free) ->
+                                        update inputs
+                                        BindGroupEntry.Buffer(bi, buf, 0L, buf.Size)
+                                    | None ->
+                                        BindGroupEntry.Null
+                                | None ->
+                                    BindGroupEntry.Null
+                                    
+                                    
+                        | None ->
+                            BindGroupEntry.Null    
+                    )
+                device.CreateBindGroup {
+                    Label = sprintf "group %d" gi
+                    Layout = groupLayouts.[gi]
+                    Entries = data
+                }
+            )
+        
+        
+        task {
+            try
+                use enc = device.CreateCommandEncoder { Label = null; Next = null }
+                use pass = enc.BeginComputePass { Label = null; TimestampWrites = undefined }
+                
+                pass.SetPipeline pipeline
+                for KeyValue(gi, group) in groups do
+                    pass.SetBindGroup(gi, group, [||])
+                    
+                pass.DispatchWorkgroups(workGroups.X, workGroups.Y, workGroups.Z)
+                pass.End()
+                use cmd = enc.Finish { Label = null }
+                
+                
+                do! device.Queue.Submit([| cmd |])
+            finally
+                for KeyValue(_, group) in groups do
+                    group.Dispose()
+        }
+
+    member x.Run(workGroups : V3i, inputs : list<string * obj>) = x.Run (workGroups, MapExt.ofList inputs)
+    
+    member x.Run(workGroups : V2i, inputs : MapExt<string, obj>) = x.Run(workGroups.XYI, inputs)
+    member x.Run(workGroups : V2i, inputs : list<string * obj>) = x.Run(workGroups.XYI, inputs)
+    member x.Run(workGroups : int,  inputs : MapExt<string, obj>) = x.Run(V3i(workGroups, 1, 1), inputs)
+    member x.Run(workGroups : int,  inputs : list<string * obj>) = x.Run(V3i(workGroups, 1, 1), inputs)
+    
+    static member Compile(device : Device, shader : FShade.ComputeShader) =
+            
+        let wgsl = 
+            FShade.ComputeShader.toModule shader
+            |> ModuleCompiler.compileWGSL
+            
+        let sm =
+            device.CreateShaderModule {
+                Label = null
+                Next = { ShaderSourceWGSL.Next = null; ShaderSourceWGSL.Code = wgsl.code }
+            }
+            
+        let compute =
+            {
+                Module = sm
+                EntryPoint = "compute"
+                Constants = [||]
+            }
+            
+        let groupLayoutTable, groups = device.CreateBindGroupLayouts(wgsl.iface)
+        let groupLayouts =
+            match MapExt.tryMax groupLayoutTable with
+            | Some max ->
+                let len = max + 1
+                Array.init len (fun i ->
+                    match MapExt.tryFind i groupLayoutTable with
+                    | Some v -> v
+                    | None -> BindGroupLayout.Null
+                )
+            | None ->
+                [||]
+            
+        let layout =
+            device.CreatePipelineLayout {
+                Next = null
+                Label = null
+                BindGroupLayouts = groupLayouts
+                ImmediateSize = 0
+            }
+        
+        let pipe = 
+            device.CreateComputePipeline {
+                Label = null
+                Layout = layout
+                Compute = compute
+            }
+            
+        new CompiledComputeShader(device, pipe, groupLayouts, groups, wgsl.iface)
+    
+    static member Compile(device : Device, shader : 'a -> 'b) =
+        let sh = FShade.ComputeShader.ofFunction (V3i(1024, 1024, 1024)) shader
+        CompiledComputeShader.Compile(device, sh)
+
+    member x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize x
+        pipeline.Dispose()
+        for g in groupLayouts do
+            g.Dispose()
+            
+        for KeyValue(_, e) in defaultSamplers do
+            for KeyValue(_, s) in e do s.Dispose()
+            
+        for KeyValue(_, e) in uniformBufferReaders do
+            for KeyValue(_, (_,_,free)) in e do free()
+            
+        
+    interface System.IDisposable with
+        member x.Dispose() =
+            x.Dispose(true)
+            
+    override x.Finalize() =
+        x.Dispose false
+
+
+
+let computeTest (device : Device) =
+    let cnt = 2048
+    let factor = 2.5
+    
+    use a = device.CreateBuffer(BufferUsage.Storage, Array.init cnt float32).Result
+    use b = device.CreateBuffer(BufferUsage.Storage, Array.init cnt (fun i -> float32 cnt - float32 i)).Result
+    use c = device.CreateBuffer(BufferUsage.Storage, Array.zeroCreate<float32> cnt).Result
+    
+    use tex =
+        device.CreateTexture {
+            Next = null
+            Label : string
+            Usage : TextureUsage
+            Dimension : TextureDimension
+            Size : Extent3D
+            Format : TextureFormat
+            MipLevelCount : int
+            SampleCount : int
+            ViewFormats : array<TextureFormat>
+        }
+    
+    
+    use shader = CompiledComputeShader.Compile(device, ComputeShader.computer)
+    let groups = cnt / shader.LocalSize.X
+    
+    let task = 
+        shader.Run(groups, [
+            "a", a :> obj
+            "b", b
+            "c", c
+            "Factor", factor
+        ])
+    task.Wait()
+    
+    let arr = device.Download<float32>(c).Result
+    let check = arr |> Array.forall (fun v -> float v = factor * float cnt)
+    printfn "ARR: %A (%A)" arr check
+    
+    
+    
+        
+        
+    ()
+
+
 [<EntryPoint>]
 let main _argv =
     Aardvark.Init()
     
     let app = WebGPUApplication.Create(true).Result
+    computeTest app.Device
+    exit 0
+    
     let win = app.CreateGameWindow(vsync = true)
     //
     // let data = Array.init 1024 byte

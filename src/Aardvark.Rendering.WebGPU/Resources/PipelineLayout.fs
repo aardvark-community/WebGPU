@@ -11,15 +11,49 @@ type PipelineLayout(layout : WebGPU.PipelineLayout, groupLayouts : BindGroupLayo
     member x.Layout = layout
     member x.GroupLayouts = groupLayouts
 
+
+[<RequireQualifiedAccess>]   
+type WGSLBindGroupEntry =
+    | StorageBuffer of WGSLStorageBuffer
+    | StorageTexture of WGSLImage
+    | UniformBuffer of WGSLUniformBuffer
+    | Texture of WGSLTexture
+    | Sampler of WGSLSampler
+                
+type WGSLBindGroupLayout(entries : MapExt<int, MapExt<int, WGSLBindGroupEntry>>) =
+    
+    member x.Entries = entries
+    
+    member x.BindGroupCount =
+        match MapExt.tryMax x.Entries with
+        | Some maxKey -> 1 + maxKey
+        | None -> 0
+    
+    
+    
+    
+
+
 [<AbstractClass; Sealed>]
 type WebGPUPipelineLayoutExtensions private() =
         
     [<Extension>]
-    static member CreateBindGroupLayouts (device : Device, iface : FShade.WGSL.WGSLProgramInterface) =
+    static member CreateBindGroupLayouts (device : Device, iface : FShade.WGSL.WGSLProgramInterface) : MapExt<int, BindGroupLayout> * WGSLBindGroupLayout =
         
         let mutable groupDescriptors = MapExt.empty
-        
-        let stages = WebGPU.ShaderStage.Vertex ||| WebGPU.ShaderStage.Fragment
+        let mutable frontendDescriptors = MapExt.empty
+        let mutable stages = WebGPU.ShaderStage.None
+        for slot in iface.shaders.Slots |> MapExt.keys do
+            match slot with
+            | ShaderSlot.Vertex -> 
+                stages <- stages ||| WebGPU.ShaderStage.Vertex
+            | ShaderSlot.Fragment ->
+                stages <- stages ||| WebGPU.ShaderStage.Fragment
+            | ShaderSlot.Compute ->
+                stages <- stages ||| WebGPU.ShaderStage.Compute
+            | _ ->
+                ()
+            
         for KeyValue(_, b) in iface.images do
             let sampleType =
                 match b.imageType.valueType with
@@ -50,6 +84,12 @@ type WebGPUPipelineLayoutExtensions private() =
                         })
                     ) |> Some
                 )
+            frontendDescriptors <-
+                frontendDescriptors |> MapExt.alter b.imageGroup (fun g ->
+                    g |> Option.defaultValue MapExt.empty |> MapExt.add b.imageBinding (WGSLBindGroupEntry.StorageTexture b) |> Some
+                )
+            
+            
                
         for KeyValue(_, b) in iface.samplers do
             groupDescriptors <-
@@ -61,6 +101,10 @@ type WebGPUPipelineLayoutExtensions private() =
                     g |> MapExt.add b.samplerBinding (
                         BindGroupLayoutEntry.Sampler(b.samplerBinding, stages, SamplerBindingType.Filtering)
                     ) |> Some
+                )
+            frontendDescriptors <-
+                frontendDescriptors |> MapExt.alter b.samplerGroup (fun g ->
+                    g |> Option.defaultValue MapExt.empty |> MapExt.add b.samplerBinding (WGSLBindGroupEntry.Sampler b) |> Some
                 )
                 
         for KeyValue(_, t) in iface.textures do
@@ -96,6 +140,10 @@ type WebGPUPipelineLayoutExtensions private() =
                         })
                     ) |> Some
                 )
+            frontendDescriptors <-
+                frontendDescriptors |> MapExt.alter t.textureGroup (fun g ->
+                    g |> Option.defaultValue MapExt.empty |> MapExt.add t.textureBinding (WGSLBindGroupEntry.Texture t) |> Some
+                )
                
         for KeyValue(_, b) in iface.storageBuffers do
             groupDescriptors <-
@@ -105,14 +153,17 @@ type WebGPUPipelineLayoutExtensions private() =
                         | Some g -> g
                         | None -> MapExt.empty
                         
-                        
                     g |> MapExt.add b.ssbBinding (
                         BindGroupLayoutEntry.Buffer(b.ssbBinding, stages, {
-                            BufferBindingLayout.Type = BufferBindingType.ReadOnlyStorage
+                            BufferBindingLayout.Type = (if b.ssbReadOnly then BufferBindingType.ReadOnlyStorage else BufferBindingType.Storage)
                             BufferBindingLayout.HasDynamicOffset = false
                             BufferBindingLayout.MinBindingSize = 0L
                         })
                     ) |> Some
+                )
+            frontendDescriptors <-
+                frontendDescriptors |> MapExt.alter b.ssbGroup (fun g ->
+                    g |> Option.defaultValue MapExt.empty |> MapExt.add b.ssbBinding (WGSLBindGroupEntry.StorageBuffer b) |> Some
                 )
         
         for KeyValue(_, b) in iface.uniformBuffers do
@@ -131,6 +182,10 @@ type WebGPUPipelineLayoutExtensions private() =
                     ) |> Some
                 )
         
+            frontendDescriptors <-
+                frontendDescriptors |> MapExt.alter b.ubGroup (fun g ->
+                    g |> Option.defaultValue MapExt.empty |> MapExt.add b.ubBinding (WGSLBindGroupEntry.UniformBuffer b) |> Some
+                )
        
         let groupLayouts =
             groupDescriptors |> MapExt.map (fun gi bindings ->
@@ -139,11 +194,11 @@ type WebGPUPipelineLayoutExtensions private() =
                     Entries = bindings |> MapExt.values |> Array.ofSeq
                 }    
             )
-        groupLayouts
+        groupLayouts, WGSLBindGroupLayout(frontendDescriptors)
  
     [<Extension>]
     static member CreatePipelineLayout (device : Device, iface : FShade.WGSL.WGSLProgramInterface) =
-        let groupLayouts = device.CreateBindGroupLayouts(iface)
+        let groupLayouts, _  = device.CreateBindGroupLayouts(iface)
         let maxKey = MapExt.tryMax groupLayouts
             
         let groupLayouts =
