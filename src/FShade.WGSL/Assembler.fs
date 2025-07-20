@@ -794,18 +794,23 @@ module Assembler =
         
 
     let assembleParameter (doubleAsFloat : bool) (rev : bool) (p : CParameter) =
-        let modifier =
-            match p.modifier with
-                | CParameterModifier.In -> ""
-                | CParameterModifier.ByRef -> failwith "inout "
-                | CParameterModifier.Out -> failwith "out "
-
+        
         let parType =
             match p.ctype with
             | CType.CBool -> CType.CInt(true, 32)
             | t -> t
+            
+        let parType =
+            match p.modifier with
+            | CParameterModifier.ByRef 
+            | CParameterModifier.Out ->
+                CType.CPointer(CPointerModifier.None, parType)
+            | _ ->
+                parType
+    
+        
         let decl = assembleDeclaration doubleAsFloat rev parType (wgslName p.name)
-        sprintf "%s%s" modifier decl
+        decl
 
     let assembleFunctionSignature (doubleAsFloat : bool) (rev : bool) (s : CFunctionSignature) =
         let ret = s.returnType |> assembleType doubleAsFloat rev
@@ -1443,14 +1448,14 @@ module Assembler =
 
     let private uniformLayout (isUniformBuffer : bool) (decorations : list<UniformDecoration>) (set : int) (binding : int) =
 
-        let decorations =
-            decorations |> List.choose (fun d ->
-                match d with
-                    | UniformDecoration.Format t -> Some t.Name
-                    | UniformDecoration.BufferBinding _
-                    | UniformDecoration.BufferDescriptorSet _ 
-                    | UniformDecoration.FieldIndex _ -> None
-            )
+        let decorations = []
+            // decorations |> List.choose (fun d ->
+            //     match d with
+            //         | UniformDecoration.Format t -> Some t.Name
+            //         | UniformDecoration.BufferBinding _
+            //         | UniformDecoration.BufferDescriptorSet _ 
+            //         | UniformDecoration.FieldIndex _ -> None
+            // )
             
         let decorations =
             if binding >= 0 then (sprintf "@binding(%d)" binding) :: decorations
@@ -1523,7 +1528,7 @@ module Assembler =
                                 let defs = 
                                     fields |> List.map (fun u ->
                                         let def = assembleDeclaration config.doubleAsFloat config.reverseMatrixLogic u.cUniformType (checkName u.cUniformName)
-                                        sprintf "var<shared> %s;" def
+                                        sprintf "var<workgroup> %s;" def
                                     )
                                 return String.concat "\r\n" defs
 
@@ -1537,19 +1542,17 @@ module Assembler =
                                             let name = checkName field.cUniformName
 
                                             match field.cUniformType with
-                                            | CType.CPointer(_,ct) ->
+                                            | CType.CPointer(m,ct) ->
                                                 do! Interface.addStorageBuffer {
                                                     ssbGroup = set
                                                     ssbBinding = binding
                                                     ssbName = name.Name
                                                     ssbType = WGSLType.ofCType config.doubleAsFloat config.reverseMatrixLogic ct
-                                                    ssbReadOnly = s.stages.Stage = ShaderStage.Compute
+                                                    ssbReadOnly = s.stages.Stage <> ShaderStage.Compute
                                                 }
                                                 let typ = assembleType config.doubleAsFloat config.reverseMatrixLogic ct
                                                 let! s = State.get
-                                                let access =
-                                                    if s.stages.Stage = ShaderStage.Compute then "read_write"
-                                                    else "read" 
+                                                let access = "read_write"
                                                 return sprintf "%svar<storage, %s> %s : array<%s>;" prefix access name.Name typ.Name
                                             
                                             | ct ->

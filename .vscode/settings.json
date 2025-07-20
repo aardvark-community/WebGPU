@@ -82,6 +82,7 @@
         "span": "cpp",
         "typeindex": "cpp",
         "unordered_set": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "*.hpp11": "cpp"
     }
 }

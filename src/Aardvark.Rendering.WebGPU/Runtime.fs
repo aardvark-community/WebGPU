@@ -8,6 +8,7 @@ type Runtime(device : Device) as this =
     do device.Runtime <- this
     
     interface IRuntime with
+        member this.DebugLabelsEnabled = false
         member this.Blit(src,srcRegion,dst,dstRegion) = failwith "todo"
         member this.Clear(fbo: IFramebuffer,values: ClearValues): unit = failwith "todo"
         member this.Clear(texture: IBackendTexture,values: ClearValues): unit = failwith "todo"
@@ -63,7 +64,7 @@ type Runtime(device : Device) as this =
         member this.ReadPixels(src,attachment,offset,size) = failwith "todo"
         member this.ShaderCachePath = failwith "todo"
         member this.ShaderCachePath with set value = failwith "todo"
-        member this.ShaderDepthRange = Range1d(-1.0, 1.0)
+        member this.ShaderDepthRange = Range1f(-1.0f, 1.0f)
         member this.SupportedPipelineStatistics = Set.empty
         member this.SupportsLayeredShaderInputs = false
         member this.SupportsRaytracing = false

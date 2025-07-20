@@ -7,7 +7,7 @@ open Microsoft.FSharp.Reflection
 open Microsoft.FSharp.NativeInterop
 open Aardvark.Base
 open FSharp.Data.Adaptive
-open FShade.WGSL
+open FShade.GLSL
 open Aardvark.Rendering
 
 #nowarn "9"
@@ -15,7 +15,7 @@ open Aardvark.Rendering
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module WGSLType =
-    open PrimitiveValueConverter.Interop
+    open PrimitiveValueConverter
 
     let toType =
         LookupTable.lookup [
@@ -58,20 +58,20 @@ module WGSLType =
             Mat(3,4,Int(true,32)), typeof<M34i>
             Mat(4,4,Int(true,32)), typeof<M44i>
 
-            Mat(2,2,Float(32)), typeof<M24f> // Matrix rows need to be padded to 4 elements according to std140
-            Mat(2,3,Float(32)), typeof<M24f>
+            //Mat(2,2,Float(32)), typeof<M24f> // Matrix rows need to be padded to 4 elements according to std140
+            //Mat(2,3,Float(32)), typeof<M24f>
             Mat(3,3,Float(32)), typeof<M34f>
             Mat(3,4,Float(32)), typeof<M34f>
             Mat(4,4,Float(32)), typeof<M44f>
 
-            Mat(2,2,Float(64)), typeof<M24f>
-            Mat(2,3,Float(64)), typeof<M24f>
+            //Mat(2,2,Float(64)), typeof<M24f>
+            //Mat(2,3,Float(64)), typeof<M24f>
             Mat(3,3,Float(64)), typeof<M34f>
             Mat(3,4,Float(64)), typeof<M34f>
             Mat(4,4,Float(64)), typeof<M44f>
         ]
 
-    let rec sizeof (t : WGSLType) =
+    let rec sizeof (t : GLSLType) =
         match t with
         | Bool -> 4
         | Int(_,b) -> b / 8
@@ -86,6 +86,8 @@ module WGSLType =
         | Sampler _ -> failwith "[UniformWriter] sampler does not have a size"
         | DynamicArray _ -> failwith "[UniformWriter] dynamic arrays do not have a size"
         | Intrinsic _ -> failwith "[UniformWriter] dynamic arrays do not have a size"
+        | SamplerState -> failwith "[UniformWriter] SamplerStates do not have a size"
+        | Texture _ -> failwith "[UniformWriter] Textures do not have a size"
 
 
 
@@ -540,10 +542,10 @@ module UniformWriters =
                     | :? MethodInfo as mi -> mi.ReturnType
                     | _ -> failwith "[UnformWriter] invalid member info"
 
-        let rec tryCreateWriterInternal (target : FShade.WGSL.WGSLType) (tSource : Type) =
+        let rec tryCreateWriterInternal (target : FShade.GLSL.GLSLType) (tSource : Type) =
             match target with
 
-                | FShade.WGSL.Struct(name, fields, size) ->
+                | FShade.GLSL.Struct(name, fields, size) ->
                     let fieldWriters =
                         if FSharpType.IsUnion(tSource, true) then
                             let cases = FSharpType.GetUnionCases(tSource, true)
@@ -599,7 +601,7 @@ module UniformWriters =
                         | None ->
                             None
 
-                | FShade.WGSL.Array(len, itemType, stride) ->
+                | FShade.GLSL.Array(len, itemType, stride) ->
                     let stride = nativeint stride
                     match tSource with
                         | ArrayOf tSourceElem ->
@@ -638,7 +640,7 @@ module UniformWriters =
                                     None
 
                 | t -> 
-                    let tTarget = WGSLType.toType t
+                    let tTarget = GLSLType.toType t
 
                     let prim = newPrimitiveWriter tTarget
 
@@ -648,9 +650,9 @@ module UniformWriters =
                         let converter = PrimitiveValueConverter.getConverter tSource tTarget
                         newMapWriter tSource tTarget converter prim |> Some
 
-    let cache = System.Collections.Concurrent.ConcurrentDictionary<FShade.WGSL.WGSLType * Type, Option<IWriter>>()
+    let cache = System.Collections.Concurrent.ConcurrentDictionary<FShade.GLSL.GLSLType * Type, Option<IWriter>>()
 
-    let tryGetWriter (offset : int) (tTarget : FShade.WGSL.WGSLType) (tSource : Type) =
+    let tryGetWriter (offset : int) (tTarget : FShade.GLSL.GLSLType) (tSource : Type) =
         let key = (tTarget, tSource)
         let writer = cache.GetOrAdd(key, fun (tTarget, tSource) -> NewWriters.tryCreateWriterInternal tTarget tSource)
 
@@ -660,7 +662,7 @@ module UniformWriters =
             | None ->
                 None
     
-    let getWriter (offset : int) (tTarget : FShade.WGSL.WGSLType) (tSource : Type) =
+    let getWriter (offset : int) (tTarget : FShade.GLSL.GLSLType) (tSource : Type) =
         match tryGetWriter offset tTarget tSource with
             | Some w -> w
             | None -> failwithf "[UniformWriter] could not create UniformWriter for field %A (input-type: %A)" tTarget tSource

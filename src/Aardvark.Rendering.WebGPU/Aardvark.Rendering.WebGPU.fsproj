@@ -21,7 +21,6 @@
     <Compile Include="Runtime.fs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\FShade.WGSL\FShade.WGSL.fsproj" />
     <ProjectReference Include="..\WebGPU\WebGPU.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />

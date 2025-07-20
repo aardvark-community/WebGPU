@@ -407,6 +407,37 @@ type WGSLShaderDecoration =
 
 [<AutoOpen>]
 module private Tools =
+    
+    let private formatName =
+        LookupTable.lookup [
+            // 'bgra8unorm', 'r32float', 'r32sint', 'r32uint', 'r8unorm', 'rg32float', 'rg32sint', 'rg32uint', 'rgba16float', 'rgba16sint',
+            // 'rgba16uint', 'rgba32float', 'rgba32sint', 'rgba32uint', 'rgba8sint', 'rgba8snorm', 'rgba8uint', 'rgba8unorm'
+            //
+            // ImageFormat.Bgra8, "bgra8unorm"
+            // ImageFormat.Rgba8, "rgba8unorm"
+            ImageFormat.R32f, "r32float"
+            ImageFormat.R32i, "r32sint"
+            ImageFormat.R32ui, "r32uint"
+            ImageFormat.R8, "r8unorm"
+            ImageFormat.Rg32f, "rg32float"
+            ImageFormat.Rg32i, "rg32sint"
+            ImageFormat.Rg32ui, "rg32uint"
+            ImageFormat.Rgba16f, "rgba16float"
+            ImageFormat.Rgba16i, "rgba16sint"
+            ImageFormat.Rgba16ui, "rgba16uint"
+            ImageFormat.Rgba32f, "rgba32float"
+            ImageFormat.Rgba32i, "rgba32sint"
+            ImageFormat.Rgba32ui, "rgba32uint"
+            ImageFormat.Rgba8i, "rgba8sint"
+            ImageFormat.Rgba8Snorm, "rgba8snorm"
+            ImageFormat.Rgba8ui, "rgba8uint"
+            ImageFormat.Rgba8, "rgba8unorm"
+            
+            
+            
+            // TODO
+        ]
+    
     let lines (str : string) =
         str.Split([| "\r\n" |], StringSplitOptions.None) :> seq<_>
              
@@ -454,10 +485,14 @@ module private Tools =
                     | _ -> failwith "unsupported sampler dimension"
 
             let msSuffix = if t.isMS then "multisampled_" else ""
-            let typeArgSuffix = 
-                match t.valueType with
-                    | Vec(_,Int _) -> "<i32>"
-                    | _ -> "<f32>"
+            let typeArgSuffix =
+                match t.format with
+                | Some fmt ->
+                    sprintf "<%s, read_write>" (formatName fmt)
+                | None ->
+                    match t.valueType with
+                    | Vec(_,Int _) -> "<i32, read_write>"
+                    | _ -> "<f32, read_write>"
                  
             if t.isArray then $"texture_{msSuffix}{dimStr}_array{typeArgSuffix}"
             else $"texture_storage_{msSuffix}{dimStr}{typeArgSuffix}"

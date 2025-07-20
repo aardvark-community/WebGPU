@@ -3,7 +3,7 @@ namespace Aardvark.Rendering.WebGPU
 open System.Runtime.CompilerServices
 open Aardvark.Base
 open FShade
-open FShade.WGSL
+open FShade.GLSL
 open global.WebGPU
 open Aardvark.Rendering
 
@@ -14,11 +14,11 @@ type PipelineLayout(layout : WebGPU.PipelineLayout, groupLayouts : BindGroupLayo
 
 [<RequireQualifiedAccess>]   
 type WGSLBindGroupEntry =
-    | StorageBuffer of WGSLStorageBuffer
-    | StorageTexture of WGSLImage
-    | UniformBuffer of WGSLUniformBuffer
-    | Texture of WGSLTexture
-    | Sampler of WGSLSampler
+    | StorageBuffer of GLSL.GLSLStorageBuffer
+    | StorageTexture of GLSL.GLSLImage
+    | UniformBuffer of GLSL.GLSLUniformBuffer
+    | Texture of GLSL.GLSLTexture
+    | Sampler of GLSL.GLSLSamplerState
                 
 type WGSLBindGroupLayout(entries : MapExt<int, MapExt<int, WGSLBindGroupEntry>>) =
     
@@ -38,28 +38,36 @@ type WGSLBindGroupLayout(entries : MapExt<int, MapExt<int, WGSLBindGroupEntry>>)
 type WebGPUPipelineLayoutExtensions private() =
         
     [<Extension>]
-    static member CreateBindGroupLayouts (device : Device, iface : FShade.WGSL.WGSLProgramInterface) : MapExt<int, BindGroupLayout> * WGSLBindGroupLayout =
+    static member CreateBindGroupLayouts (device : Device, iface : FShade.GLSL.GLSLProgramInterface) : MapExt<int, BindGroupLayout> * WGSLBindGroupLayout =
         
         let mutable groupDescriptors = MapExt.empty
         let mutable frontendDescriptors = MapExt.empty
         let mutable stages = WebGPU.ShaderStage.None
+        
+        let mutable storageBufferUsers = MapExt.empty
+        
         for slot in iface.shaders.Slots |> MapExt.keys do
-            match slot with
-            | ShaderSlot.Vertex -> 
-                stages <- stages ||| WebGPU.ShaderStage.Vertex
-            | ShaderSlot.Fragment ->
-                stages <- stages ||| WebGPU.ShaderStage.Fragment
-            | ShaderSlot.Compute ->
-                stages <- stages ||| WebGPU.ShaderStage.Compute
-            | _ ->
-                ()
+            let stage =
+                match slot with
+                | ShaderSlot.Vertex -> WebGPU.ShaderStage.Vertex
+                | ShaderSlot.Fragment -> WebGPU.ShaderStage.Fragment
+                | ShaderSlot.Compute -> WebGPU.ShaderStage.Compute
+                | _ -> WebGPU.ShaderStage.None
+                
+            
+            for b in iface.shaders.[slot].shaderStorageBuffers do
+                storageBufferUsers <- storageBufferUsers |> MapExt.alter b (function
+                    | Some o -> Some (o ||| stage)
+                    | None -> Some stage
+                )
+            stages <- stages ||| stage
             
         for KeyValue(_, b) in iface.images do
             let sampleType =
                 match b.imageType.valueType with
-                | WGSL.WGSLType.Int(true,_) -> TextureSampleType.Sint
-                | WGSL.WGSLType.Int(false,_) -> TextureSampleType.Uint
-                | WGSL.WGSLType.Float _ -> TextureSampleType.Float
+                | GLSL.GLSLType.Int(true,_) -> TextureSampleType.Sint
+                | GLSL.GLSLType.Int(false,_) -> TextureSampleType.Uint
+                | GLSL.GLSLType.Float _ -> TextureSampleType.Float
                 | _ -> TextureSampleType.Undefined
             
             let viewDimension =
@@ -70,52 +78,60 @@ type WebGPUPipelineLayoutExtensions private() =
                 | SamplerDimension.SamplerCube -> TextureViewDimension.Cube
                 | _ -> TextureViewDimension.Undefined
                 
+            let format =
+                match b.imageType.format with
+                | Some ImageFormat.Rgba8 -> WebGPU.TextureFormat.RGBA8Unorm
+                | Some ImageFormat.Rgba32f -> WebGPU.TextureFormat.RGBA32Float
+                | Some ImageFormat.R32f -> WebGPU.TextureFormat.R32Float
+                | Some ImageFormat.R32ui -> WebGPU.TextureFormat.R32Uint
+                | _ -> WebGPU.TextureFormat.Undefined
+                
             groupDescriptors <-
-                groupDescriptors |> MapExt.alter b.imageGroup (fun g ->
+                groupDescriptors |> MapExt.alter b.imageSet (fun g ->
                     let g = 
                         match g with
                         | Some g -> g
                         | None -> MapExt.empty
                     g |> MapExt.add b.imageBinding (
-                        BindGroupLayoutEntry.Texture(b.imageBinding, stages, {
-                            TextureBindingLayout.Multisampled = b.imageType.isMS
-                            TextureBindingLayout.SampleType = sampleType
-                            TextureBindingLayout.ViewDimension = viewDimension
+                        BindGroupLayoutEntry.StorageTexture(b.imageBinding, stages, {
+                            StorageTextureBindingLayout.ViewDimension = viewDimension
+                            StorageTextureBindingLayout.Access = StorageTextureAccess.ReadWrite
+                            StorageTextureBindingLayout.Format = format
                         })
                     ) |> Some
                 )
             frontendDescriptors <-
-                frontendDescriptors |> MapExt.alter b.imageGroup (fun g ->
+                frontendDescriptors |> MapExt.alter b.imageSet (fun g ->
                     g |> Option.defaultValue MapExt.empty |> MapExt.add b.imageBinding (WGSLBindGroupEntry.StorageTexture b) |> Some
                 )
             
             
                
-        for KeyValue(_, b) in iface.samplers do
-            groupDescriptors <-
-                groupDescriptors |> MapExt.alter b.samplerGroup (fun g ->
-                    let g = 
-                        match g with
-                        | Some g -> g
-                        | None -> MapExt.empty
-                    g |> MapExt.add b.samplerBinding (
-                        BindGroupLayoutEntry.Sampler(b.samplerBinding, stages, SamplerBindingType.Filtering)
-                    ) |> Some
-                )
-            frontendDescriptors <-
-                frontendDescriptors |> MapExt.alter b.samplerGroup (fun g ->
-                    g |> Option.defaultValue MapExt.empty |> MapExt.add b.samplerBinding (WGSLBindGroupEntry.Sampler b) |> Some
-                )
+        // for KeyValue(_, b) in iface.samplers do
+        //     groupDescriptors <-
+        //         groupDescriptors |> MapExt.alter b.samplerSet (fun g ->
+        //             let g = 
+        //                 match g with
+        //                 | Some g -> g
+        //                 | None -> MapExt.empty
+        //             g |> MapExt.add b.samplerBinding (
+        //                 BindGroupLayoutEntry.Sampler(b.samplerBinding, stages, SamplerBindingType.Filtering)
+        //             ) |> Some
+        //         )
+        //     frontendDescriptors <-
+        //         frontendDescriptors |> MapExt.alter b.samplerSet (fun g ->
+        //             g |> Option.defaultValue MapExt.empty |> MapExt.add b.samplerBinding (WGSLBindGroupEntry.Sampler b) |> Some
+        //         )
                 
         for KeyValue(_, t) in iface.textures do
             let sampleType =
                 match t.textureType.valueType with
-                | WGSL.WGSLType.Int(true,_) -> TextureSampleType.Sint
-                | WGSL.WGSLType.Int(false,_) -> TextureSampleType.Uint
-                | WGSL.WGSLType.Float _ -> TextureSampleType.Float
-                | WGSL.WGSLType.Vec(_, WGSL.WGSLType.Float _) -> TextureSampleType.Float
-                | WGSL.WGSLType.Vec(_, WGSL.WGSLType.Int(true,_)) -> TextureSampleType.Sint
-                | WGSL.WGSLType.Vec(_, WGSL.WGSLType.Int(false,_)) -> TextureSampleType.Uint
+                | GLSL.GLSLType.Int(true,_) -> TextureSampleType.Sint
+                | GLSL.GLSLType.Int(false,_) -> TextureSampleType.Uint
+                | GLSL.GLSLType.Float _ -> TextureSampleType.Float
+                | GLSL.GLSLType.Vec(_, GLSL.GLSLType.Float _) -> TextureSampleType.Float
+                | GLSL.GLSLType.Vec(_, GLSL.GLSLType.Int(true,_)) -> TextureSampleType.Sint
+                | GLSL.GLSLType.Vec(_, GLSL.GLSLType.Int(false,_)) -> TextureSampleType.Uint
                 | _ -> TextureSampleType.Undefined
             
             let viewDimension =
@@ -127,7 +143,7 @@ type WebGPUPipelineLayoutExtensions private() =
                 | _ -> TextureViewDimension.Undefined
                 
             groupDescriptors <-
-                groupDescriptors |> MapExt.alter t.textureGroup (fun g ->
+                groupDescriptors |> MapExt.alter t.textureSet (fun g ->
                     let g = 
                         match g with
                         | Some g -> g
@@ -141,34 +157,69 @@ type WebGPUPipelineLayoutExtensions private() =
                     ) |> Some
                 )
             frontendDescriptors <-
-                frontendDescriptors |> MapExt.alter t.textureGroup (fun g ->
+                frontendDescriptors |> MapExt.alter t.textureSet (fun g ->
                     g |> Option.defaultValue MapExt.empty |> MapExt.add t.textureBinding (WGSLBindGroupEntry.Texture t) |> Some
                 )
                
+        
+        for KeyValue(_, s) in iface.samplerStates do
+            groupDescriptors <-
+                groupDescriptors |> MapExt.alter s.samplerSet (fun g ->
+                    let g = 
+                        match g with
+                        | Some g -> g
+                        | None -> MapExt.empty
+                    g |> MapExt.add s.samplerBinding (
+                        BindGroupLayoutEntry.Sampler(s.samplerBinding, stages, SamplerBindingType.Filtering)
+                    ) |> Some
+                )
+            frontendDescriptors <-
+                frontendDescriptors |> MapExt.alter s.samplerSet (fun g ->
+                    g |> Option.defaultValue MapExt.empty |> MapExt.add s.samplerBinding (WGSLBindGroupEntry.Sampler s) |> Some
+                )
+               
+               
         for KeyValue(_, b) in iface.storageBuffers do
             groupDescriptors <-
-                groupDescriptors |> MapExt.alter b.ssbGroup (fun g ->
+                groupDescriptors |> MapExt.alter b.ssbSet (fun g ->
                     let g = 
                         match g with
                         | Some g -> g
                         | None -> MapExt.empty
                         
+                    let stages =
+                        match MapExt.tryFind b.ssbName storageBufferUsers with
+                        | Some s -> s
+                        | None -> stages
+                        
+                    // TODO: fshade needs to report using stages as well!!!!
+                    let stages =
+                        if stages.HasFlag WebGPU.ShaderStage.Vertex then stages &&& ~~~WebGPU.ShaderStage.Vertex
+                        else stages
+                        
+                    let typ = BufferBindingType.Storage
+                        // if b.ssbAccess.HasFlag(FShade.StorageAccess.Write) then
+                        //     BufferBindingType.Storage
+                        // else
+                        //     BufferBindingType.ReadOnlyStorage
+                           
+                        
                     g |> MapExt.add b.ssbBinding (
                         BindGroupLayoutEntry.Buffer(b.ssbBinding, stages, {
-                            BufferBindingLayout.Type = (if b.ssbReadOnly then BufferBindingType.ReadOnlyStorage else BufferBindingType.Storage)
+                            BufferBindingLayout.Type = typ
                             BufferBindingLayout.HasDynamicOffset = false
                             BufferBindingLayout.MinBindingSize = 0L
                         })
                     ) |> Some
                 )
             frontendDescriptors <-
-                frontendDescriptors |> MapExt.alter b.ssbGroup (fun g ->
+                frontendDescriptors |> MapExt.alter b.ssbSet (fun g ->
                     g |> Option.defaultValue MapExt.empty |> MapExt.add b.ssbBinding (WGSLBindGroupEntry.StorageBuffer b) |> Some
                 )
         
         for KeyValue(_, b) in iface.uniformBuffers do
             groupDescriptors <-
-                groupDescriptors |> MapExt.alter b.ubGroup (fun g ->
+                groupDescriptors |> MapExt.alter b.ubSet (fun g ->
                     let g = 
                         match g with
                         | Some g -> g
@@ -183,7 +234,7 @@ type WebGPUPipelineLayoutExtensions private() =
                 )
         
             frontendDescriptors <-
-                frontendDescriptors |> MapExt.alter b.ubGroup (fun g ->
+                frontendDescriptors |> MapExt.alter b.ubSet (fun g ->
                     g |> Option.defaultValue MapExt.empty |> MapExt.add b.ubBinding (WGSLBindGroupEntry.UniformBuffer b) |> Some
                 )
        
@@ -197,7 +248,7 @@ type WebGPUPipelineLayoutExtensions private() =
         groupLayouts, WGSLBindGroupLayout(frontendDescriptors)
  
     [<Extension>]
-    static member CreatePipelineLayout (device : Device, iface : FShade.WGSL.WGSLProgramInterface) =
+    static member CreatePipelineLayout (device : Device, iface : FShade.GLSL.GLSLProgramInterface) =
         let groupLayouts, _  = device.CreateBindGroupLayouts(iface)
         let maxKey = MapExt.tryMax groupLayouts
             

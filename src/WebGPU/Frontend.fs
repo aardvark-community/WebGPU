@@ -1506,6 +1506,7 @@ type Buffer internal(device : Device, handle : nativeint) =
             let mutable res = WebGPU.Raw.WebGPU.BufferGetMapState(handle)
             res
         )
+    let mutable name : string = null
     member x.Handle = handle
     member x.Device = device
     override x.ToString() = $"Buffer(0x%08X{handle})"
@@ -1517,12 +1518,15 @@ type Buffer internal(device : Device, handle : nativeint) =
     static member Null = nullptr
     interface Aardvark.Rendering.IBufferRange with
         member x.Buffer = x
-        member x.Offset = 0n
-        member x.SizeInBytes = nativeint x.Size
+        member x.Offset = 0UL
+        member x.SizeInBytes = uint64 x.Size
     
     interface Aardvark.Rendering.IBackendBuffer with
-        member x.Handle = handle
+        member x.Handle = uint64 handle
         member x.Runtime = device.Runtime
+        member x.Name
+            with get() = name
+            and set(v) = name <- v
     member this.MapAsync(mode : MapMode, offset : int64, size : int64, callbackInfo : BufferMapCallbackInfo) : Future =
         callbackInfo.Pin(device, fun _callbackInfoPtr ->
             let res = WebGPU.Raw.WebGPU.BufferMapAsync(handle, mode, unativeint(offset), unativeint(size), (if NativePtr.toNativeInt _callbackInfoPtr = 0n then Unchecked.defaultof<_> else NativePtr.read _callbackInfoPtr))

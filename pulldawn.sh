@@ -44,7 +44,7 @@ python tools/fetch_dawn_dependencies.py --use-test-deps
 mkdir -p out/Release
 cd out/Release
 
-cmake -S ../.. -B . -DCMAKE_BUILD_TYPE=Release $ARCH_FLAGS -DCMAKE_INSTALL_PREFIX=./blabber || { echo 'cmake failed' ; exit 1; }
+cmake -S ../.. -B . -DCMAKE_BUILD_TYPE=Release $ARCH_FLAGS -DCMAKE_INSTALL_PREFIX=./blabber -DTINT_BUILD_SPV_READER=1 || { echo 'cmake failed' ; exit 1; }
 make webgpu_dawn
 
 if [ "$OS" = "Darwin" ]; then

@@ -2199,7 +2199,8 @@ module Frontend =
                     printfn "                for a in afterRun do do! a()"
                     printfn "                afterRun <- null"
                     printfn "        }"
-                    
+                elif o.Name = "buffer" then
+                    printfn "    let mutable name : string = null"
                 printfn "    member x.Handle = handle"
                 
                 
@@ -2232,12 +2233,15 @@ module Frontend =
                 if o.Name = "buffer" then
                     printfn "    interface Aardvark.Rendering.IBufferRange with"
                     printfn "        member x.Buffer = x"
-                    printfn "        member x.Offset = 0n"
-                    printfn "        member x.SizeInBytes = nativeint x.Size"
+                    printfn "        member x.Offset = 0UL"
+                    printfn "        member x.SizeInBytes = uint64 x.Size"
                     printfn "    "
                     printfn "    interface Aardvark.Rendering.IBackendBuffer with"
-                    printfn "        member x.Handle = handle"
+                    printfn "        member x.Handle = uint64 handle"
                     printfn "        member x.Runtime = device.Runtime"
+                    printfn "        member x.Name"
+                    printfn "            with get() = name"
+                    printfn "            and set(v) = name <- v"
                 
                 for m in o.Methods do
                     match m with

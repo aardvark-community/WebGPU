@@ -14,6 +14,7 @@ type RenderTask(device : Device, signature : IFramebufferSignature, objects : as
     let id = RenderTaskId.New()
     let all = System.Collections.Generic.HashSet<PreparedMultiRenderObject>()
     let mutable frameId = 0UL
+    let mutable name : string = null
     
     member x.FramebufferSignature = signature
         
@@ -94,6 +95,9 @@ type RenderTask(device : Device, signature : IFramebufferSignature, objects : as
         )
     
     interface IRenderTask with
+        member this.Name
+            with get() = name
+            and set v = name <- v
         member this.Dispose() = ()
         member this.FrameId = frameId
         member this.FramebufferSignature = Some (signature :> IFramebufferSignature)
@@ -109,6 +113,7 @@ type ClearTask(device : Device, signature : IFramebufferSignature, values : aval
     
     let id = RenderTaskId.New()
     let mutable frameId = 0UL
+    let mutable name : string = null
     
     member x.FramebufferSignature = signature
         
@@ -217,6 +222,9 @@ type ClearTask(device : Device, signature : IFramebufferSignature, values : aval
         member this.Runtime = Some device.Runtime
         member this.Update(var0,var1) = ()
         member this.Use(var0) = var0()
+        member this.Name
+            with get() = name
+            and set v = name <- v
     
     
         

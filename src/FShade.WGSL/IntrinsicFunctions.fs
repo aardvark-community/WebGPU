@@ -1811,7 +1811,7 @@ module IntrinsicFunctions =
 
             let functionName =
                 match name with
-                | "get_Size" -> "textureDimensions({0})"
+                | "get_Size" -> "vec2i(textureDimensions({0}))"
                 | "get_Samples" -> "textureNumSamples({0})"
                 | "Load" | "get_Item" -> sprintf "textureLoad(%s)" (loadStoreArgs())
                 | "Store" | "set_Item" -> sprintf "textureStore(%s)" (loadStoreArgs())
@@ -1917,16 +1917,16 @@ module IntrinsicFunctions =
             let functionName =
                 match name with
                 | "get_Size" ->
-                    if isMS then "textureDimensions({0})"
-                    else "textureDimensions({0}, 0)"
+                    if isMS then "vec2i(textureDimensions({0}))"
+                    else "vec2i(textureDimensions({0}, 0))"
 
                 | "get_MipMapLevels" ->
                     if isMS then "1"
                     else "textureNumLevels({0})"
 
                 | "GetSize" ->
-                    if isMS then "textureDimensions({0})"
-                    else "textureDimensions({0}, {1})"
+                    if isMS then "vec2i(textureDimensions({0}))"
+                    else "vec2i(textureDimensions({0}, {1}))"
 
                 | "get_Samples" ->
                     "textureNumSamples({0})"

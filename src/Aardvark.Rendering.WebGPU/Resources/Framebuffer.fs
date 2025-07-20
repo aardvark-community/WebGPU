@@ -15,7 +15,7 @@ type Framebuffer (signature : IFramebufferSignature, size : V2i, colorAttachment
         member x.Dispose() = x.Dispose()
     
     interface IFramebuffer with
-        member x.GetHandle(o) = null
+        member x.Handle = 0UL
         member x.Signature = signature
         member x.Attachments = Map.empty
         member x.Size = size

@@ -17,7 +17,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Aardvark.Application.Slim.WebGPU\Aardvark.Application.Slim.WebGPU.fsproj" />
     <ProjectReference Include="..\Aardvark.Rendering.WebGPU\Aardvark.Rendering.WebGPU.fsproj" />
-    <ProjectReference Include="..\FShade.WGSL\FShade.WGSL.fsproj" />
     <ProjectReference Include="..\WebGPU\WebGPU.fsproj" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />

@@ -339,11 +339,11 @@ type WebGPUExtensions private() =
         tcs.Task
 
     [<Extension>]
-    static member CompileShader(device : Device, shaderCode : string) =
+    static member CompileShader(device : Device, shaderCode : string, ?label : string) =
         
         let shader =
             device.CreateShaderModule {
-                Label = null
+                Label = defaultArg label null
                 Next = { ShaderSourceWGSL.Next = null; ShaderSourceWGSL.Code = shaderCode }
             }
             
@@ -365,6 +365,33 @@ type WebGPUExtensions private() =
         shader
         
 
+
+    [<Extension>]
+    static member CompileShader(device : Device, spirv : uint32[]) =
+        
+        let shader =
+            device.CreateShaderModule {
+                Label = null
+                Next = { ShaderSourceSPIRV.Next = null; ShaderSourceSPIRV.Code = spirv }
+            }
+            
+        let info = shader.GetCompilationInfo().Result
+        let hasErrors = info.Messages |> Array.exists (fun m -> m.Type <= CompilationMessageType.Error)
+        let hasWarnings = info.Messages |> Array.exists (fun m -> m.Type <= CompilationMessageType.Warning)
+        if hasWarnings then
+            Report.Begin "shader compile"
+            for m in info.Messages do
+                let str = sprintf "@%d,%d: %s" m.LineNum m.LinePos m.Message
+                for line in lineRx.Split str do
+                    match m.Type with
+                    | CompilationMessageType.Error -> Report.ErrorNoPrefix("{0}", line)
+                    | CompilationMessageType.Warning -> Report.WarnNoPrefix("{0}", line)
+                    | _ -> Report.Line("{0}", line)
+            Report.End() |> ignore
+        
+        if hasErrors then failwith $"shader compilation failed: {info.Messages}"
+        shader
+        
 
     
 [<AbstractClass; Sealed>]

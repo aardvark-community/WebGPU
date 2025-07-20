@@ -13,11 +13,11 @@ endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(FILES WebGPU.cpp)
+set(FILES WebGPU.cpp ShaderTrans.cpp)
 set(DAWN_LIBRARY_NAME "")
 if(APPLE)
     set(CMAKE_SHARED_LINKER_FLAGS "-O3 -flto=thin -dead_strip -framework CoreFoundation -framework QuartzCore -framework Metal")
-    set(FILES WebGPU.cpp utils_metal.mm)
+    set(FILES WebGPU.cpp ShaderTrans.cpp utils_metal.mm)
     set(DAWN_LIBRARY_NAME "libwebgpu_dawn.dylib")
 elseif(UNIX)
     set(CMAKE_SHARED_LINKER_FLAGS "-O3 -Wl,--gc-sections -Wl,--strip-all")
@@ -41,9 +41,9 @@ elseif(UNIX)
     set_target_properties(WebGPUNative PROPERTIES INSTALL_RPATH "$ORIGIN")
 endif()
 
-
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../include/dawn)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../include/dawn ${CMAKE_CURRENT_SOURCE_DIR}/tmp/dawn)
 target_link_libraries(WebGPUNative PRIVATE  ${DAWN_LIBRARY_NAME})
+
 
 SET(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/Native/WebGPU/") 
 install(TARGETS WebGPUNative DESTINATION ${OS}/${ARCH})

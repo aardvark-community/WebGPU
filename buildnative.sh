@@ -18,8 +18,8 @@ fi
 echo "$OS $ARCH"
 
 cd src/WebGPUNative
-rm -dfr build
-mkdir build
+# rm -dfr build
+# mkdir build
 cd build
 cmake -S .. -B . -DCMAKE_BUILD_TYPE=Release $ARCH_FLAGS
 make

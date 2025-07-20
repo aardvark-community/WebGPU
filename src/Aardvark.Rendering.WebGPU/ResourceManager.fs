@@ -140,11 +140,11 @@ module AdaptiveRenderPipelineDescription =
                         Some (p.paramLocation, { Type = t; Stride = stride; PerInstance = perInstance })
                 
                 match o.VertexAttributes.TryGetAttribute (Symbol.Create p.paramSemantic) with
-                | Some att -> ofBufferView false att
-                | None ->
+                | ValueSome att -> ofBufferView false att
+                | ValueNone ->
                     match o.InstanceAttributes.TryGetAttribute (Symbol.Create p.paramSemantic) with
-                    | Some att -> ofBufferView true att
-                    | None -> None
+                    | ValueSome att -> ofBufferView true att
+                    | ValueNone -> None
                         
             ) |> MapExt.ofList
         
@@ -170,15 +170,11 @@ type AdaptiveBindGroupEntry =
 type ResourceManager(device : Device) =
     let bufferCache = ConcurrentDict<BufferUsage * IAdaptiveValue, AdaptiveResource<Buffer>>(Dict())
     let pipelineCache = ConcurrentDict<AdaptiveRenderPipelineDescription, AdaptiveResource<RenderPipeline>>(Dict())
-    let uboCache = ConcurrentDict<FShade.WGSL.WGSLUniformBuffer * list<IAdaptiveValue>, AdaptiveResource<Buffer>>(Dict())
+    let uboCache = ConcurrentDict<FShade.GLSL.GLSLUniformBuffer * list<IAdaptiveValue>, AdaptiveResource<Buffer>>(Dict())
     let bindGroupsCache = ConcurrentDict<MapExt<int, BindGroupLayout> * array<list<AdaptiveBindGroupEntry>>, AdaptiveResource<BindGroup[]>>(Dict())
     
-    let blitters = Dict<TextureFormat, Blitter>()
-    
     let getBlitter (fmt : TextureFormat) =
-        lock blitters (fun () ->
-            blitters.GetOrCreate(fmt, fun fmt -> new Blitter(device, fmt))    
-        )
+        Blitter.Get(device, fmt)
     
     static let acquire (v : IAdaptiveValue) =
         match v with
@@ -556,7 +552,7 @@ type ResourceManager(device : Device) =
             { new AdaptiveResource<RenderPipeline>() with
                 override x.Create(cmd, token) =
                     let layout = desc.Shader.PipelineLayout
-                    let shader = desc.Shader.ShaderModule
+                    let shaders = desc.Shader.ShaderModules
                     
                     let buffers =
                         match MapExt.tryMax desc.InputDescriptions with
@@ -688,14 +684,14 @@ type ResourceManager(device : Device) =
                             Label = null
                             Layout = layout
                             Vertex = {
-                                Module = shader
-                                EntryPoint = "vertex"
+                                Module = shaders.[FShade.ShaderStage.Vertex]
+                                EntryPoint = "main"
                                 Buffers = buffers
                                 Constants = [||]
                             }
                             Fragment = {
-                                Module = shader
-                                EntryPoint = "fragment"
+                                Module = shaders.[FShade.ShaderStage.Fragment]
+                                EntryPoint = "main"
                                 Targets = targets
                                 Constants = [||]
                             }
@@ -748,15 +744,15 @@ type ResourceManager(device : Device) =
             }
         )
                 
-    member x.CreateUniformBuffer(template : FShade.WGSL.WGSLUniformBuffer, uniforms : IUniformProvider) =
+    member x.CreateUniformBuffer(template : FShade.GLSL.GLSLUniformBuffer, uniforms : IUniformProvider) =
         let args = 
             template.ubFields |> List.map (fun f ->
                 match uniforms.TryGetUniform(Ag.Scope.Root, Symbol.Create f.ufName)  with
-                | Some v -> v
-                | None ->
+                | ValueSome v -> v
+                | ValueNone ->
                     match Uniforms.tryGetDerivedUniform f.ufName uniforms with
-                    | Some v -> v
-                    | None ->
+                    | ValueSome v -> v
+                    | ValueNone ->
                         failwith $"missing uniform: {f.ufName}"
             )
         uboCache.GetOrCreate((template, args), fun (template, args) ->
@@ -804,36 +800,36 @@ type ResourceManager(device : Device) =
         
         for KeyValue(name, ubo) in iface.uniformBuffers do
             let b = x.CreateUniformBuffer(ubo, uniforms)
-            groupBindings.[ubo.ubGroup] <- (AdaptiveBindGroupEntry.Buffer(ubo.ubBinding, b)) :: groupBindings.[ubo.ubGroup]
+            groupBindings.[ubo.ubSet] <- (AdaptiveBindGroupEntry.Buffer(ubo.ubBinding, b)) :: groupBindings.[ubo.ubSet]
         
         for KeyValue(name, ssb) in iface.storageBuffers do
             match uniforms.TryGetUniform(Ag.Scope.Root, Symbol.Create ssb.ssbName) with
-            | Some data ->
+            | ValueSome data ->
                 if typeof<IBuffer>.IsAssignableFrom data.ContentType then
                     let buffer = x.CreateBuffer(BufferUsage.Storage, data)
-                    groupBindings.[ssb.ssbGroup] <- (AdaptiveBindGroupEntry.Buffer(ssb.ssbBinding, buffer)) :: groupBindings.[ssb.ssbGroup]
+                    groupBindings.[ssb.ssbSet] <- (AdaptiveBindGroupEntry.Buffer(ssb.ssbBinding, buffer)) :: groupBindings.[ssb.ssbSet]
                 elif data.ContentType.IsArray then
                     let srcType = data.ContentType.GetElementType()
                     let dstType = WGSLType.toType ssb.ssbType
                     let conv = PrimitiveValueConverter.getArrayConverter srcType dstType
                     let b = x.CreateBuffer(BufferUsage.Storage, AVal.custom (fun t -> ArrayBuffer(conv(data.GetValueUntyped(t) :?> System.Array))))              
-                    groupBindings.[ssb.ssbGroup] <- (AdaptiveBindGroupEntry.Buffer(ssb.ssbBinding, b)) :: groupBindings.[ssb.ssbGroup]
+                    groupBindings.[ssb.ssbSet] <- (AdaptiveBindGroupEntry.Buffer(ssb.ssbBinding, b)) :: groupBindings.[ssb.ssbSet]
                 else
                     failwith $"unsupported storage buffer type: {data.ContentType}"
-            | None ->
+            | ValueNone ->
                 ()
         
         for KeyValue(name, tex) in iface.images do
             match uniforms.TryGetUniform(Ag.Scope.Root, Symbol.Create tex.imageName) with
-            | Some data ->
+            | ValueSome data ->
                 let texture = x.CreateTexture(data)
                 let view = x.CreateStorageTextureView(texture, 0)
-                groupBindings.[tex.imageGroup] <- (AdaptiveBindGroupEntry.TextureView(tex.imageBinding, view)) :: groupBindings.[tex.imageGroup]
-            | None ->
+                groupBindings.[tex.imageSet] <- (AdaptiveBindGroupEntry.TextureView(tex.imageBinding, view)) :: groupBindings.[tex.imageSet]
+            | ValueNone ->
                 ()
         
         for KeyValue(name, tex) in iface.textures do
-            let sem = tex.textureNames |> List.head // TODO: multiple????
+            let sem = tex.textureSemantics |> List.head // TODO: multiple????
             let viewDim =
                 match tex.textureType.dimension with
                 | FShade.SamplerDimension.Sampler1d -> TextureViewDimension.D1D
@@ -842,16 +838,16 @@ type ResourceManager(device : Device) =
                 | _ -> TextureViewDimension.D3D
                 
             match uniforms.TryGetUniform(Ag.Scope.Root, Symbol.Create sem) with
-            | Some data ->
+            | ValueSome data ->
                 let texture = x.CreateTexture(data)
                 let view = x.CreateSampledTextureView(texture, viewDim)
-                groupBindings.[tex.textureGroup] <- (AdaptiveBindGroupEntry.TextureView(tex.textureBinding, view)) :: groupBindings.[tex.textureGroup]
-            | None ->
+                groupBindings.[tex.textureSet] <- (AdaptiveBindGroupEntry.TextureView(tex.textureBinding, view)) :: groupBindings.[tex.textureSet]
+            | ValueNone ->
                 ()
         
-        for KeyValue(name, sam) in iface.samplers do
-            let sampler = program.Samplers.[sam.samplerGroup].[sam.samplerBinding]
-            groupBindings.[sam.samplerGroup] <- (AdaptiveBindGroupEntry.Sampler(sam.samplerBinding, sampler)) :: groupBindings.[sam.samplerGroup]
+        for KeyValue(name, sam) in iface.samplerStates do
+            let sampler = program.Samplers.[sam.samplerSet].[sam.samplerBinding]
+            groupBindings.[sam.samplerSet] <- (AdaptiveBindGroupEntry.Sampler(sam.samplerBinding, sampler)) :: groupBindings.[sam.samplerSet]
             
         bindGroupsCache.GetOrCreate((program.BindGroupLayouts, groupBindings), fun (bindGroupLayouts, groupBindings) ->
             let program = ()
@@ -930,11 +926,11 @@ type ResourceManager(device : Device) =
                         Some (p.paramLocation, int64 att.Offset, buffer)
                 
                 match vertexAttributes.TryGetAttribute (Symbol.Create p.paramSemantic) with
-                | Some att -> ofBufferView false att
-                | None ->
+                | ValueSome att -> ofBufferView false att
+                | ValueNone ->
                     match instanceAttributes.TryGetAttribute (Symbol.Create p.paramSemantic) with
-                    | Some att -> ofBufferView true att
-                    | None ->
+                    | ValueSome att -> ofBufferView true att
+                    | ValueNone ->
                         None
                 
                 

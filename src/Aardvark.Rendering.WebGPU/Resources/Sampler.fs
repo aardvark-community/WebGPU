@@ -3,7 +3,7 @@ namespace Aardvark.Rendering.WebGPU
 open System.Runtime.CompilerServices
 open Aardvark.Base
 open FShade
-open FShade.WGSL
+open FShade.GLSL
 open global.WebGPU
 open Aardvark.Rendering
 open System.IO
@@ -33,8 +33,8 @@ type WebGPUSamplerExtensions private() =
             AddressModeU = samplerDesc.AddressU |> Option.defaultValue FShade.WrapMode.Wrap |> Translations.AddressMode.ofFShade
             AddressModeV = samplerDesc.AddressV |> Option.defaultValue FShade.WrapMode.Wrap |> Translations.AddressMode.ofFShade
             AddressModeW = samplerDesc.AddressW |> Option.defaultValue FShade.WrapMode.Wrap |> Translations.AddressMode.ofFShade
-            LodMinClamp = samplerDesc.MinLod |> Option.defaultValue 0.0 |> float32
-            LodMaxClamp = samplerDesc.MaxLod |> Option.defaultValue 1000.0 |> float32
+            LodMinClamp = samplerDesc.MinLod |> Option.defaultValue 0.0f 
+            LodMaxClamp = samplerDesc.MaxLod |> Option.defaultValue 1000.0f
             Compare = samplerDesc.Comparison |> Option.map Translations.CompareFunction.ofFShade |> Option.defaultValue CompareFunction.Undefined
             MaxAnisotropy = uint16 anisotropy
         }
