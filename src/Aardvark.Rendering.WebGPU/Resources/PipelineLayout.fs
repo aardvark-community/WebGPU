@@ -42,7 +42,6 @@ type WebGPUPipelineLayoutExtensions private() =
         
         let mutable groupDescriptors = MapExt.empty
         let mutable frontendDescriptors = MapExt.empty
-        let mutable stages = WebGPU.ShaderStage.None
         
         
         let toStage (stage : FShade.ShaderStage) =
@@ -51,6 +50,12 @@ type WebGPUPipelineLayoutExtensions private() =
             | FShade.ShaderStage.Fragment -> WebGPU.ShaderStage.Fragment
             | FShade.ShaderStage.Compute -> WebGPU.ShaderStage.Compute
             | _ -> WebGPU.ShaderStage.None
+        
+        let inline getStages (name : string) =
+            let mutable user = WebGPU.ShaderStage.None
+            for stage in iface.GetUniformStages(name) do
+                user <- (toStage stage) ||| user
+            user
         
         for KeyValue(_, b) in iface.images do
             let sampleType =
@@ -83,7 +88,7 @@ type WebGPUPipelineLayoutExtensions private() =
                         | Some g -> g
                         | None -> MapExt.empty
                     g |> MapExt.add b.imageBinding (
-                        BindGroupLayoutEntry.StorageTexture(b.imageBinding, stages, {
+                        BindGroupLayoutEntry.StorageTexture(b.imageBinding, getStages b.imageName, {
                             StorageTextureBindingLayout.ViewDimension = viewDimension
                             StorageTextureBindingLayout.Access = StorageTextureAccess.ReadWrite
                             StorageTextureBindingLayout.Format = format
@@ -139,7 +144,7 @@ type WebGPUPipelineLayoutExtensions private() =
                         | Some g -> g
                         | None -> MapExt.empty
                     g |> MapExt.add t.textureBinding (
-                        BindGroupLayoutEntry.Texture(t.textureBinding, stages, {
+                        BindGroupLayoutEntry.Texture(t.textureBinding, getStages t.textureName, {
                             TextureBindingLayout.Multisampled = t.textureType.isMS
                             TextureBindingLayout.SampleType = sampleType
                             TextureBindingLayout.ViewDimension = viewDimension
@@ -160,7 +165,7 @@ type WebGPUPipelineLayoutExtensions private() =
                         | Some g -> g
                         | None -> MapExt.empty
                     g |> MapExt.add s.samplerBinding (
-                        BindGroupLayoutEntry.Sampler(s.samplerBinding, stages, SamplerBindingType.Filtering)
+                        BindGroupLayoutEntry.Sampler(s.samplerBinding, getStages s.samplerName, SamplerBindingType.Filtering)
                     ) |> Some
                 )
             frontendDescriptors <-
@@ -177,12 +182,6 @@ type WebGPUPipelineLayoutExtensions private() =
                         | Some g -> g
                         | None -> MapExt.empty
                         
-                    let stages =
-                        let mutable user = WebGPU.ShaderStage.None
-                        for stage in iface.GetUniformStages(b.ssbName) do
-                            user <- (toStage stage) ||| user
-                            
-                        user
                         
                     // TODO: fshade needs to report using stages as well!!!!
                     // let stages =
@@ -197,7 +196,7 @@ type WebGPUPipelineLayoutExtensions private() =
                            
                         
                     g |> MapExt.add b.ssbBinding (
-                        BindGroupLayoutEntry.Buffer(b.ssbBinding, stages, {
+                        BindGroupLayoutEntry.Buffer(b.ssbBinding, getStages b.ssbName, {
                             BufferBindingLayout.Type = typ
                             BufferBindingLayout.HasDynamicOffset = false
                             BufferBindingLayout.MinBindingSize = 0L
@@ -217,7 +216,7 @@ type WebGPUPipelineLayoutExtensions private() =
                         | Some g -> g
                         | None -> MapExt.empty
                     g |> MapExt.add b.ubBinding (
-                        BindGroupLayoutEntry.Buffer(b.ubBinding, stages, {
+                        BindGroupLayoutEntry.Buffer(b.ubBinding, getStages b.ubName, {
                             BufferBindingLayout.Type = BufferBindingType.Uniform
                             BufferBindingLayout.HasDynamicOffset = false
                             BufferBindingLayout.MinBindingSize = int64 b.ubSize

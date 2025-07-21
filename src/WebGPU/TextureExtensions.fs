@@ -140,7 +140,7 @@ type ImageExtensions private() =
                     let dst : TexelCopyTextureInfo =
                         {
                             Texture = tex
-                            Origin = { X = dstOffset.X; Y = dstOffset.Y; Z = dstOffset.Z }
+                            Origin = { Origin3D.X = dstOffset.X; Y = dstOffset.Y; Z = dstOffset.Z }
                             Aspect = TextureAspect.All
                             MipLevel = dstLevel
                         }
