@@ -44,24 +44,14 @@ type WebGPUPipelineLayoutExtensions private() =
         let mutable frontendDescriptors = MapExt.empty
         let mutable stages = WebGPU.ShaderStage.None
         
-        let mutable storageBufferUsers = MapExt.empty
         
-        for slot in iface.shaders.Slots |> MapExt.keys do
-            let stage =
-                match slot with
-                | ShaderSlot.Vertex -> WebGPU.ShaderStage.Vertex
-                | ShaderSlot.Fragment -> WebGPU.ShaderStage.Fragment
-                | ShaderSlot.Compute -> WebGPU.ShaderStage.Compute
-                | _ -> WebGPU.ShaderStage.None
-                
-            
-            for b in iface.shaders.[slot].shaderStorageBuffers do
-                storageBufferUsers <- storageBufferUsers |> MapExt.alter b (function
-                    | Some o -> Some (o ||| stage)
-                    | None -> Some stage
-                )
-            stages <- stages ||| stage
-            
+        let toStage (stage : FShade.ShaderStage) =
+            match stage with
+            | FShade.ShaderStage.Vertex -> WebGPU.ShaderStage.Vertex
+            | FShade.ShaderStage.Fragment -> WebGPU.ShaderStage.Fragment
+            | FShade.ShaderStage.Compute -> WebGPU.ShaderStage.Compute
+            | _ -> WebGPU.ShaderStage.None
+        
         for KeyValue(_, b) in iface.images do
             let sampleType =
                 match b.imageType.valueType with
@@ -179,7 +169,7 @@ type WebGPUPipelineLayoutExtensions private() =
                 )
                
                
-        for KeyValue(_, b) in iface.storageBuffers do
+        for KeyValue(name, b) in iface.storageBuffers do
             groupDescriptors <-
                 groupDescriptors |> MapExt.alter b.ssbSet (fun g ->
                     let g = 
@@ -188,20 +178,22 @@ type WebGPUPipelineLayoutExtensions private() =
                         | None -> MapExt.empty
                         
                     let stages =
-                        match MapExt.tryFind b.ssbName storageBufferUsers with
-                        | Some s -> s
-                        | None -> stages
+                        let mutable user = WebGPU.ShaderStage.None
+                        for stage in iface.GetUniformStages(b.ssbName) do
+                            user <- (toStage stage) ||| user
+                            
+                        user
                         
                     // TODO: fshade needs to report using stages as well!!!!
-                    let stages =
-                        if stages.HasFlag WebGPU.ShaderStage.Vertex then stages &&& ~~~WebGPU.ShaderStage.Vertex
-                        else stages
+                    // let stages =
+                    //     if stages.HasFlag WebGPU.ShaderStage.Vertex then stages &&& ~~~WebGPU.ShaderStage.Vertex
+                    //     else stages
                         
-                    let typ = BufferBindingType.Storage
-                        // if b.ssbAccess.HasFlag(FShade.StorageAccess.Write) then
-                        //     BufferBindingType.Storage
-                        // else
-                        //     BufferBindingType.ReadOnlyStorage
+                    let typ = //BufferBindingType.Storage
+                        if b.ssbAccess.HasFlag(FShade.StorageAccess.Write) then
+                            BufferBindingType.Storage
+                        else
+                            BufferBindingType.ReadOnlyStorage
                            
                         
                     g |> MapExt.add b.ssbBinding (

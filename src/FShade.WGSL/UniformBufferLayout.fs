@@ -143,7 +143,7 @@ module WGSLType =
                 else WGSLType.Mat(c, r, ofCType doubleAsFloat rev elem)
 
             | CType.CArray(elem, len) -> WGSLType.Array(len, ofCType doubleAsFloat rev elem, -1)
-            | CType.CStruct(name, fields,_) -> WGSLType.Struct(name, fields |> List.map (fun (t, n) -> n, ofCType doubleAsFloat rev t, -1), -1)
+            | CType.CStruct(name, fields) -> WGSLType.Struct(name, fields |> List.map (fun (t, n) -> n, ofCType doubleAsFloat rev t, -1), -1)
 
             | CType.CIntrinsic a ->
                 match a.tag with
@@ -1185,15 +1185,15 @@ module WGSLProgramInterface =
             let maxLod = 
                 match src.ReadByte() with
                 | 0uy -> None
-                | _ -> Some (src.ReadDouble())
+                | _ -> Some (src.ReadSingle())
             let minLod = 
                 match src.ReadByte() with
                 | 0uy -> None
-                | _ -> Some (src.ReadDouble())
+                | _ -> Some (src.ReadSingle())
             let mipLodBias = 
                 match src.ReadByte() with
                 | 0uy -> None
-                | _ -> Some (src.ReadDouble())
+                | _ -> Some (src.ReadSingle())
 
             {
                 FilterReduction = None

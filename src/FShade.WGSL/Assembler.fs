@@ -781,7 +781,7 @@ module Assembler =
                 else Identifier (name + "<f64>")
 
             | CType.CArray(t, l)                        -> $"array<{(assembleType doubleAsFloat rev t).Name}, {l}>" |> Identifier
-            | CType.CStruct(n,_,_)                      -> wgslName n
+            | CType.CStruct(n,_)                        -> wgslName n
 
             | CType.CPointer(_, t)                      -> (assembleType doubleAsFloat rev t).Name |> sprintf "array<%s>" |> Identifier
 
@@ -1750,7 +1750,7 @@ module Assembler =
                                 | true, _, mode when mode.HasFlag InterpolationMode.PerPatch -> return ["@patch"]
                                 | _ -> return []
 
-                        | ParameterDecoration.StorageBuffer(read, write) ->
+                        | ParameterDecoration.StorageBuffer access ->
                             let! binding = AssemblerState.newBinding InputKind.StorageBuffer 1
 
                             let args = []
@@ -1769,10 +1769,9 @@ module Assembler =
                             //let args = args |> String.concat " "
 
                             let rw =
-                                match read, write with
-                                    | true, false -> "read"
-                                    | _ -> "read_write"
-
+                                if access.HasFlag StorageAccess.Write then "read_write"
+                                else "read"
+                                
                             let decorations = String.concat " " args
                             let typeName = assembleType config.doubleAsFloat config.reverseMatrixLogic p.cParamType
                             return [$"{decorations} var<storage, {rw}> {p.cParamName} : {typeName.Name};"]
@@ -1793,7 +1792,7 @@ module Assembler =
                 | None ->
                     decorations
             
-            let isBuffer = p.cParamDecorations |> Seq.tryPick (function ParameterDecoration.StorageBuffer(_, w) -> Some (not w) | _ -> None)
+            let isBuffer = p.cParamDecorations |> Seq.tryPick (function ParameterDecoration.StorageBuffer acc -> Some (not (acc.HasFlag StorageAccess.Write)) | _ -> None)
             
             let slot =
                 p.cParamDecorations |> Seq.tryPick (function
