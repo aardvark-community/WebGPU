@@ -4,10 +4,11 @@ open WebGPU
 open Aardvark.Base
 open Aardvark.Rendering
 
-type Framebuffer (signature : IFramebufferSignature, size : V2i, colorAttachments : TextureView[], depth : option<TextureView>) =
+type Framebuffer (signature : IFramebufferSignature, size : V2i, colorAttachments : TextureView[], depth : option<TextureView>, colorTextures : Texture[], depthTexture : option<Texture>) =
     member x.ColorAttachments = colorAttachments
     member x.DepthStencil = depth
-    
+    member x.ColorTextures = colorTextures
+    member x.DepthTexture = depthTexture
     member x.Dispose() =
         ()
     

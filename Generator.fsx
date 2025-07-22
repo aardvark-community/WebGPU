@@ -2242,7 +2242,21 @@ module Frontend =
                     printfn "        member x.Name"
                     printfn "            with get() = name"
                     printfn "            and set(v) = name <- v"
-                
+                if o.Name = "texture" then
+                    printfn "    interface Aardvark.Rendering.IBackendTexture with"
+                    printfn "        member x.Name"
+                    printfn "            with get() = null"
+                    printfn "            and set _ = ()"
+                    printfn "        member x.WantMipMaps = x.MipLevelCount > 1"
+                    printfn "        member x.Runtime = x.Device.Runtime"
+                    printfn "        member x.Dimension = Unchecked.defaultof<_>"
+                    printfn "        member x.Format = Unchecked.defaultof<_>"
+                    printfn "        member x.Samples = x.SampleCount"
+                    printfn "        member x.Count = x.DepthOrArrayLayers"
+                    printfn "        member x.MipMapLevels = x.MipLevelCount"
+                    printfn "        member x.Size = Aardvark.Base.V3i(x.Width, x.Height, x.DepthOrArrayLayers)"
+                    printfn "        member x.Handle = uint64 handle"
+
                 for m in o.Methods do
                     match m with
                     | SimpleGetter ->

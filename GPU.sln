@@ -36,6 +36,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WebGPUNative", "WebGPUNativ
 		src\WebGPUNative\dllexport.h = src\WebGPUNative\dllexport.h
 		src\WebGPUNative\WebGPU.cpp = src\WebGPUNative\WebGPU.cpp
 		src\WebGPUNative\utils_metal.mm = src\WebGPUNative\utils_metal.mm
+		src\WebGPUNative\ShaderTrans.cpp = src\WebGPUNative\ShaderTrans.cpp
 	EndProjectSection
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FShade.WGSL", "src\FShade.WGSL\FShade.WGSL.fsproj", "{1EFC5E0C-CD8A-42DD-AF93-0ECCDA3926C5}"

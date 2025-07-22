@@ -7657,6 +7657,19 @@ type Texture internal(device : Device, handle : nativeint) =
         | :? Texture as other -> other.Handle = x.Handle
         | _ -> false
     static member Null = nullptr
+    interface Aardvark.Rendering.IBackendTexture with
+        member x.Name
+            with get() = null
+            and set _ = ()
+        member x.WantMipMaps = x.MipLevelCount > 1
+        member x.Runtime = x.Device.Runtime
+        member x.Dimension = Unchecked.defaultof<_>
+        member x.Format = Unchecked.defaultof<_>
+        member x.Samples = x.SampleCount
+        member x.Count = x.DepthOrArrayLayers
+        member x.MipMapLevels = x.MipLevelCount
+        member x.Size = Aardvark.Base.V3i(x.Width, x.Height, x.DepthOrArrayLayers)
+        member x.Handle = uint64 handle
     member this.CreateView(descriptor : TextureViewDescriptor) : TextureView =
         descriptor.Pin(device, fun _descriptorPtr ->
             let res = WebGPU.Raw.WebGPU.TextureCreateView(handle, _descriptorPtr)

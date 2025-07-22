@@ -58,6 +58,7 @@
         "queue": "cpp",
         "regex": "cpp",
         "valarray": "cpp",
-        "*.inc": "cpp"
+        "*.inc": "cpp",
+        "shared_mutex": "cpp"
     }
 }

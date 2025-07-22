@@ -514,7 +514,7 @@ type ResourceManager(device : Device) =
         { new AdaptiveResource<TextureView>() with
             member x.Create(cmd, token) =
                 let tex = tex.GetHandle(cmd, token)
-                tex.CreateView(TextureUsage.StorageBinding ||| TextureUsage.RenderAttachment, level)
+                tex.CreateView(TextureUsage.TextureBinding ||| TextureUsage.StorageBinding ||| TextureUsage.RenderAttachment, level)
                 
             member x.TryUpdate(handle, cmd, token) =
                 tex.TryUpdate(cmd, token)

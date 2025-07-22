@@ -4,12 +4,90 @@ open System.Runtime.CompilerServices
 open Aardvark.Base
 open FShade
 open FShade.GLSL
+open WebGPU.ShaderTranspiler
 open global.WebGPU
 open Aardvark.Rendering
 open System.IO
 open Microsoft.FSharp.NativeInterop
 #nowarn "9"
 
+type WGSLShader =
+    {
+        codes : Map<FShade.ShaderStage, string>
+        iface : GLSLProgramInterface
+    }
+
+module WGSLShader =
+    open System.IO
+    open FShade.GLSL
+    
+    let writeTo (dst : Stream) (shader : WGSLShader) =
+        use dst = new BinaryWriter(dst, System.Text.Encoding.UTF8, true)
+        dst.Write "WGSLShader"
+        
+        dst.Write (shader.codes.Count)
+        for KeyValue(stage, code) in shader.codes do
+            dst.Write (int stage)
+            dst.Write code
+        
+        GLSLProgramInterface.serializeInternal dst shader.iface
+
+    let tryReadFrom (src : Stream) =
+        use src = new BinaryReader(src, System.Text.Encoding.UTF8, true)
+        if src.ReadString() = "WGSLShader" then
+            let codes =
+                let cnt = src.ReadInt32()
+                let mutable map = Map.empty
+                for i in 0 .. cnt - 1 do
+                    let stage = src.ReadInt32() |> unbox<FShade.ShaderStage>
+                    let code = src.ReadString()
+                    map <- Map.add stage code map
+                map
+                
+            let iface = GLSLProgramInterface.deserializeInternal src
+            Some { codes = codes; iface = iface }
+        else
+            None
+    
+    let tryUnpickle (src : byte[]) =
+        use ms = new MemoryStream(src)
+        tryReadFrom ms
+        
+    let unpickle (src : byte[]) =
+        match tryUnpickle src with
+        | Some res -> res
+        | None -> failwith "could not unpickle WGSLShader"
+        
+    let pickle (src : WGSLShader) =
+        use ms = new MemoryStream()
+        writeTo ms src
+        ms.ToArray()
+        
+        
+    let ofGLSL (glsl : GLSLShader) =
+        let stagesAndEntries = 
+            match glsl.iface.shaders with
+            | GLSLProgramShaders.Graphics shaders ->
+                shaders.stages |> MapExt.toList |> List.map (fun (stage, info) ->
+                    stage, info.shaderEntry
+                )
+            | GLSLProgramShaders.Compute info ->
+                [FShade.ShaderStage.Compute, info.shaderEntry]
+            | _ ->
+                []
+                
+        let codes =
+            stagesAndEntries |> List.map (fun (stage, entry) ->
+                let gpuStage =
+                    match stage with
+                    | FShade.ShaderStage.Vertex -> WebGPU.ShaderStage.Vertex
+                    | FShade.ShaderStage.Fragment -> WebGPU.ShaderStage.Fragment
+                    | _ -> WebGPU.ShaderStage.Compute
+                stage, toWGSL gpuStage entry glsl.code    
+            )
+                
+        { codes = Map.ofList codes; iface = glsl.iface }
+         
 
 type internal ShaderCacheKey =
     {
@@ -40,7 +118,7 @@ module internal ShaderCacheKey =
         let hash = System.Security.Cryptography.SHA1.HashData ms
         System.Convert.ToBase64String(hash).Replace("=", ".").Replace("/", "_").Replace("+", "-")
 
-type ShaderProgram(shaderModules : MapExt<FShade.ShaderStage, ShaderModule>, code : GLSLShader, groupLayouts : MapExt<int, BindGroupLayout>, pipelineLayout : PipelineLayout, samplers : Map<int, Map<int, Sampler>>) =
+type ShaderProgram(shaderModules : Map<FShade.ShaderStage, ShaderModule>, code : WGSLShader, groupLayouts : MapExt<int, BindGroupLayout>, pipelineLayout : PipelineLayout, samplers : Map<int, Map<int, Sampler>>) =
     
     let bindGroupCount =
         match MapExt.tryMax groupLayouts with
@@ -100,9 +178,10 @@ type WebGPUShaderExtensions private() =
         if not (Directory.Exists cachePath) then
             Directory.CreateDirectory cachePath |> ignore
     
-    static let wgslCache = ConcurrentDict<IFramebufferSignature * FShade.Effect, GLSLShader>(Dict())
+    static let wgslCache = ConcurrentDict<IFramebufferSignature * FShade.Effect, WGSLShader>(Dict())
+    static let wgslComputeCache = ConcurrentDict<FShade.ComputeShader, WGSLShader>(Dict())
     
-    static let shaderProgramCache = ConcurrentDict<Device * FShade.GLSL.GLSLShader, ShaderProgram>(Dict())
+    static let shaderProgramCache = ConcurrentDict<Device * WGSLShader, ShaderProgram>(Dict())
     
     static let lineRx = System.Text.RegularExpressions.Regex @"\r\n|\n|\r"
     
@@ -121,62 +200,74 @@ type WebGPUShaderExtensions private() =
                 
             let cacheFile = Path.Combine(cachePath, fileName + ".bin")
             
-            let inline write (shader : FShade.GLSL.GLSLShader) =
-                Log.start "shader"
-                for l in lineRx.Split shader.code do
-                    Log.line "%s" l
-                Log.stop()
-                let data = FShade.GLSL.GLSLShader.pickle shader
+            let inline write (shader : WGSLShader) =
+                let data = WGSLShader.pickle shader
                 File.WriteAllBytes(cacheFile, data)
                 shader
             
             if false && File.Exists cacheFile then
                 try
                     let data = File.ReadAllBytes cacheFile
-                    FShade.GLSL.GLSLShader.unpickle data
+                    WGSLShader.unpickle data
                 with e ->
                     Log.warn "could not read cache-file: %A" e
                     effect.Link(signature)
                     |> ModuleCompiler.compileGLSL glslBackend
+                    |> WGSLShader.ofGLSL
+                    
                     |> write
             else
                 effect.Link(signature)
                 |> ModuleCompiler.compileGLSL glslBackend
+                |> WGSLShader.ofGLSL
                 |> write
         )
     
     [<Extension>]
-    static member CreateShaderProgram(this : Device, glsl : FShade.GLSL.GLSLShader) =
-        shaderProgramCache.GetOrCreate((this, glsl), fun (device, glsl) ->
-            let entries = 
-                match glsl.iface.shaders with
-                | GLSLProgramShaders.Graphics shaders ->
-                    shaders.stages |> MapExt.map (fun stage info ->
-                        info.shaderEntry    
-                    )
-                | GLSLProgramShaders.Compute info ->
-                    MapExt.singleton FShade.ShaderStage.Compute info.shaderEntry
-                | _ ->
-                    failwith "no raytracing"
+    static member GetWGSLCode(this : FShade.ComputeShader) =
+        wgslComputeCache.GetOrCreate(this, fun computeShader ->
+            let fileName =
+                ShaderCacheKey.computeHash {
+                    EffectId = this.csId
+                    Outputs = Map.empty
+                    Depth = None
+                }
+            let cacheFile = Path.Combine(cachePath, fileName + ".bin")
+            
+            let inline write (shader : WGSLShader) =
+                let data = WGSLShader.pickle shader
+                File.WriteAllBytes(cacheFile, data)
+                shader
+            
+            if false && File.Exists cacheFile then
+                try
+                    let data = File.ReadAllBytes cacheFile
+                    WGSLShader.unpickle data
+                with e ->
+                    Log.warn "could not read cache-file: %A" e
+                    computeShader
+                    |> FShade.ComputeShader.toModule
+                    |> ModuleCompiler.compileGLSL glslBackend
+                    |> WGSLShader.ofGLSL
+                    |> write
+            else
+                computeShader
+                |> FShade.ComputeShader.toModule
+                |> ModuleCompiler.compileGLSL glslBackend
+                |> WGSLShader.ofGLSL
+                |> write
+        )
         
-            let shaderCodes =
-                entries |> MapExt.map (fun stage entry ->
-                    let gpuStage =
-                        match stage with
-                        | FShade.ShaderStage.Vertex -> WebGPU.ShaderStage.Vertex
-                        | FShade.ShaderStage.Fragment -> WebGPU.ShaderStage.Fragment
-                        | _ -> WebGPU.ShaderStage.Compute
-                        
-                    let wgsl = ShaderTranspiler.toWGSL gpuStage "main" glsl.code
-                    
-                    wgsl
-                )
+    [<Extension>]
+    static member CreateShaderProgram(this : Device, wgsl : WGSLShader) =
+        shaderProgramCache.GetOrCreate((this, wgsl), fun (device, wgsl) ->
+
             let shaderModules =
-                shaderCodes |> MapExt.map (fun stage wgsl ->
-                    device.CompileShader(wgsl, string (wgsl.Substring(0, 100)))
+                wgsl.codes |> Map.map (fun stage wgsl ->
+                    device.CompileShader(wgsl)
                 )
             let samplers = 
-                glsl.iface.samplerStates
+                wgsl.iface.samplerStates
                 |> MapExt.toList |> List.map (fun (k, v) ->
                     let sam = List.exactlyOne v.samplerStates
                     v.samplerSet, (v.samplerBinding, device.CreateSampler(sam))
@@ -185,7 +276,7 @@ type WebGPUShaderExtensions private() =
                 |> List.map (fun (gid, samplers) -> gid, samplers |> List.map snd |> Map.ofList)
                 |> Map.ofList
                 
-            let groupLayouts,_ = device.CreateBindGroupLayouts glsl.iface
+            let groupLayouts,_ = device.CreateBindGroupLayouts wgsl.iface
             
             let pipelineLayout =
                 let entries = 
@@ -203,10 +294,10 @@ type WebGPUShaderExtensions private() =
                     ImmediateSize = 0
                 }
             
-            new ShaderProgram(shaderModules, glsl, groupLayouts, pipelineLayout, samplers)   
+            new ShaderProgram(shaderModules, wgsl, groupLayouts, pipelineLayout, samplers)   
         )
 
     [<Extension>]
     static member CreateShaderProgram(this : Device, effect : FShade.Effect, signature : IFramebufferSignature) =
-        let wgsl = effect.GetWGSLCode(signature)
-        this.CreateShaderProgram(wgsl)
+        let glsl = effect.GetWGSLCode(signature)
+        this.CreateShaderProgram(glsl)

@@ -7,6 +7,8 @@ open Aardvark.Rendering.WebGPU
 type Runtime(device : Device) as this =
     do device.Runtime <- this
     
+    member x.Device = device
+    
     interface IRuntime with
         member this.DebugLabelsEnabled = false
         member this.Blit(src,srcRegion,dst,dstRegion) = failwith "todo"

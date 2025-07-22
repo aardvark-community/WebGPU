@@ -33,7 +33,6 @@ DllExport(int) transpileSpirV(const uint32_t* spv, int spvLength, char** wgsl, s
     tintInitMtx.lock();
 	if (!tintInit) {
 		tint::Initialize();
-		cout << "Tint initialized" << endl;
 		tintInit = true;
 	}
 	tintInitMtx.unlock();
@@ -43,6 +42,17 @@ DllExport(int) transpileSpirV(const uint32_t* spv, int spvLength, char** wgsl, s
 
 	auto bin = std::vector<uint32_t>(spv, spv + spvLength);
 	auto m = tint::spirv::reader::Read(bin, options);
+	if(!m.IsValid()) {
+		auto err = m.Diagnostics().Str();
+
+		auto res = new char[err.size() + 1];
+		strcpy(res, err.c_str());
+		*wgsl = res;
+		*wgslSize = err.size();
+		
+		return -1;
+	}
+
 
 	auto result = tint::wgsl::writer::Generate(m, {});
 

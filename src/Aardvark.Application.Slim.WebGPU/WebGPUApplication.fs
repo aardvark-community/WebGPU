@@ -196,7 +196,7 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
                                     
                                 
                                 let fbo =
-                                    new Framebuffer(signature, size, [| colorView |], Some depthView)
+                                    new Framebuffer(signature, size, [| colorView |], Some depthView, [|color|], Some depth)
                                 
                                 
                                 task.Run(fbo)

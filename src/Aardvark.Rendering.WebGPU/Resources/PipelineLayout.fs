@@ -51,11 +51,16 @@ type WebGPUPipelineLayoutExtensions private() =
             | FShade.ShaderStage.Compute -> WebGPU.ShaderStage.Compute
             | _ -> WebGPU.ShaderStage.None
         
-        let inline getStages (name : string) =
+        let getStages (name : string) =
             let mutable user = WebGPU.ShaderStage.None
             for stage in iface.GetUniformStages(name) do
                 user <- (toStage stage) ||| user
             user
+        
+        let isCompute =
+            match iface.shaders with
+            | GLSLProgramShaders.Compute _ -> true
+            | _ -> false
         
         for KeyValue(_, b) in iface.images do
             let sampleType =
@@ -63,6 +68,9 @@ type WebGPUPipelineLayoutExtensions private() =
                 | GLSL.GLSLType.Int(true,_) -> TextureSampleType.Sint
                 | GLSL.GLSLType.Int(false,_) -> TextureSampleType.Uint
                 | GLSL.GLSLType.Float _ -> TextureSampleType.Float
+                | GLSL.GLSLType.Vec(_, GLSL.GLSLType.Int(true,_)) -> TextureSampleType.Sint
+                | GLSL.GLSLType.Vec(_, GLSL.GLSLType.Int(false,_)) -> TextureSampleType.Uint
+                | GLSL.GLSLType.Vec(_, GLSL.GLSLType.Float _) -> TextureSampleType.Float
                 | _ -> TextureSampleType.Undefined
             
             let viewDimension =
@@ -88,11 +96,19 @@ type WebGPUPipelineLayoutExtensions private() =
                         | Some g -> g
                         | None -> MapExt.empty
                     g |> MapExt.add b.imageBinding (
-                        BindGroupLayoutEntry.StorageTexture(b.imageBinding, getStages b.imageName, {
-                            StorageTextureBindingLayout.ViewDimension = viewDimension
-                            StorageTextureBindingLayout.Access = StorageTextureAccess.ReadWrite
-                            StorageTextureBindingLayout.Format = format
-                        })
+                        if isCompute then
+                            BindGroupLayoutEntry.StorageTexture(b.imageBinding, getStages b.imageName, {
+                                StorageTextureBindingLayout.ViewDimension = viewDimension
+                                StorageTextureBindingLayout.Access = StorageTextureAccess.ReadWrite
+                                StorageTextureBindingLayout.Format = format
+                            })
+                        else
+                            BindGroupLayoutEntry.Texture(b.imageBinding, getStages b.imageName, {
+                                TextureBindingLayout.Multisampled = b.imageType.isMS
+                                TextureBindingLayout.SampleType = sampleType
+                                TextureBindingLayout.ViewDimension = viewDimension
+                                
+                            })
                     ) |> Some
                 )
             frontendDescriptors <-
@@ -196,7 +212,7 @@ type WebGPUPipelineLayoutExtensions private() =
                            
                         
                     g |> MapExt.add b.ssbBinding (
-                        BindGroupLayoutEntry.Buffer(b.ssbBinding, getStages b.ssbName, {
+                        BindGroupLayoutEntry.Buffer(b.ssbBinding, getStages name, {
                             BufferBindingLayout.Type = typ
                             BufferBindingLayout.HasDynamicOffset = false
                             BufferBindingLayout.MinBindingSize = 0L
