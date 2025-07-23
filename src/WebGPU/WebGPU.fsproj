@@ -13,6 +13,7 @@
     <Compile Include="TextureExtensions.fs" />
     <Compile Include="FrontendExtensions.fs" />
     <Compile Include="ShaderTrans.fs" />
+    <Compile Include="BufferFillExtensions.fs" />
     <Content Include="paket.references" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />

@@ -9,12 +9,14 @@ open WebGPU
 type RasterizerInput =
     {
         Positions           : Buffer
+        Normals             : Buffer
         Colors              : Buffer
         
         ColorTexture        : Texture
-        DepthTexture        : Texture
+        DepthBuffer         : Buffer
         
-        ModelViewProj       : Trafo3d
+        ModelViewTrafo      : Trafo3d
+        ProjTrafo           : Trafo3d
     }
 
 

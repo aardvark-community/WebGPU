@@ -41,7 +41,9 @@ module ShaderTranspiler =
             
             
             if ret = 0 then str
-            else failwithf "transpileSpirV failed with code %d: %s" ret str
+            else
+                Aardvark.Base.Log.warn "%s" glsl
+                failwithf "transpileSpirV failed with code %d: %s" ret str
                 
             
         | _ ->

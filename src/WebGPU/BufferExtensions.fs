@@ -79,7 +79,7 @@ and BufferRangeProxy(range : BufferRange) =
 
 [<AbstractClass; Sealed>]
 type WebGPUBufferExtensions private() =
-    
+
     [<Extension>]
     static member Mapped<'r>(buffer : Buffer, mode : MapMode, offset : int64, size : int64, action : nativeint -> 'r) =
         match buffer.MapState with
@@ -120,6 +120,12 @@ type WebGPUBufferExtensions private() =
     static member Mapped<'r>(buffer : Buffer, mode : MapMode, action : nativeint -> 'r) =
         buffer.Mapped(mode, 0L, buffer.Size, action)
          
+         
+    [<Extension>]
+    static member Clear(this : Buffer, value : uint32) =
+        use cmd = this.Device.CreateCommandEncoder { Label = null; Next = null }
+        cmd.ClearBuffer
+         
     [<Extension>]
     static member WriteBuffer<'a when 'a : unmanaged>(this : Queue, buffer : Buffer, data : System.ReadOnlySpan<'a>) =
         use ptr = fixed data
@@ -144,7 +150,7 @@ type WebGPUBufferExtensions private() =
 
     
     [<Extension>]
-    static member Upload<'a when 'a : unmanaged>(this : CommandEncoder, src : System.ReadOnlySpan<'a>, dst : Buffer, dstOffset : int64) =
+    static member Upload<'a when 'a : unmanaged>(this : CommandEncoder, src : System.ReadOnlySpan<'a>, dst : Buffer, dstOffset : int64) : unit =
         let size = int64 src.Length * int64 sizeof<'a>
         use tmp = dst.Device.CreateBuffer { Next = null; Label = null; Size = size; Usage = BufferUsage.MapWrite ||| BufferUsage.CopySrc; MappedAtCreation = true }
         let dstPtr = tmp.GetMappedRange(0L, size)
