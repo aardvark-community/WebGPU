@@ -29,7 +29,9 @@ endif()
 
 add_definitions(-D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR )
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../libs/Native/WebGPU/${OS}/${ARCH}/)
-
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/tmp/dawn/out/Release/src/tint/Release)
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/tmp/dawn/out/Release/third_party/spirv-tools/source/Release)
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/tmp/dawn/out/Release/third_party/spirv-tools/source/opt/Release)
 
 add_library(WebGPUNative SHARED ${FILES})
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
@@ -42,7 +44,7 @@ elseif(UNIX)
 endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../include/dawn ${CMAKE_CURRENT_SOURCE_DIR}/tmp/dawn)
-target_link_libraries(WebGPUNative PRIVATE  ${DAWN_LIBRARY_NAME})
+target_link_libraries(WebGPUNative PRIVATE  ${DAWN_LIBRARY_NAME} SPIRV-Tools.lib SPIRV-Tools-opt.lib tint_api.lib tint_api_common.lib tint_cmd_common.lib tint_cmd_fuzz_ir_helpers.lib tint_lang_core.lib tint_lang_core_constant.lib tint_lang_core_intrinsic.lib tint_lang_core_ir.lib tint_lang_core_ir_analysis.lib tint_lang_core_ir_transform.lib tint_lang_core_ir_type.lib tint_lang_core_type.lib tint_lang_glsl.lib tint_lang_glsl_intrinsic.lib tint_lang_glsl_ir.lib tint_lang_glsl_validate.lib tint_lang_hlsl.lib tint_lang_hlsl_intrinsic.lib tint_lang_hlsl_ir.lib tint_lang_hlsl_type.lib tint_lang_hlsl_validate.lib tint_lang_hlsl_writer.lib tint_lang_hlsl_writer_ast_printer.lib tint_lang_hlsl_writer_ast_raise.lib tint_lang_hlsl_writer_common.lib tint_lang_hlsl_writer_helpers.lib tint_lang_hlsl_writer_printer.lib tint_lang_hlsl_writer_raise.lib tint_lang_msl.lib tint_lang_msl_intrinsic.lib tint_lang_msl_ir.lib tint_lang_msl_ir_transform.lib tint_lang_msl_type.lib tint_lang_spirv.lib tint_lang_spirv_intrinsic.lib tint_lang_spirv_ir.lib tint_lang_spirv_reader.lib tint_lang_spirv_reader_ast_lower.lib tint_lang_spirv_reader_ast_parser.lib tint_lang_spirv_reader_common.lib tint_lang_spirv_reader_lower.lib tint_lang_spirv_reader_parser.lib tint_lang_spirv_type.lib tint_lang_spirv_validate.lib tint_lang_spirv_writer.lib tint_lang_spirv_writer_common.lib tint_lang_spirv_writer_helpers.lib tint_lang_spirv_writer_printer.lib tint_lang_spirv_writer_raise.lib tint_lang_wgsl.lib tint_lang_wgsl_ast.lib tint_lang_wgsl_ast_transform.lib tint_lang_wgsl_inspector.lib tint_lang_wgsl_intrinsic.lib tint_lang_wgsl_ir.lib tint_lang_wgsl_program.lib tint_lang_wgsl_reader.lib tint_lang_wgsl_reader_lower.lib tint_lang_wgsl_reader_parser.lib tint_lang_wgsl_reader_program_to_ir.lib tint_lang_wgsl_resolver.lib tint_lang_wgsl_sem.lib tint_lang_wgsl_writer.lib tint_lang_wgsl_writer_ast_printer.lib tint_lang_wgsl_writer_ir_to_program.lib tint_lang_wgsl_writer_raise.lib tint_lang_wgsl_writer_syntax_tree_printer.lib tint_utils.lib tint_utils_bytes.lib tint_utils_command.lib tint_utils_containers.lib tint_utils_diagnostic.lib tint_utils_file.lib tint_utils_ice.lib tint_utils_macros.lib tint_utils_math.lib tint_utils_memory.lib tint_utils_rtti.lib tint_utils_strconv.lib tint_utils_symbol.lib tint_utils_system.lib tint_utils_text.lib tint_utils_text_generator.lib)
 
 
 SET(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/../../libs/Native/WebGPU/") 

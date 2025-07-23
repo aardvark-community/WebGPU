@@ -23,7 +23,7 @@ pushd out
 mkdir Release
 pushd Release
 
-cmake ..\.. -DCMAKE_BUILD_TYPE=Release
+cmake ..\.. -DCMAKE_BUILD_TYPE=Release -DTINT_BUILD_SPV_READER=1 -DTINT_BUILD_WGSL_WRITER=1
 cmake --build . --config Release --target ALL_BUILD 
 xcopy /Y .\Release\webgpu_dawn.dll ..\..\..\..\..\..\libs\Native\WebGPU\windows\AMD64\
 xcopy /Y .\src\dawn\native\Release\webgpu_dawn.lib ..\..\..\..\..\..\libs\Native\WebGPU\windows\AMD64\

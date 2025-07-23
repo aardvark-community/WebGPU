@@ -54,7 +54,7 @@ module Obj =
             file.CopyTo(s)
             
         let mesh = Aardvark.Data.Wavefront.ObjParser.Load tmp
-        System.IO.File.Delete tmp
+        //System.IO.File.Delete tmp
         
         let positions = 
             match mesh.Vertices with
