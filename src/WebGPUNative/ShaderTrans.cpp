@@ -26,16 +26,35 @@ using namespace std;
 // 	const ShaderStage stage;
 // 	const std::vector<std::filesystem::path> includePaths;	// optional
 // };
+#if _WIN32
+#include <windows.h>
+static CRITICAL_SECTION tintInitMtx;
+static BOOL tintInitMtxInitialized = FALSE;
+#else
+#include <mutex>
 static std::mutex tintInitMtx;
+#endif
 static bool tintInit = false;
 
 DllExport(int) transpileSpirV(const uint32_t* spv, int spvLength, char** wgsl, size_t* wgslSize) {
+#if _WIN32
+    if (!tintInitMtxInitialized) {
+        InitializeCriticalSection(&tintInitMtx);
+        tintInitMtxInitialized = TRUE;
+    }
+    EnterCriticalSection(&tintInitMtx);
+#else
     tintInitMtx.lock();
+#endif
 	if (!tintInit) {
 		tint::Initialize();
 		tintInit = true;
 	}
-	tintInitMtx.unlock();
+#if _WIN32
+    LeaveCriticalSection(&tintInitMtx);
+#else
+    tintInitMtx.unlock();
+#endif
 	tint::spirv::reader::Options options;
 	options.allow_non_uniform_derivatives = true;
 	options.allowed_features = tint::wgsl::AllowedFeatures::Everything();
