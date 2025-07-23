@@ -11,6 +11,10 @@
     <EmbeddedResource Include="resources\miramar_lf.png" />
     <EmbeddedResource Include="resources\miramar_rt.png" />
     <EmbeddedResource Include="resources\miramar_up.png" />
+    <Compile Include="Rasterizer.fs" />
+    <Compile Include="BasicRasterizer.fs" />
+    <Compile Include="ComputeRasterizerDemo.fs" />
+    <Compile Include="RenderDemo.fs" />
     <Compile Include="Program.fs" />
     <Content Include="paket.references" />
   </ItemGroup>

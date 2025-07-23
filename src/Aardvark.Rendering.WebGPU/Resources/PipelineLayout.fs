@@ -4,8 +4,7 @@ open System.Runtime.CompilerServices
 open Aardvark.Base
 open FShade
 open FShade.GLSL
-open global.WebGPU
-open Aardvark.Rendering
+open WebGPU
 
 type PipelineLayout(layout : WebGPU.PipelineLayout, groupLayouts : BindGroupLayout[]) =
     member x.Layout = layout

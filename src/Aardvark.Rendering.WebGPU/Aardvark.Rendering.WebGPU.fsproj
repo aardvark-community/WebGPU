@@ -15,6 +15,7 @@
     <Compile Include="Resources\Texture.fs" />
     <Compile Include="Resources\Framebuffer.fs" />
     <Compile Include="UniformWriters.fs" />
+    <Compile Include="ComputeShader.fs" />
     <Compile Include="ResourceManager.fs" />
     <Compile Include="PreparedRenderObject.fs" />
     <Compile Include="RenderTask.fs" />

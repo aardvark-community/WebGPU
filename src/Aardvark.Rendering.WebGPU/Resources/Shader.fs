@@ -5,10 +5,11 @@ open Aardvark.Base
 open FShade
 open FShade.GLSL
 open WebGPU.ShaderTranspiler
-open global.WebGPU
-open Aardvark.Rendering
 open System.IO
 open Microsoft.FSharp.NativeInterop
+open WebGPU
+open Aardvark.Rendering
+
 #nowarn "9"
 
 type WGSLShader =
@@ -116,7 +117,7 @@ module internal ShaderCacheKey =
         serialize bw src
         ms.Position <- 0L
         let hash = System.Security.Cryptography.SHA1.HashData ms
-        System.Convert.ToBase64String(hash).Replace("=", ".").Replace("/", "_").Replace("+", "-")
+        "wgsl_" + System.Convert.ToBase64String(hash).Replace("=", ".").Replace("/", "_").Replace("+", "-")
 
 type ShaderProgram(shaderModules : Map<FShade.ShaderStage, ShaderModule>, code : WGSLShader, groupLayouts : MapExt<int, BindGroupLayout>, pipelineLayout : PipelineLayout, samplers : Map<int, Map<int, Sampler>>) =
     
@@ -145,6 +146,8 @@ type ShaderProgram(shaderModules : Map<FShade.ShaderStage, ShaderModule>, code :
 
 [<AbstractClass; Sealed>]
 type WebGPUShaderExtensions private() =
+    
+    static let mutable shaderCaching = true
     
     static let glslBackend =
         FShade.GLSL.Backend.Create {
@@ -187,64 +190,80 @@ type WebGPUShaderExtensions private() =
     
     static member FShadeBackend = glslBackend
     
+    static member ShaderCaching
+        with get() = shaderCaching
+        and set v = shaderCaching <- v
+    
     [<Extension>]
     static member GetWGSLCode(this : FShade.Effect, signature : IFramebufferSignature) =
         wgslCache.GetOrCreate((signature, this), fun (signature, effect) ->
-            
-            let fileName =
-                ShaderCacheKey.computeHash {
-                    EffectId = effect.Id
-                    Outputs = signature.ColorAttachments
-                    Depth = signature.DepthStencilAttachment
-                }
+            if shaderCaching then
+                let fileName =
+                    ShaderCacheKey.computeHash {
+                        EffectId = effect.Id
+                        Outputs = signature.ColorAttachments
+                        Depth = signature.DepthStencilAttachment
+                    }
+                    
+                let cacheFile = Path.Combine(cachePath, fileName + ".bin")
                 
-            let cacheFile = Path.Combine(cachePath, fileName + ".bin")
-            
-            let inline write (shader : WGSLShader) =
-                let data = WGSLShader.pickle shader
-                File.WriteAllBytes(cacheFile, data)
-                shader
-            
-            if false && File.Exists cacheFile then
-                try
-                    let data = File.ReadAllBytes cacheFile
-                    WGSLShader.unpickle data
-                with e ->
-                    Log.warn "could not read cache-file: %A" e
+                let inline write (shader : WGSLShader) =
+                    let data = WGSLShader.pickle shader
+                    File.WriteAllBytes(cacheFile, data)
+                    shader
+                
+                if File.Exists cacheFile then
+                    try
+                        let data = File.ReadAllBytes cacheFile
+                        WGSLShader.unpickle data
+                    with e ->
+                        Log.warn "could not read cache-file: %A" e
+                        effect.Link(signature)
+                        |> ModuleCompiler.compileGLSL glslBackend
+                        |> WGSLShader.ofGLSL
+                        
+                        |> write
+                else
                     effect.Link(signature)
                     |> ModuleCompiler.compileGLSL glslBackend
                     |> WGSLShader.ofGLSL
-                    
                     |> write
             else
                 effect.Link(signature)
                 |> ModuleCompiler.compileGLSL glslBackend
                 |> WGSLShader.ofGLSL
-                |> write
+                
         )
     
     [<Extension>]
     static member GetWGSLCode(this : FShade.ComputeShader) =
         wgslComputeCache.GetOrCreate(this, fun computeShader ->
-            let fileName =
-                ShaderCacheKey.computeHash {
-                    EffectId = this.csId
-                    Outputs = Map.empty
-                    Depth = None
-                }
-            let cacheFile = Path.Combine(cachePath, fileName + ".bin")
-            
-            let inline write (shader : WGSLShader) =
-                let data = WGSLShader.pickle shader
-                File.WriteAllBytes(cacheFile, data)
-                shader
-            
-            if false && File.Exists cacheFile then
-                try
-                    let data = File.ReadAllBytes cacheFile
-                    WGSLShader.unpickle data
-                with e ->
-                    Log.warn "could not read cache-file: %A" e
+            if shaderCaching then
+                let fileName =
+                    ShaderCacheKey.computeHash {
+                        EffectId = this.csId
+                        Outputs = Map.empty
+                        Depth = None
+                    }
+                let cacheFile = Path.Combine(cachePath, fileName + ".bin")
+                
+                let inline write (shader : WGSLShader) =
+                    let data = WGSLShader.pickle shader
+                    File.WriteAllBytes(cacheFile, data)
+                    shader
+                
+                if shaderCaching && File.Exists cacheFile then
+                    try
+                        let data = File.ReadAllBytes cacheFile
+                        WGSLShader.unpickle data
+                    with e ->
+                        Log.warn "could not read cache-file: %A" e
+                        computeShader
+                        |> FShade.ComputeShader.toModule
+                        |> ModuleCompiler.compileGLSL glslBackend
+                        |> WGSLShader.ofGLSL
+                        |> write
+                else
                     computeShader
                     |> FShade.ComputeShader.toModule
                     |> ModuleCompiler.compileGLSL glslBackend
@@ -255,7 +274,6 @@ type WebGPUShaderExtensions private() =
                 |> FShade.ComputeShader.toModule
                 |> ModuleCompiler.compileGLSL glslBackend
                 |> WGSLShader.ofGLSL
-                |> write
         )
         
     [<Extension>]
