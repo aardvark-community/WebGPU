@@ -16,7 +16,7 @@ git remote add origin https://github.com/google/dawn.git
 git fetch --depth 1 origin %DAWNCOMMIT%
 git reset --hard FETCH_HEAD
 
-REM git checkout 3d47c8a32f07bdc91840ae56d94c247a66b6c47f
+REM git checkout %DAWNCOMMIT%
 
 python tools\fetch_dawn_dependencies.py --use-test-deps
 
@@ -26,7 +26,7 @@ mkdir Release
 pushd Release
 
 cmake ..\.. -DCMAKE_BUILD_TYPE=Release -DTINT_BUILD_SPV_READER=1 -DTINT_BUILD_WGSL_WRITER=1
-cmake --build . --config Release --target ALL_BUILD 
+cmake --build . --config Release --target ALL_BUILD -- /m
 
 REM Copy dawn.json
 xcopy /Y ..\..\src\dawn\dawn.json ..\..\..\..\..\..\

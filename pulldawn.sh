@@ -48,7 +48,7 @@ mkdir -p out/Release
 cd out/Release || exit 1
 
 cmake -S ../.. -B . -DCMAKE_BUILD_TYPE=Release $ARCH_FLAGS -DCMAKE_INSTALL_PREFIX=./blabber -DTINT_BUILD_SPV_READER=1 -DTINT_BUILD_WGSL_WRITER=1 || { echo 'cmake failed' ; exit 1; }
-make webgpu_dawn
+make -j webgpu_dawn
 
 # Copy dawn.json
 cp ../../src/dawn/dawn.json ../../../../../../
@@ -57,9 +57,11 @@ cp ../../src/dawn/dawn.json ../../../../../../
 if [ "$OS" = "Darwin" ]; then
   mkdir -p ../../../../../../libs/Native/WebGPU/mac/$ARCH_NAME/
   cp ./src/dawn/native/libwebgpu_dawn.dylib ../../../../../../libs/Native/WebGPU/mac/$ARCH_NAME/ || { echo 'copy failed' ; exit 1; }
+  echo $DAWNCOMMIT > ../../../../../../libs/Native/WebGPU/mac/$ARCH_NAME/dawn.commit
 else
   mkdir -p ../../../../../../libs/Native/WebGPU/linux/$ARCH_NAME/
   cp ./src/dawn/native/libwebgpu_dawn.so ../../../../../../libs/Native/WebGPU/linux/$ARCH_NAME/ || { echo 'copy failed' ; exit 1; }
+  echo $DAWNCOMMIT > ../../../../../../libs/Native/WebGPU/linux/$ARCH_NAME/dawn.commit
 fi
 
 # Copy Headers
@@ -75,7 +77,6 @@ cp ./gen/include/dawn/webgpu_cpp.h ../../../../../../include/dawn/webgpu_cpp.h
 cp ./gen/src/emdawnwebgpu/include/webgpu/webgpu_cpp_chained_struct.h ../../../../../../include/dawn/webgpu/webgpu_cpp_chained_struct.h
 cp ../../include/webgpu/webgpu_enum_class_bitmasks.h ../../../../../../include/dawn/webgpu/webgpu_enum_class_bitmasks.h
 cp ./gen/webgpu-headers/webgpu.h ../../../../../../include/dawn/webgpu.h
-
 
 
 cd ../../../../../../
