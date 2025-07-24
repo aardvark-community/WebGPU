@@ -1,5 +1,7 @@
 REM @echo off
 
+set /p DAWNCOMMIT=<dawn.commit
+
 pushd src\WebGPUNative
 
 rd /s /q tmp
@@ -11,7 +13,7 @@ REM git clone https://github.com/google/dawn.git
 pushd dawn
 git init
 git remote add origin https://github.com/google/dawn.git
-git fetch --depth 1 origin 3d47c8a32f07bdc91840ae56d94c247a66b6c47f
+git fetch --depth 1 origin %DAWNCOMMIT%
 git reset --hard FETCH_HEAD
 
 REM git checkout 3d47c8a32f07bdc91840ae56d94c247a66b6c47f
