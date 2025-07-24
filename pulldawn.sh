@@ -47,6 +47,10 @@ cd out/Release
 cmake -S ../.. -B . -DCMAKE_BUILD_TYPE=Release $ARCH_FLAGS -DCMAKE_INSTALL_PREFIX=./blabber -DTINT_BUILD_SPV_READER=1 -DTINT_BUILD_WGSL_WRITER=1 || { echo 'cmake failed' ; exit 1; }
 make webgpu_dawn
 
+# Copy dawn.json
+cp ../../src/dawn/dawn.json ../../../../../../
+
+# Copy Libs
 if [ "$OS" = "Darwin" ]; then
   mkdir -p ../../../../../../libs/Native/WebGPU/mac/$ARCH_NAME/
   cp ./src/dawn/native/libwebgpu_dawn.dylib ../../../../../../libs/Native/WebGPU/mac/$ARCH_NAME/ || { echo 'copy failed' ; exit 1; }
@@ -54,9 +58,22 @@ else
   mkdir -p ../../../../../../libs/Native/WebGPU/linux/$ARCH_NAME/
   cp ./src/dawn/native/libwebgpu_dawn.so ../../../../../../libs/Native/WebGPU/linux/$ARCH_NAME/ || { echo 'copy failed' ; exit 1; }
 fi
-cp -r ./gen/include/ ../../../../../../include/dawn
-cp -r ../../include/ ../../../../../../include/dawn
-cp ../../src/dawn/dawn.json ../../../../../../
+
+mkdir -p ../../../../../../include/dawn/webgpu
+mkdir -p ../../../../../../include/src/tint
+mkdir -p ../../../../../../include/src/utils
+rsync -ar --include='*/' --include='*.h' --exclude='*' gen/include/dawn/ ../../../../../../include/dawn
+rsync -ar --include='*/' --include='*.h' --exclude='*' ../../include/  ../../../../../../include
+rsync -a --include='*/' --include='*.h' --exclude='*' ../../src/tint/  ../../../../../../include/src/tint/
+rsync -ar --include='*/' --include='*.h' --exclude='*' ../../src/utils/  ../../../../../../include/src/utils/
+cp ./gen/include/dawn/webgpu.h ../../../../../../include/dawn/webgpu/webgpu.h
+cp ./gen/include/dawn/webgpu_cpp.h ../../../../../../include/dawn/webgpu_cpp.h
+cp ./gen/src/emdawnwebgpu/include/webgpu/webgpu_cpp_chained_struct.h ../../../../../../include/dawn/webgpu/webgpu_cpp_chained_struct.h
+cp ../../include/webgpu/webgpu_enum_class_bitmasks.h ../../../../../../include/dawn/webgpu/webgpu_enum_class_bitmasks.h
+cp ./gen/webgpu-headers/webgpu.h ../../../../../../include/dawn/webgpu.h
+
+
+
 cd ../../../../../../
 
 dotnet fsi Generator.fsx
