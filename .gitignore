@@ -39,3 +39,4 @@ bin/
 **/pub/
 src/WebGPUNative/build
 src/WebGPUNative/tmp
+/libs/windows/AMD64/*.lib

@@ -1,5 +1,8 @@
 @echo off
 
+powershell -command "Expand-Archive -Force libs/windows/AMD64/libs.zip libs/windows/AMD64/"
+
+
 pushd src\WebGPUNative
 rd /s /q  build
 mkdir build
