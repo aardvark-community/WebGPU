@@ -1,5 +1,8 @@
 #!/bin/sh
 
+DAWNCOMMIT=`cat dawn.commit`
+echo "using dawn commit $DAWNCOMMIT"
+
 OS=`uname -s`
 ARCH_FLAGS=""
 ARCH_NAME="AMD64"
@@ -23,26 +26,26 @@ then
 fi
 echo "$OS $ARCH $ARCH_NAME"
 
-cd src/WebGPUNative
+cd src/WebGPUNative || exit 1
 
 rm -dfr tmp
 mkdir -p tmp
-cd tmp
+cd tmp || exit 1
 
 # git clone https://github.com/google/dawn.git
 mkdir dawn
-cd dawn
+cd dawn || exit 1
 git init
 git remote add origin https://github.com/google/dawn.git
-git fetch --depth 1 origin 3d47c8a32f07bdc91840ae56d94c247a66b6c47f
+git fetch --depth 1 origin $DAWNCOMMIT
 git reset --hard FETCH_HEAD
 
-# git checkout 3d47c8a32f07bdc91840ae56d94c247a66b6c47f
+# git checkout $DAWNCOMMIT
 
 python tools/fetch_dawn_dependencies.py --use-test-deps
 
 mkdir -p out/Release
-cd out/Release
+cd out/Release || exit 1
 
 cmake -S ../.. -B . -DCMAKE_BUILD_TYPE=Release $ARCH_FLAGS -DCMAKE_INSTALL_PREFIX=./blabber -DTINT_BUILD_SPV_READER=1 -DTINT_BUILD_WGSL_WRITER=1 || { echo 'cmake failed' ; exit 1; }
 make webgpu_dawn
@@ -59,6 +62,7 @@ else
   cp ./src/dawn/native/libwebgpu_dawn.so ../../../../../../libs/Native/WebGPU/linux/$ARCH_NAME/ || { echo 'copy failed' ; exit 1; }
 fi
 
+# Copy Headers
 mkdir -p ../../../../../../include/dawn/webgpu
 mkdir -p ../../../../../../include/src/tint
 mkdir -p ../../../../../../include/src/utils
