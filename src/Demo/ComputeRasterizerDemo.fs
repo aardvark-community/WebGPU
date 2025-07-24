@@ -246,7 +246,7 @@ let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d
 
 let run() =
     Aardvark.Init()
-     
+    WebGPUShaderExtensions.ShaderCaching <- true
      
     let rasterizer = BasicRasterizer.compile
      

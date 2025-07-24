@@ -148,6 +148,7 @@ type ShaderProgram(shaderModules : Map<FShade.ShaderStage, ShaderModule>, code :
 type WebGPUShaderExtensions private() =
     
     static let mutable shaderCaching = true
+    static let mutable printShaders = true
     
     static let glslBackend =
         FShade.GLSL.Backend.Create {
@@ -194,9 +195,25 @@ type WebGPUShaderExtensions private() =
         with get() = shaderCaching
         and set v = shaderCaching <- v
     
+    static member PrintShaders
+        with get() = printShaders
+        and set v = printShaders <- v
     [<Extension>]
     static member GetWGSLCode(this : FShade.Effect, signature : IFramebufferSignature) =
         wgslCache.GetOrCreate((signature, this), fun (signature, effect) ->
+            
+            let compile() =
+                let glsl = 
+                    effect.Link(signature)
+                    |> ModuleCompiler.compileGLSL glslBackend
+                    
+                if printShaders then
+                    Log.start "effect %A" effect.Id
+                    for line in lineRx.Split(glsl.code) do
+                        Log.line "%s" line
+                    
+                WGSLShader.ofGLSL glsl
+            
             if shaderCaching then
                 let fileName =
                     ShaderCacheKey.computeHash {
@@ -218,26 +235,33 @@ type WebGPUShaderExtensions private() =
                         WGSLShader.unpickle data
                     with e ->
                         Log.warn "could not read cache-file: %A" e
-                        effect.Link(signature)
-                        |> ModuleCompiler.compileGLSL glslBackend
-                        |> WGSLShader.ofGLSL
-                        
+                        compile()
                         |> write
                 else
-                    effect.Link(signature)
-                    |> ModuleCompiler.compileGLSL glslBackend
-                    |> WGSLShader.ofGLSL
+                    compile()
                     |> write
             else
-                effect.Link(signature)
-                |> ModuleCompiler.compileGLSL glslBackend
-                |> WGSLShader.ofGLSL
+                compile()
                 
         )
     
     [<Extension>]
     static member GetWGSLCode(this : FShade.ComputeShader) =
         wgslComputeCache.GetOrCreate(this, fun computeShader ->
+            
+            let compile() =
+                let glsl = 
+                    computeShader
+                    |> FShade.ComputeShader.toModule
+                    |> ModuleCompiler.compileGLSL glslBackend
+                    
+                if printShaders then
+                    Log.start "compute shader %A" computeShader.csId
+                    for line in lineRx.Split(glsl.code) do
+                        Log.line "%s" line
+                    
+                WGSLShader.ofGLSL glsl
+                
             if shaderCaching then
                 let fileName =
                     ShaderCacheKey.computeHash {
@@ -258,22 +282,13 @@ type WebGPUShaderExtensions private() =
                         WGSLShader.unpickle data
                     with e ->
                         Log.warn "could not read cache-file: %A" e
-                        computeShader
-                        |> FShade.ComputeShader.toModule
-                        |> ModuleCompiler.compileGLSL glslBackend
-                        |> WGSLShader.ofGLSL
+                        compile()
                         |> write
                 else
-                    computeShader
-                    |> FShade.ComputeShader.toModule
-                    |> ModuleCompiler.compileGLSL glslBackend
-                    |> WGSLShader.ofGLSL
+                    compile()
                     |> write
             else
-                computeShader
-                |> FShade.ComputeShader.toModule
-                |> ModuleCompiler.compileGLSL glslBackend
-                |> WGSLShader.ofGLSL
+                compile()
         )
         
     [<Extension>]
