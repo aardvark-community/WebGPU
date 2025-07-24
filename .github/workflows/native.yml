@@ -10,6 +10,7 @@ on:
       - pulldawn.cmd
       - buildnative.sh
       - buildnative.cmd
+      - src/WebGPUNative/CMakeLists.txt
 jobs:
   mac_x64:
     name: MacOS (x64)
