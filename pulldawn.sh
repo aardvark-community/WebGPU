@@ -53,7 +53,7 @@ if [ "$GITHUB_ACTIONS" = "true" ]; then
   MAKEARGS='-j 2'
 fi
 
-cmake -S ../.. -B . -G "Unix Makefiles" -DDAWN_BUILD_TESTS=OFF -DTINT_BUILD_TESTS=OFF -DTINT_BUILD_CMD_TOOLS=OFF -DCMAKE_BUILD_TYPE=Release $ARCH_FLAGS -DCMAKE_INSTALL_PREFIX=./blabber -DTINT_BUILD_SPV_READER=1 -DTINT_BUILD_WGSL_WRITER=1 || { echo 'cmake failed' ; exit 1; }
+cmake -S ../.. -B . -G "Unix Makefiles" -DCMAKE_CXX_STANDARD=17 -DDAWN_BUILD_TESTS=OFF -DTINT_BUILD_TESTS=OFF -DTINT_BUILD_CMD_TOOLS=OFF -DCMAKE_BUILD_TYPE=Release $ARCH_FLAGS -DCMAKE_INSTALL_PREFIX=./blabber -DTINT_BUILD_SPV_READER=1 -DTINT_BUILD_WGSL_WRITER=1 || { echo 'cmake failed' ; exit 1; }
 make $MAKEARGS webgpu_dawn
 
 # Copy dawn.json
