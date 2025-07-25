@@ -25,7 +25,7 @@ pushd out
 mkdir Release
 pushd Release
 
-cmake ..\.. -DCMAKE_BUILD_TYPE=Release -DTINT_BUILD_SPV_READER=1 -DTINT_BUILD_WGSL_WRITER=1
+cmake ..\.. -G "Visual Studio 17 2022" -A x64 -DDAWN_BUILD_TESTS=OFF -DTINT_BUILD_TESTS=OFF -DTINT_BUILD_CMD_TOOLS=OFF -DCMAKE_BUILD_TYPE=Release -DTINT_BUILD_SPV_READER=1 -DTINT_BUILD_WGSL_WRITER=1
 cmake --build . --config Release --target ALL_BUILD -- /m
 
 REM Copy dawn.json
@@ -37,6 +37,7 @@ xcopy /Y .\src\dawn\native\Release\webgpu_dawn.lib ..\..\..\..\..\..\libs\Native
 xcopy /Y .\third_party\spirv-tools\source\Release\SPIRV-Tools.lib ..\..\..\..\..\..\libs\windows\AMD64\
 xcopy /Y .\third_party\spirv-tools\source\opt\Release\SPIRV-Tools-opt.lib ..\..\..\..\..\..\libs\windows\AMD64\
 xcopy .\src\tint\Release\*.lib ..\..\..\..\..\..\libs\windows\AMD64 /Y
+echo %DAWNCOMMIT% > ..\..\..\..\..\..\libs\Native\WebGPU\windows\AMD64\dawn.commit
 
 powershell -command "Compress-Archive -Force ../../../../../../libs/windows/AMD64/*.lib ../../../../../../libs/windows/AMD64/libs.zip"
 
@@ -45,11 +46,11 @@ xcopy /I /s /Y .\gen\include\dawn\*.h ..\..\..\..\..\..\include\dawn
 xcopy /s /I /Y ..\..\include\  ..\..\..\..\..\..\include\
 xcopy /s /I /Y ..\..\src\tint\*.h  ..\..\..\..\..\..\include\src\tint\
 xcopy /s /I /Y ..\..\src\utils\*.h  ..\..\..\..\..\..\include\src\utils\
-xcopy /-I /Y .\gen\include\dawn\webgpu.h ..\..\..\..\..\..\include\dawn\webgpu\webgpu.h
-xcopy /-I /Y .\gen\include\dawn\webgpu_cpp.h ..\..\..\..\..\..\include\dawn\webgpu_cpp.h
-xcopy /-I /Y .\gen\src\emdawnwebgpu\include\webgpu\webgpu_cpp_chained_struct.h ..\..\..\..\..\..\include\dawn\webgpu\webgpu_cpp_chained_struct.h
-xcopy /-I /Y ..\..\include\webgpu\webgpu_enum_class_bitmasks.h ..\..\..\..\..\..\include\dawn\webgpu\webgpu_enum_class_bitmasks.h
-xcopy /-I /Y .\gen\webgpu-headers\webgpu.h ..\..\..\..\..\..\include\dawn\webgpu.h
+xcopy /Y .\gen\include\dawn\webgpu.h ..\..\..\..\..\..\include\dawn\webgpu\webgpu.h
+xcopy /Y .\gen\include\dawn\webgpu_cpp.h ..\..\..\..\..\..\include\dawn\webgpu_cpp.h
+xcopy /Y .\gen\src\emdawnwebgpu\include\webgpu\webgpu_cpp_chained_struct.h ..\..\..\..\..\..\include\dawn\webgpu\webgpu_cpp_chained_struct.h
+xcopy /Y ..\..\include\webgpu\webgpu_enum_class_bitmasks.h ..\..\..\..\..\..\include\dawn\webgpu\webgpu_enum_class_bitmasks.h
+xcopy /Y .\gen\webgpu-headers\webgpu.h ..\..\..\..\..\..\include\dawn\webgpu.h
 
 popd 
 popd 
