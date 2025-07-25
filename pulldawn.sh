@@ -47,8 +47,14 @@ python tools/fetch_dawn_dependencies.py --use-test-deps
 mkdir -p out/Release
 cd out/Release || exit 1
 
+# github action runners run out of memory when using -j, so we limit the threads to 2
+MAKEARGS='-j '
+if [ "$GITHUB_ACTIONS" = "true" ]; then
+  MAKEARGS='-j 2'
+fi
+
 cmake -S ../.. -B . -G "Unix Makefiles" -DDAWN_BUILD_TESTS=OFF -DTINT_BUILD_TESTS=OFF -DTINT_BUILD_CMD_TOOLS=OFF -DCMAKE_BUILD_TYPE=Release $ARCH_FLAGS -DCMAKE_INSTALL_PREFIX=./blabber -DTINT_BUILD_SPV_READER=1 -DTINT_BUILD_WGSL_WRITER=1 || { echo 'cmake failed' ; exit 1; }
-make -j webgpu_dawn
+make $MAKEARGS webgpu_dawn
 
 # Copy dawn.json
 cp ../../src/dawn/dawn.json ../../../../../../
