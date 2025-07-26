@@ -163,8 +163,11 @@ struct Options {
     /// Set to `true` to disable the polyfills on integer division and modulo.
     bool disable_polyfill_integer_div_mod = false;
 
-    /// Set to `true` to enable the module constant transform
-    bool enable_module_constant = false;
+    /// Set to `true` to scalarize max min and clamp builtins.
+    bool scalarize_max_min_clamp = false;
+
+    /// Set to `true` to disable the module constant transform for f16
+    bool disable_module_constant_f16 = false;
 
     /// Emit argument buffers
     bool use_argument_buffers = false;
@@ -187,6 +190,9 @@ struct Options {
     /// The optional vertex pulling configuration.
     std::optional<VertexPullingConfig> vertex_pulling_config = {};
 
+    /// Immediate binding point info
+    std::optional<BindingPoint> immediate_binding_point = {};
+
     /// The bindings.
     Bindings bindings;
 
@@ -200,13 +206,15 @@ struct Options {
                  disable_demote_to_helper,
                  emit_vertex_point_size,
                  disable_polyfill_integer_div_mod,
-                 enable_module_constant,
+                 scalarize_max_min_clamp,
+                 disable_module_constant_f16,
                  use_argument_buffers,
                  buffer_size_ubo_index,
                  fixed_sample_mask,
                  pixel_local_attachments,
                  array_length_from_uniform,
                  vertex_pulling_config,
+                 immediate_binding_point,
                  bindings);
 };
 

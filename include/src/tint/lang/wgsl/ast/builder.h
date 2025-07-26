@@ -32,14 +32,12 @@
 
 #include "src/tint/api/common/override_id.h"
 
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/fluent_types.h"
 #include "src/tint/lang/core/interpolation.h"
-#include "src/tint/lang/core/interpolation_sampling.h"
-#include "src/tint/lang/core/interpolation_type.h"
 #include "src/tint/lang/core/number.h"
-#include "src/tint/lang/core/subgroup_matrix_kind.h"
-#include "src/tint/lang/core/texel_format.h"
 #include "src/tint/lang/core/type/sampler_kind.h"
+#include "src/tint/lang/core/type/texel_buffer.h"
 #include "src/tint/lang/core/type/texture_dimension.h"
 #include "src/tint/lang/wgsl/ast/alias.h"
 #include "src/tint/lang/wgsl/ast/assignment_statement.h"
@@ -100,8 +98,7 @@
 #include "src/tint/lang/wgsl/ast/variable_decl_statement.h"
 #include "src/tint/lang/wgsl/ast/while_statement.h"
 #include "src/tint/lang/wgsl/ast/workgroup_attribute.h"
-#include "src/tint/lang/wgsl/builtin_fn.h"
-#include "src/tint/lang/wgsl/extension.h"
+#include "src/tint/lang/wgsl/enums.h"
 #include "src/tint/utils/generation_id.h"
 #include "src/tint/utils/memory/block_allocator.h"
 #include "src/tint/utils/symbol/symbol_table.h"
@@ -1301,6 +1298,11 @@ class Builder {
 
         /// @returns the external texture
         ast::Type external_texture() const { return (*this)("texture_external"); }
+
+        /// @returns the texel buffer
+        ast::Type texel_buffer(core::TexelFormat format, core::Access access) const {
+            return (*this)("texel_buffer", format, access);
+        }
 
         /// @param subtype the texture subtype.
         /// @returns the input attachment

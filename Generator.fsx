@@ -124,9 +124,19 @@ module FunctionDef =
                
         let returns =
             match obj.TryGetProperty("returns") with
-            | (true, r) when r.ValueKind = JsonValueKind.String ->
-                r.GetString()
+            | (true, r) ->
+                if r.ValueKind = JsonValueKind.String then
+                    r.GetString()
+                elif r.ValueKind = JsonValueKind.Object then
+                    match r.TryGetProperty "type" with
+                    | (true, t) when t.ValueKind = JsonValueKind.String ->
+                        t.GetString()
+                    | _ ->
+                        "void"
+                else
+                    "void"
             | _ ->
+                
                 "void"
         
         let tags =
