@@ -200,7 +200,10 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
                                 
                                 
                                 task.Run(fbo)
-                                surf.Present()
+                                match surf.Present() with
+                                | Status.Error -> Log.warn "could not present swapchain"
+                                | _ -> ()
+                                
                                 true
                         }
                             

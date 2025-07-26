@@ -294,11 +294,11 @@ type WebGPUExtensions private() =
    
     [<Extension>]
     static member GetWGSLLanguageFeatures(this : Instance) =
-        let cnt = WebGPU.Raw.WebGPU.InstanceGetWGSLLanguageFeatures(this.Handle, NativePtr.ofNativeInt 0n)
-        let arr = Array.zeroCreate (int cnt)
+        let arr = [| Unchecked.defaultof<Raw.SupportedWGSLLanguageFeatures> |]
         use ptr = fixed arr
-        WebGPU.Raw.WebGPU.InstanceGetWGSLLanguageFeatures(this.Handle, ptr) |> ignore
-        arr
+        WebGPU.Raw.WebGPU.InstanceGetWGSLLanguageFeatures(this.Handle, ptr)
+        let res = arr.[0]
+        Array.init (int res.FeatureCount) (fun i -> NativePtr.get res.Features i)
         
     [<Extension>]
     static member Wait(this : Queue) =
