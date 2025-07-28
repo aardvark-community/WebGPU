@@ -275,12 +275,16 @@ type WebGPUExtensions private() =
 
     [<Extension>]
     static member GetFormatCapabilities(this : Adapter, format : TextureFormat) =
-         let mutable res = Unchecked.defaultof<WebGPU.Raw.DawnFormatCapabilities>
-         use ptr = fixed &res
+         let arr = Array.zeroCreate<_> 128
+         use pArr = fixed arr
+         let mutable drm = WebGPU.Raw.DawnDrmFormatCapabilities(0n, SType.DawnDrmFormatCapabilities, 128un, pArr)
+         use pDrm = fixed &drm
+         let mutable rr = WebGPU.Raw.DawnFormatCapabilities(NativePtr.toNativeInt pDrm)
+         use ptr = fixed &rr
          let status = WebGPU.Raw.WebGPU.AdapterGetFormatCapabilities(this.Handle, format, ptr)
          if status <> Status.Success then
              failwith $"could not get format capabilities: {status}"
-         DawnFormatCapabilities.Read(Unchecked.defaultof<_>, &res)
+         DawnFormatCapabilities.Read(Unchecked.defaultof<_>, &rr)
          
     [<Extension>]
     static member GetCapabilities(this : Surface, adapter : Adapter) =
@@ -294,11 +298,11 @@ type WebGPUExtensions private() =
    
     [<Extension>]
     static member GetWGSLLanguageFeatures(this : Instance) =
-        let cnt = WebGPU.Raw.WebGPU.InstanceGetWGSLLanguageFeatures(this.Handle, NativePtr.ofNativeInt 0n)
-        let arr = Array.zeroCreate (int cnt)
+        let arr = [| Unchecked.defaultof<Raw.SupportedWGSLLanguageFeatures> |]
         use ptr = fixed arr
-        WebGPU.Raw.WebGPU.InstanceGetWGSLLanguageFeatures(this.Handle, ptr) |> ignore
-        arr
+        WebGPU.Raw.WebGPU.InstanceGetWGSLLanguageFeatures(this.Handle, ptr)
+        let res = arr.[0]
+        Array.init (int res.FeatureCount) (fun i -> NativePtr.get res.Features i)
         
     [<Extension>]
     static member Wait(this : Queue) =
@@ -469,7 +473,7 @@ type BufferRangeExtensions private() =
             MipLevelCount = 1
             BaseArrayLayer = 0
             ArrayLayerCount = 1
-            Aspect = TextureAspect.Plane0Only
+            Aspect = TextureAspect.All
             Usage = usage
         }
         

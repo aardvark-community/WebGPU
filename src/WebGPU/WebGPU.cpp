@@ -25,8 +25,8 @@ EMSCRIPTEN_KEEPALIVE bool gpuAdapterHasFeature(WGPUAdapter self, WGPUFeatureName
 EMSCRIPTEN_KEEPALIVE void gpuAdapterGetFeatures(WGPUAdapter self, WGPUSupportedFeatures* features) {
     return wgpuAdapterGetFeatures(self, features);
 }
-EMSCRIPTEN_KEEPALIVE WGPUFuture gpuAdapterRequestDevice(WGPUAdapter self, const WGPUDeviceDescriptor* options, WGPURequestDeviceCallbackInfo callbackInfo) {
-    return wgpuAdapterRequestDevice(self, options, callbackInfo);
+EMSCRIPTEN_KEEPALIVE WGPUFuture gpuAdapterRequestDevice(WGPUAdapter self, const WGPUDeviceDescriptor* descriptor, WGPURequestDeviceCallbackInfo callbackInfo) {
+    return wgpuAdapterRequestDevice(self, descriptor, callbackInfo);
 }
 EMSCRIPTEN_KEEPALIVE void gpuAdapterRelease(WGPUAdapter self) {
     return wgpuAdapterRelease(self);
@@ -322,7 +322,7 @@ EMSCRIPTEN_KEEPALIVE WGPUFuture gpuInstanceRequestAdapter(WGPUInstance self, con
 EMSCRIPTEN_KEEPALIVE bool gpuInstanceHasWGSLLanguageFeature(WGPUInstance self, WGPUWGSLLanguageFeatureName feature) {
     return wgpuInstanceHasWGSLLanguageFeature(self, feature);
 }
-EMSCRIPTEN_KEEPALIVE WGPUStatus gpuInstanceGetWGSLLanguageFeatures(WGPUInstance self, WGPUSupportedWGSLLanguageFeatures* features) {
+EMSCRIPTEN_KEEPALIVE void gpuInstanceGetWGSLLanguageFeatures(WGPUInstance self, WGPUSupportedWGSLLanguageFeatures* features) {
     return wgpuInstanceGetWGSLLanguageFeatures(self, features);
 }
 EMSCRIPTEN_KEEPALIVE void gpuInstanceRelease(WGPUInstance self) {
@@ -331,8 +331,14 @@ EMSCRIPTEN_KEEPALIVE void gpuInstanceRelease(WGPUInstance self) {
 EMSCRIPTEN_KEEPALIVE void gpuInstanceAddRef(WGPUInstance self) {
     return wgpuInstanceAddRef(self);
 }
-EMSCRIPTEN_KEEPALIVE WGPUStatus gpuGetInstanceCapabilities(WGPUInstanceCapabilities* capabilities) {
-    return wgpuGetInstanceCapabilities(capabilities);
+EMSCRIPTEN_KEEPALIVE void gpuGetInstanceFeatures(WGPUSupportedInstanceFeatures* features) {
+    return wgpuGetInstanceFeatures(features);
+}
+EMSCRIPTEN_KEEPALIVE bool gpuHasInstanceFeature(WGPUInstanceFeatureName feature) {
+    return wgpuHasInstanceFeature(feature);
+}
+EMSCRIPTEN_KEEPALIVE WGPUStatus gpuGetInstanceLimits(WGPUInstanceLimits* limits) {
+    return wgpuGetInstanceLimits(limits);
 }
 EMSCRIPTEN_KEEPALIVE void gpuPipelineLayoutSetLabel(WGPUPipelineLayout self, WGPUStringView label) {
     return wgpuPipelineLayoutSetLabel(self, label);
@@ -657,7 +663,7 @@ EMSCRIPTEN_KEEPALIVE WGPUStatus gpuSurfaceGetCapabilities(WGPUSurface self, WGPU
 EMSCRIPTEN_KEEPALIVE void gpuSurfaceGetCurrentTexture(WGPUSurface self, WGPUSurfaceTexture* surfaceTexture) {
     return wgpuSurfaceGetCurrentTexture(self, surfaceTexture);
 }
-EMSCRIPTEN_KEEPALIVE void gpuSurfacePresent(WGPUSurface self) {
+EMSCRIPTEN_KEEPALIVE WGPUStatus gpuSurfacePresent(WGPUSurface self) {
     return wgpuSurfacePresent(self);
 }
 EMSCRIPTEN_KEEPALIVE void gpuSurfaceUnconfigure(WGPUSurface self) {

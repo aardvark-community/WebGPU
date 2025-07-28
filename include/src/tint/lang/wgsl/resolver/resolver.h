@@ -39,8 +39,8 @@
 #include "src/tint/api/common/binding_point.h"
 #include "src/tint/lang/core/constant/eval.h"
 #include "src/tint/lang/core/constant/value.h"
+#include "src/tint/lang/core/enums.h"
 #include "src/tint/lang/core/intrinsic/table.h"
-#include "src/tint/lang/core/subgroup_matrix_kind.h"
 #include "src/tint/lang/core/type/input_attachment.h"
 #include "src/tint/lang/wgsl/allowed_features.h"
 #include "src/tint/lang/wgsl/intrinsic/dialect.h"
@@ -225,6 +225,10 @@ class Resolver {
     /// dimensions @p dim.
     const core::type::StorageTexture* StorageTexture(const ast::Identifier* ident,
                                                      core::type::TextureDimension dim);
+
+    /// @returns a texel buffer resolved from the templated identifier @p ident.
+    /// @param ident the identifier to resolve
+    const core::type::TexelBuffer* TexelBuffer(const ast::Identifier* ident);
 
     /// @returns an input attachment resolved from the templated identifier @p ident
     const core::type::InputAttachment* InputAttachment(const ast::Identifier* ident);

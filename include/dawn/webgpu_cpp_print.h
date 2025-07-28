@@ -341,6 +341,35 @@ namespace wgpu {
       return o;
   }
   template <typename CharT, typename Traits>
+  std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, ComponentSwizzle value) {
+      switch (value) {
+      case ComponentSwizzle::Undefined:
+        o << "ComponentSwizzle::Undefined";
+        break;
+      case ComponentSwizzle::Zero:
+        o << "ComponentSwizzle::Zero";
+        break;
+      case ComponentSwizzle::One:
+        o << "ComponentSwizzle::One";
+        break;
+      case ComponentSwizzle::R:
+        o << "ComponentSwizzle::R";
+        break;
+      case ComponentSwizzle::G:
+        o << "ComponentSwizzle::G";
+        break;
+      case ComponentSwizzle::B:
+        o << "ComponentSwizzle::B";
+        break;
+      case ComponentSwizzle::A:
+        o << "ComponentSwizzle::A";
+        break;
+          default:
+            o << "ComponentSwizzle::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<ComponentSwizzle>::type>(value);
+      }
+      return o;
+  }
+  template <typename CharT, typename Traits>
   std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, CompositeAlphaMode value) {
       switch (value) {
       case CompositeAlphaMode::Auto:
@@ -503,14 +532,14 @@ namespace wgpu {
   template <typename CharT, typename Traits>
   std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, FeatureName value) {
       switch (value) {
+      case FeatureName::CoreFeaturesAndLimits:
+        o << "FeatureName::CoreFeaturesAndLimits";
+        break;
       case FeatureName::DepthClipControl:
         o << "FeatureName::DepthClipControl";
         break;
       case FeatureName::Depth32FloatStencil8:
         o << "FeatureName::Depth32FloatStencil8";
-        break;
-      case FeatureName::TimestampQuery:
-        o << "FeatureName::TimestampQuery";
         break;
       case FeatureName::TextureCompressionBC:
         o << "FeatureName::TextureCompressionBC";
@@ -526,6 +555,9 @@ namespace wgpu {
         break;
       case FeatureName::TextureCompressionASTCSliced3D:
         o << "FeatureName::TextureCompressionASTCSliced3D";
+        break;
+      case FeatureName::TimestampQuery:
+        o << "FeatureName::TimestampQuery";
         break;
       case FeatureName::IndirectFirstInstance:
         o << "FeatureName::IndirectFirstInstance";
@@ -554,8 +586,11 @@ namespace wgpu {
       case FeatureName::Subgroups:
         o << "FeatureName::Subgroups";
         break;
-      case FeatureName::CoreFeaturesAndLimits:
-        o << "FeatureName::CoreFeaturesAndLimits";
+      case FeatureName::TextureFormatsTier1:
+        o << "FeatureName::TextureFormatsTier1";
+        break;
+      case FeatureName::TextureFormatsTier2:
+        o << "FeatureName::TextureFormatsTier2";
         break;
       case FeatureName::DawnInternalUsages:
         o << "FeatureName::DawnInternalUsages";
@@ -728,8 +763,8 @@ namespace wgpu {
       case FeatureName::DawnDeviceAllocatorControl:
         o << "FeatureName::DawnDeviceAllocatorControl";
         break;
-      case FeatureName::TextureFormatsTier1:
-        o << "FeatureName::TextureFormatsTier1";
+      case FeatureName::TextureComponentSwizzle:
+        o << "FeatureName::TextureComponentSwizzle";
         break;
           default:
             o << "FeatureName::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<FeatureName>::type>(value);
@@ -784,6 +819,23 @@ namespace wgpu {
         break;
           default:
             o << "IndexFormat::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<IndexFormat>::type>(value);
+      }
+      return o;
+  }
+  template <typename CharT, typename Traits>
+  std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, InstanceFeatureName value) {
+      switch (value) {
+      case InstanceFeatureName::TimedWaitAny:
+        o << "InstanceFeatureName::TimedWaitAny";
+        break;
+      case InstanceFeatureName::ShaderSourceSPIRV:
+        o << "InstanceFeatureName::ShaderSourceSPIRV";
+        break;
+      case InstanceFeatureName::MultipleDevicesPerAdapter:
+        o << "InstanceFeatureName::MultipleDevicesPerAdapter";
+        break;
+          default:
+            o << "InstanceFeatureName::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<InstanceFeatureName>::type>(value);
       }
       return o;
   }
@@ -895,6 +947,20 @@ namespace wgpu {
         break;
           default:
             o << "PowerPreference::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<PowerPreference>::type>(value);
+      }
+      return o;
+  }
+  template <typename CharT, typename Traits>
+  std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, PredefinedColorSpace value) {
+      switch (value) {
+      case PredefinedColorSpace::SRGB:
+        o << "PredefinedColorSpace::SRGB";
+        break;
+      case PredefinedColorSpace::DisplayP3:
+        o << "PredefinedColorSpace::DisplayP3";
+        break;
+          default:
+            o << "PredefinedColorSpace::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<PredefinedColorSpace>::type>(value);
       }
       return o;
   }
@@ -1183,6 +1249,15 @@ namespace wgpu {
       case SType::SurfaceSourceXCBWindow:
         o << "SType::SurfaceSourceXCBWindow";
         break;
+      case SType::SurfaceColorManagement:
+        o << "SType::SurfaceColorManagement";
+        break;
+      case SType::RequestAdapterWebXROptions:
+        o << "SType::RequestAdapterWebXROptions";
+        break;
+      case SType::CompatibilityModeLimits:
+        o << "SType::CompatibilityModeLimits";
+        break;
       case SType::TextureBindingViewDimensionDescriptor:
         o << "SType::TextureBindingViewDimensionDescriptor";
         break;
@@ -1393,6 +1468,18 @@ namespace wgpu {
       case SType::RequestAdapterWebGPUBackendOptions:
         o << "SType::RequestAdapterWebGPUBackendOptions";
         break;
+      case SType::DawnFakeDeviceInitializeErrorForTesting:
+        o << "SType::DawnFakeDeviceInitializeErrorForTesting";
+        break;
+      case SType::TextureComponentSwizzleDescriptor:
+        o << "SType::TextureComponentSwizzleDescriptor";
+        break;
+      case SType::SharedTextureMemoryD3D11BeginState:
+        o << "SType::SharedTextureMemoryD3D11BeginState";
+        break;
+      case SType::DawnConsumeAdapterDescriptor:
+        o << "SType::DawnConsumeAdapterDescriptor";
+        break;
           default:
             o << "SType::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<SType>::type>(value);
       }
@@ -1412,6 +1499,12 @@ namespace wgpu {
         break;
       case SubgroupMatrixComponentType::I32:
         o << "SubgroupMatrixComponentType::I32";
+        break;
+      case SubgroupMatrixComponentType::U8:
+        o << "SubgroupMatrixComponentType::U8";
+        break;
+      case SubgroupMatrixComponentType::I8:
+        o << "SubgroupMatrixComponentType::I8";
         break;
           default:
             o << "SubgroupMatrixComponentType::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<SubgroupMatrixComponentType>::type>(value);
@@ -1511,6 +1604,12 @@ namespace wgpu {
       case TextureFormat::R8Sint:
         o << "TextureFormat::R8Sint";
         break;
+      case TextureFormat::R16Unorm:
+        o << "TextureFormat::R16Unorm";
+        break;
+      case TextureFormat::R16Snorm:
+        o << "TextureFormat::R16Snorm";
+        break;
       case TextureFormat::R16Uint:
         o << "TextureFormat::R16Uint";
         break;
@@ -1540,6 +1639,12 @@ namespace wgpu {
         break;
       case TextureFormat::R32Sint:
         o << "TextureFormat::R32Sint";
+        break;
+      case TextureFormat::RG16Unorm:
+        o << "TextureFormat::RG16Unorm";
+        break;
+      case TextureFormat::RG16Snorm:
+        o << "TextureFormat::RG16Snorm";
         break;
       case TextureFormat::RG16Uint:
         o << "TextureFormat::RG16Uint";
@@ -1591,6 +1696,12 @@ namespace wgpu {
         break;
       case TextureFormat::RG32Sint:
         o << "TextureFormat::RG32Sint";
+        break;
+      case TextureFormat::RGBA16Unorm:
+        o << "TextureFormat::RGBA16Unorm";
+        break;
+      case TextureFormat::RGBA16Snorm:
+        o << "TextureFormat::RGBA16Snorm";
         break;
       case TextureFormat::RGBA16Uint:
         o << "TextureFormat::RGBA16Uint";
@@ -1784,24 +1895,6 @@ namespace wgpu {
       case TextureFormat::ASTC12x12UnormSrgb:
         o << "TextureFormat::ASTC12x12UnormSrgb";
         break;
-      case TextureFormat::R16Unorm:
-        o << "TextureFormat::R16Unorm";
-        break;
-      case TextureFormat::RG16Unorm:
-        o << "TextureFormat::RG16Unorm";
-        break;
-      case TextureFormat::RGBA16Unorm:
-        o << "TextureFormat::RGBA16Unorm";
-        break;
-      case TextureFormat::R16Snorm:
-        o << "TextureFormat::R16Snorm";
-        break;
-      case TextureFormat::RG16Snorm:
-        o << "TextureFormat::RG16Snorm";
-        break;
-      case TextureFormat::RGBA16Snorm:
-        o << "TextureFormat::RGBA16Snorm";
-        break;
       case TextureFormat::R8BG8Biplanar420Unorm:
         o << "TextureFormat::R8BG8Biplanar420Unorm";
         break;
@@ -1886,6 +1979,20 @@ namespace wgpu {
         break;
           default:
             o << "TextureViewDimension::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<TextureViewDimension>::type>(value);
+      }
+      return o;
+  }
+  template <typename CharT, typename Traits>
+  std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, ToneMappingMode value) {
+      switch (value) {
+      case ToneMappingMode::Standard:
+        o << "ToneMappingMode::Standard";
+        break;
+      case ToneMappingMode::Extended:
+        o << "ToneMappingMode::Extended";
+        break;
+          default:
+            o << "ToneMappingMode::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<ToneMappingMode>::type>(value);
       }
       return o;
   }
@@ -2071,6 +2178,9 @@ namespace wgpu {
         break;
       case WGSLLanguageFeatureName::SizedBindingArray:
         o << "WGSLLanguageFeatureName::SizedBindingArray";
+        break;
+      case WGSLLanguageFeatureName::TexelBuffers:
+        o << "WGSLLanguageFeatureName::TexelBuffers";
         break;
       case WGSLLanguageFeatureName::ChromiumTestingUnimplemented:
         o << "WGSLLanguageFeatureName::ChromiumTestingUnimplemented";

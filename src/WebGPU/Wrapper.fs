@@ -78,6 +78,15 @@ type DeviceDescriptor =
         new(label : StringView, requiredFeatureCount : unativeint, requiredFeatures : nativeptr<FeatureName>, requiredLimits : nativeptr<Limits>, defaultQueue : QueueDescriptor, deviceLostCallbackInfo : DeviceLostCallbackInfo, uncapturedErrorCallbackInfo : UncapturedErrorCallbackInfo) = DeviceDescriptor(0n, label, requiredFeatureCount, requiredFeatures, requiredLimits, defaultQueue, deviceLostCallbackInfo, uncapturedErrorCallbackInfo)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
+type DawnConsumeAdapterDescriptor = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public SType : SType
+        val mutable public ConsumeAdapter : int
+        new(nextInChain : nativeint, sType : SType, consumeAdapter : int) = { NextInChain = nextInChain; SType = sType; ConsumeAdapter = consumeAdapter }
+        new(consumeAdapter : int) = DawnConsumeAdapterDescriptor(0n, Unchecked.defaultof<SType>, consumeAdapter)
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnTogglesDescriptor = 
     struct
         val mutable public NextInChain : nativeint
@@ -528,12 +537,20 @@ type Limits =
         val mutable public MaxComputeWorkgroupSizeZ : uint32
         val mutable public MaxComputeWorkgroupsPerDimension : uint32
         val mutable public MaxImmediateSize : uint32
+        new(nextInChain : nativeint, maxTextureDimension1D : uint32, maxTextureDimension2D : uint32, maxTextureDimension3D : uint32, maxTextureArrayLayers : uint32, maxBindGroups : uint32, maxBindGroupsPlusVertexBuffers : uint32, maxBindingsPerBindGroup : uint32, maxDynamicUniformBuffersPerPipelineLayout : uint32, maxDynamicStorageBuffersPerPipelineLayout : uint32, maxSampledTexturesPerShaderStage : uint32, maxSamplersPerShaderStage : uint32, maxStorageBuffersPerShaderStage : uint32, maxStorageTexturesPerShaderStage : uint32, maxUniformBuffersPerShaderStage : uint32, maxUniformBufferBindingSize : uint64, maxStorageBufferBindingSize : uint64, minUniformBufferOffsetAlignment : uint32, minStorageBufferOffsetAlignment : uint32, maxVertexBuffers : uint32, maxBufferSize : uint64, maxVertexAttributes : uint32, maxVertexBufferArrayStride : uint32, maxInterStageShaderVariables : uint32, maxColorAttachments : uint32, maxColorAttachmentBytesPerSample : uint32, maxComputeWorkgroupStorageSize : uint32, maxComputeInvocationsPerWorkgroup : uint32, maxComputeWorkgroupSizeX : uint32, maxComputeWorkgroupSizeY : uint32, maxComputeWorkgroupSizeZ : uint32, maxComputeWorkgroupsPerDimension : uint32, maxImmediateSize : uint32) = { NextInChain = nextInChain; MaxTextureDimension1D = maxTextureDimension1D; MaxTextureDimension2D = maxTextureDimension2D; MaxTextureDimension3D = maxTextureDimension3D; MaxTextureArrayLayers = maxTextureArrayLayers; MaxBindGroups = maxBindGroups; MaxBindGroupsPlusVertexBuffers = maxBindGroupsPlusVertexBuffers; MaxBindingsPerBindGroup = maxBindingsPerBindGroup; MaxDynamicUniformBuffersPerPipelineLayout = maxDynamicUniformBuffersPerPipelineLayout; MaxDynamicStorageBuffersPerPipelineLayout = maxDynamicStorageBuffersPerPipelineLayout; MaxSampledTexturesPerShaderStage = maxSampledTexturesPerShaderStage; MaxSamplersPerShaderStage = maxSamplersPerShaderStage; MaxStorageBuffersPerShaderStage = maxStorageBuffersPerShaderStage; MaxStorageTexturesPerShaderStage = maxStorageTexturesPerShaderStage; MaxUniformBuffersPerShaderStage = maxUniformBuffersPerShaderStage; MaxUniformBufferBindingSize = maxUniformBufferBindingSize; MaxStorageBufferBindingSize = maxStorageBufferBindingSize; MinUniformBufferOffsetAlignment = minUniformBufferOffsetAlignment; MinStorageBufferOffsetAlignment = minStorageBufferOffsetAlignment; MaxVertexBuffers = maxVertexBuffers; MaxBufferSize = maxBufferSize; MaxVertexAttributes = maxVertexAttributes; MaxVertexBufferArrayStride = maxVertexBufferArrayStride; MaxInterStageShaderVariables = maxInterStageShaderVariables; MaxColorAttachments = maxColorAttachments; MaxColorAttachmentBytesPerSample = maxColorAttachmentBytesPerSample; MaxComputeWorkgroupStorageSize = maxComputeWorkgroupStorageSize; MaxComputeInvocationsPerWorkgroup = maxComputeInvocationsPerWorkgroup; MaxComputeWorkgroupSizeX = maxComputeWorkgroupSizeX; MaxComputeWorkgroupSizeY = maxComputeWorkgroupSizeY; MaxComputeWorkgroupSizeZ = maxComputeWorkgroupSizeZ; MaxComputeWorkgroupsPerDimension = maxComputeWorkgroupsPerDimension; MaxImmediateSize = maxImmediateSize }
+        new(maxTextureDimension1D : uint32, maxTextureDimension2D : uint32, maxTextureDimension3D : uint32, maxTextureArrayLayers : uint32, maxBindGroups : uint32, maxBindGroupsPlusVertexBuffers : uint32, maxBindingsPerBindGroup : uint32, maxDynamicUniformBuffersPerPipelineLayout : uint32, maxDynamicStorageBuffersPerPipelineLayout : uint32, maxSampledTexturesPerShaderStage : uint32, maxSamplersPerShaderStage : uint32, maxStorageBuffersPerShaderStage : uint32, maxStorageTexturesPerShaderStage : uint32, maxUniformBuffersPerShaderStage : uint32, maxUniformBufferBindingSize : uint64, maxStorageBufferBindingSize : uint64, minUniformBufferOffsetAlignment : uint32, minStorageBufferOffsetAlignment : uint32, maxVertexBuffers : uint32, maxBufferSize : uint64, maxVertexAttributes : uint32, maxVertexBufferArrayStride : uint32, maxInterStageShaderVariables : uint32, maxColorAttachments : uint32, maxColorAttachmentBytesPerSample : uint32, maxComputeWorkgroupStorageSize : uint32, maxComputeInvocationsPerWorkgroup : uint32, maxComputeWorkgroupSizeX : uint32, maxComputeWorkgroupSizeY : uint32, maxComputeWorkgroupSizeZ : uint32, maxComputeWorkgroupsPerDimension : uint32, maxImmediateSize : uint32) = Limits(0n, maxTextureDimension1D, maxTextureDimension2D, maxTextureDimension3D, maxTextureArrayLayers, maxBindGroups, maxBindGroupsPlusVertexBuffers, maxBindingsPerBindGroup, maxDynamicUniformBuffersPerPipelineLayout, maxDynamicStorageBuffersPerPipelineLayout, maxSampledTexturesPerShaderStage, maxSamplersPerShaderStage, maxStorageBuffersPerShaderStage, maxStorageTexturesPerShaderStage, maxUniformBuffersPerShaderStage, maxUniformBufferBindingSize, maxStorageBufferBindingSize, minUniformBufferOffsetAlignment, minStorageBufferOffsetAlignment, maxVertexBuffers, maxBufferSize, maxVertexAttributes, maxVertexBufferArrayStride, maxInterStageShaderVariables, maxColorAttachments, maxColorAttachmentBytesPerSample, maxComputeWorkgroupStorageSize, maxComputeInvocationsPerWorkgroup, maxComputeWorkgroupSizeX, maxComputeWorkgroupSizeY, maxComputeWorkgroupSizeZ, maxComputeWorkgroupsPerDimension, maxImmediateSize)
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type CompatibilityModeLimits = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public SType : SType
         val mutable public MaxStorageBuffersInVertexStage : uint32
         val mutable public MaxStorageTexturesInVertexStage : uint32
         val mutable public MaxStorageBuffersInFragmentStage : uint32
         val mutable public MaxStorageTexturesInFragmentStage : uint32
-        new(nextInChain : nativeint, maxTextureDimension1D : uint32, maxTextureDimension2D : uint32, maxTextureDimension3D : uint32, maxTextureArrayLayers : uint32, maxBindGroups : uint32, maxBindGroupsPlusVertexBuffers : uint32, maxBindingsPerBindGroup : uint32, maxDynamicUniformBuffersPerPipelineLayout : uint32, maxDynamicStorageBuffersPerPipelineLayout : uint32, maxSampledTexturesPerShaderStage : uint32, maxSamplersPerShaderStage : uint32, maxStorageBuffersPerShaderStage : uint32, maxStorageTexturesPerShaderStage : uint32, maxUniformBuffersPerShaderStage : uint32, maxUniformBufferBindingSize : uint64, maxStorageBufferBindingSize : uint64, minUniformBufferOffsetAlignment : uint32, minStorageBufferOffsetAlignment : uint32, maxVertexBuffers : uint32, maxBufferSize : uint64, maxVertexAttributes : uint32, maxVertexBufferArrayStride : uint32, maxInterStageShaderVariables : uint32, maxColorAttachments : uint32, maxColorAttachmentBytesPerSample : uint32, maxComputeWorkgroupStorageSize : uint32, maxComputeInvocationsPerWorkgroup : uint32, maxComputeWorkgroupSizeX : uint32, maxComputeWorkgroupSizeY : uint32, maxComputeWorkgroupSizeZ : uint32, maxComputeWorkgroupsPerDimension : uint32, maxImmediateSize : uint32, maxStorageBuffersInVertexStage : uint32, maxStorageTexturesInVertexStage : uint32, maxStorageBuffersInFragmentStage : uint32, maxStorageTexturesInFragmentStage : uint32) = { NextInChain = nextInChain; MaxTextureDimension1D = maxTextureDimension1D; MaxTextureDimension2D = maxTextureDimension2D; MaxTextureDimension3D = maxTextureDimension3D; MaxTextureArrayLayers = maxTextureArrayLayers; MaxBindGroups = maxBindGroups; MaxBindGroupsPlusVertexBuffers = maxBindGroupsPlusVertexBuffers; MaxBindingsPerBindGroup = maxBindingsPerBindGroup; MaxDynamicUniformBuffersPerPipelineLayout = maxDynamicUniformBuffersPerPipelineLayout; MaxDynamicStorageBuffersPerPipelineLayout = maxDynamicStorageBuffersPerPipelineLayout; MaxSampledTexturesPerShaderStage = maxSampledTexturesPerShaderStage; MaxSamplersPerShaderStage = maxSamplersPerShaderStage; MaxStorageBuffersPerShaderStage = maxStorageBuffersPerShaderStage; MaxStorageTexturesPerShaderStage = maxStorageTexturesPerShaderStage; MaxUniformBuffersPerShaderStage = maxUniformBuffersPerShaderStage; MaxUniformBufferBindingSize = maxUniformBufferBindingSize; MaxStorageBufferBindingSize = maxStorageBufferBindingSize; MinUniformBufferOffsetAlignment = minUniformBufferOffsetAlignment; MinStorageBufferOffsetAlignment = minStorageBufferOffsetAlignment; MaxVertexBuffers = maxVertexBuffers; MaxBufferSize = maxBufferSize; MaxVertexAttributes = maxVertexAttributes; MaxVertexBufferArrayStride = maxVertexBufferArrayStride; MaxInterStageShaderVariables = maxInterStageShaderVariables; MaxColorAttachments = maxColorAttachments; MaxColorAttachmentBytesPerSample = maxColorAttachmentBytesPerSample; MaxComputeWorkgroupStorageSize = maxComputeWorkgroupStorageSize; MaxComputeInvocationsPerWorkgroup = maxComputeInvocationsPerWorkgroup; MaxComputeWorkgroupSizeX = maxComputeWorkgroupSizeX; MaxComputeWorkgroupSizeY = maxComputeWorkgroupSizeY; MaxComputeWorkgroupSizeZ = maxComputeWorkgroupSizeZ; MaxComputeWorkgroupsPerDimension = maxComputeWorkgroupsPerDimension; MaxImmediateSize = maxImmediateSize; MaxStorageBuffersInVertexStage = maxStorageBuffersInVertexStage; MaxStorageTexturesInVertexStage = maxStorageTexturesInVertexStage; MaxStorageBuffersInFragmentStage = maxStorageBuffersInFragmentStage; MaxStorageTexturesInFragmentStage = maxStorageTexturesInFragmentStage }
-        new(maxTextureDimension1D : uint32, maxTextureDimension2D : uint32, maxTextureDimension3D : uint32, maxTextureArrayLayers : uint32, maxBindGroups : uint32, maxBindGroupsPlusVertexBuffers : uint32, maxBindingsPerBindGroup : uint32, maxDynamicUniformBuffersPerPipelineLayout : uint32, maxDynamicStorageBuffersPerPipelineLayout : uint32, maxSampledTexturesPerShaderStage : uint32, maxSamplersPerShaderStage : uint32, maxStorageBuffersPerShaderStage : uint32, maxStorageTexturesPerShaderStage : uint32, maxUniformBuffersPerShaderStage : uint32, maxUniformBufferBindingSize : uint64, maxStorageBufferBindingSize : uint64, minUniformBufferOffsetAlignment : uint32, minStorageBufferOffsetAlignment : uint32, maxVertexBuffers : uint32, maxBufferSize : uint64, maxVertexAttributes : uint32, maxVertexBufferArrayStride : uint32, maxInterStageShaderVariables : uint32, maxColorAttachments : uint32, maxColorAttachmentBytesPerSample : uint32, maxComputeWorkgroupStorageSize : uint32, maxComputeInvocationsPerWorkgroup : uint32, maxComputeWorkgroupSizeX : uint32, maxComputeWorkgroupSizeY : uint32, maxComputeWorkgroupSizeZ : uint32, maxComputeWorkgroupsPerDimension : uint32, maxImmediateSize : uint32, maxStorageBuffersInVertexStage : uint32, maxStorageTexturesInVertexStage : uint32, maxStorageBuffersInFragmentStage : uint32, maxStorageTexturesInFragmentStage : uint32) = Limits(0n, maxTextureDimension1D, maxTextureDimension2D, maxTextureDimension3D, maxTextureArrayLayers, maxBindGroups, maxBindGroupsPlusVertexBuffers, maxBindingsPerBindGroup, maxDynamicUniformBuffersPerPipelineLayout, maxDynamicStorageBuffersPerPipelineLayout, maxSampledTexturesPerShaderStage, maxSamplersPerShaderStage, maxStorageBuffersPerShaderStage, maxStorageTexturesPerShaderStage, maxUniformBuffersPerShaderStage, maxUniformBufferBindingSize, maxStorageBufferBindingSize, minUniformBufferOffsetAlignment, minStorageBufferOffsetAlignment, maxVertexBuffers, maxBufferSize, maxVertexAttributes, maxVertexBufferArrayStride, maxInterStageShaderVariables, maxColorAttachments, maxColorAttachmentBytesPerSample, maxComputeWorkgroupStorageSize, maxComputeInvocationsPerWorkgroup, maxComputeWorkgroupSizeX, maxComputeWorkgroupSizeY, maxComputeWorkgroupSizeZ, maxComputeWorkgroupsPerDimension, maxImmediateSize, maxStorageBuffersInVertexStage, maxStorageTexturesInVertexStage, maxStorageBuffersInFragmentStage, maxStorageTexturesInFragmentStage)
+        new(nextInChain : nativeint, sType : SType, maxStorageBuffersInVertexStage : uint32, maxStorageTexturesInVertexStage : uint32, maxStorageBuffersInFragmentStage : uint32, maxStorageTexturesInFragmentStage : uint32) = { NextInChain = nextInChain; SType = sType; MaxStorageBuffersInVertexStage = maxStorageBuffersInVertexStage; MaxStorageTexturesInVertexStage = maxStorageTexturesInVertexStage; MaxStorageBuffersInFragmentStage = maxStorageBuffersInFragmentStage; MaxStorageTexturesInFragmentStage = maxStorageTexturesInFragmentStage }
+        new(maxStorageBuffersInVertexStage : uint32, maxStorageTexturesInVertexStage : uint32, maxStorageBuffersInFragmentStage : uint32, maxStorageTexturesInFragmentStage : uint32) = CompatibilityModeLimits(0n, Unchecked.defaultof<SType>, maxStorageBuffersInVertexStage, maxStorageTexturesInVertexStage, maxStorageBuffersInFragmentStage, maxStorageTexturesInFragmentStage)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnTexelCopyBufferRowAlignmentLimits = 
@@ -559,6 +576,13 @@ type SupportedFeatures =
         val mutable public FeatureCount : unativeint
         val mutable public Features : nativeptr<FeatureName>
         new(featureCount : unativeint, features : nativeptr<FeatureName>) = { FeatureCount = featureCount; Features = features }
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type SupportedInstanceFeatures = 
+    struct
+        val mutable public FeatureCount : unativeint
+        val mutable public Features : nativeptr<InstanceFeatureName>
+        new(featureCount : unativeint, features : nativeptr<InstanceFeatureName>) = { FeatureCount = featureCount; Features = features }
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SupportedWGSLLanguageFeatures = 
@@ -824,6 +848,15 @@ type SharedTextureMemoryD3DSwapchainBeginState =
         new(isSwapchain : int) = SharedTextureMemoryD3DSwapchainBeginState(0n, Unchecked.defaultof<SType>, isSwapchain)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
+type SharedTextureMemoryD3D11BeginState = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public SType : SType
+        val mutable public RequiresEndAccessFence : int
+        new(nextInChain : nativeint, sType : SType, requiresEndAccessFence : int) = { NextInChain = nextInChain; SType = sType; RequiresEndAccessFence = requiresEndAccessFence }
+        new(requiresEndAccessFence : int) = SharedTextureMemoryD3D11BeginState(0n, Unchecked.defaultof<SType>, requiresEndAccessFence)
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedFenceDescriptor = 
     struct
         val mutable public NextInChain : nativeint
@@ -895,6 +928,13 @@ type DawnFakeBufferOOMForTesting =
         val mutable public FakeOOMAtDevice : int
         new(nextInChain : nativeint, sType : SType, fakeOOMAtWireClientMap : int, fakeOOMAtNativeMap : int, fakeOOMAtDevice : int) = { NextInChain = nextInChain; SType = sType; FakeOOMAtWireClientMap = fakeOOMAtWireClientMap; FakeOOMAtNativeMap = fakeOOMAtNativeMap; FakeOOMAtDevice = fakeOOMAtDevice }
         new(fakeOOMAtWireClientMap : int, fakeOOMAtNativeMap : int, fakeOOMAtDevice : int) = DawnFakeBufferOOMForTesting(0n, Unchecked.defaultof<SType>, fakeOOMAtWireClientMap, fakeOOMAtNativeMap, fakeOOMAtDevice)
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type DawnFakeDeviceInitializeErrorForTesting = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public SType : SType
+        new(nextInChain : nativeint, sType : SType) = { NextInChain = nextInChain; SType = sType }
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedFenceExportInfo = 
@@ -1029,21 +1069,22 @@ type FutureWaitInfo =
         new(future : Future, completed : int) = { Future = future; Completed = completed }
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
-type InstanceCapabilities = 
+type InstanceLimits = 
     struct
         val mutable public NextInChain : nativeint
-        val mutable public TimedWaitAnyEnable : int
         val mutable public TimedWaitAnyMaxCount : unativeint
-        new(nextInChain : nativeint, timedWaitAnyEnable : int, timedWaitAnyMaxCount : unativeint) = { NextInChain = nextInChain; TimedWaitAnyEnable = timedWaitAnyEnable; TimedWaitAnyMaxCount = timedWaitAnyMaxCount }
-        new(timedWaitAnyEnable : int, timedWaitAnyMaxCount : unativeint) = InstanceCapabilities(0n, timedWaitAnyEnable, timedWaitAnyMaxCount)
+        new(nextInChain : nativeint, timedWaitAnyMaxCount : unativeint) = { NextInChain = nextInChain; TimedWaitAnyMaxCount = timedWaitAnyMaxCount }
+        new(timedWaitAnyMaxCount : unativeint) = InstanceLimits(0n, timedWaitAnyMaxCount)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type InstanceDescriptor = 
     struct
         val mutable public NextInChain : nativeint
-        val mutable public Capabilities : InstanceCapabilities
-        new(nextInChain : nativeint, capabilities : InstanceCapabilities) = { NextInChain = nextInChain; Capabilities = capabilities }
-        new(capabilities : InstanceCapabilities) = InstanceDescriptor(0n, capabilities)
+        val mutable public RequiredFeatureCount : unativeint
+        val mutable public RequiredFeatures : nativeptr<InstanceFeatureName>
+        val mutable public RequiredLimits : nativeptr<InstanceLimits>
+        new(nextInChain : nativeint, requiredFeatureCount : unativeint, requiredFeatures : nativeptr<InstanceFeatureName>, requiredLimits : nativeptr<InstanceLimits>) = { NextInChain = nextInChain; RequiredFeatureCount = requiredFeatureCount; RequiredFeatures = requiredFeatures; RequiredLimits = requiredLimits }
+        new(requiredFeatureCount : unativeint, requiredFeatures : nativeptr<InstanceFeatureName>, requiredLimits : nativeptr<InstanceLimits>) = InstanceDescriptor(0n, requiredFeatureCount, requiredFeatures, requiredLimits)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnWireWGSLControl = 
@@ -1675,6 +1716,24 @@ type TextureViewDescriptor =
         new(label : StringView, format : TextureFormat, dimension : TextureViewDimension, baseMipLevel : uint32, mipLevelCount : uint32, baseArrayLayer : uint32, arrayLayerCount : uint32, aspect : TextureAspect, usage : TextureUsage) = TextureViewDescriptor(0n, label, format, dimension, baseMipLevel, mipLevelCount, baseArrayLayer, arrayLayerCount, aspect, usage)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
+type TextureComponentSwizzleDescriptor = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public SType : SType
+        val mutable public Swizzle : TextureComponentSwizzle
+        new(nextInChain : nativeint, sType : SType, swizzle : TextureComponentSwizzle) = { NextInChain = nextInChain; SType = sType; Swizzle = swizzle }
+        new(swizzle : TextureComponentSwizzle) = TextureComponentSwizzleDescriptor(0n, Unchecked.defaultof<SType>, swizzle)
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type TextureComponentSwizzle = 
+    struct
+        val mutable public R : ComponentSwizzle
+        val mutable public G : ComponentSwizzle
+        val mutable public B : ComponentSwizzle
+        val mutable public A : ComponentSwizzle
+        new(r : ComponentSwizzle, g : ComponentSwizzle, b : ComponentSwizzle, a : ComponentSwizzle) = { R = r; G = g; B = b; A = a }
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
 type YCbCrVkDescriptor = 
     struct
         val mutable public NextInChain : nativeint
@@ -1802,7 +1861,7 @@ module WebGPU =
     [<DllImport("WebGPUNative", EntryPoint="gpuAdapterGetFeatures")>]
     extern void AdapterGetFeatures(nativeint self, SupportedFeatures* features)
     [<DllImport("WebGPUNative", EntryPoint="gpuAdapterRequestDevice")>]
-    extern Future AdapterRequestDevice(nativeint self, DeviceDescriptor* options, RequestDeviceCallbackInfo callbackInfo)
+    extern Future AdapterRequestDevice(nativeint self, DeviceDescriptor* descriptor, RequestDeviceCallbackInfo callbackInfo)
     [<DllImport("WebGPUNative", EntryPoint="gpuAdapterCreateDevice")>]
     extern nativeint AdapterCreateDevice(nativeint self, DeviceDescriptor* descriptor)
     [<DllImport("WebGPUNative", EntryPoint="gpuAdapterGetFormatCapabilities")>]
@@ -2178,13 +2237,17 @@ module WebGPU =
     [<DllImport("WebGPUNative", EntryPoint="gpuInstanceHasWGSLLanguageFeature")>]
     extern int InstanceHasWGSLLanguageFeature(nativeint self, WGSLLanguageFeatureName feature)
     [<DllImport("WebGPUNative", EntryPoint="gpuInstanceGetWGSLLanguageFeatures")>]
-    extern Status InstanceGetWGSLLanguageFeatures(nativeint self, SupportedWGSLLanguageFeatures* features)
+    extern void InstanceGetWGSLLanguageFeatures(nativeint self, SupportedWGSLLanguageFeatures* features)
     [<DllImport("WebGPUNative", EntryPoint="gpuInstanceRelease")>]
     extern void InstanceRelease(nativeint self)
     [<DllImport("WebGPUNative", EntryPoint="gpuInstanceAddRef")>]
     extern void InstanceAddRef(nativeint self)
-    [<DllImport("WebGPUNative", EntryPoint="gpuGetInstanceCapabilities")>]
-    extern Status GetInstanceCapabilities(InstanceCapabilities* capabilities)
+    [<DllImport("WebGPUNative", EntryPoint="gpuGetInstanceFeatures")>]
+    extern void GetInstanceFeatures(SupportedInstanceFeatures* features)
+    [<DllImport("WebGPUNative", EntryPoint="gpuHasInstanceFeature")>]
+    extern int HasInstanceFeature(InstanceFeatureName feature)
+    [<DllImport("WebGPUNative", EntryPoint="gpuGetInstanceLimits")>]
+    extern Status GetInstanceLimits(InstanceLimits* limits)
     [<DllImport("WebGPUNative", EntryPoint="gpuPipelineLayoutSetLabel")>]
     extern void PipelineLayoutSetLabel(nativeint self, StringView label)
     [<DllImport("WebGPUNative", EntryPoint="gpuPipelineLayoutRelease")>]
@@ -2625,7 +2688,7 @@ module WebGPU =
     [<DllImport("WebGPUNative", EntryPoint="gpuSurfaceGetCurrentTexture")>]
     extern void SurfaceGetCurrentTexture(nativeint self, SurfaceTexture* surfaceTexture)
     [<DllImport("WebGPUNative", EntryPoint="gpuSurfacePresent")>]
-    extern void SurfacePresent(nativeint self)
+    extern Status SurfacePresent(nativeint self)
     [<DllImport("WebGPUNative", EntryPoint="gpuSurfaceUnconfigure")>]
     extern void SurfaceUnconfigure(nativeint self)
     [<DllImport("WebGPUNative", EntryPoint="gpuSurfaceSetLabel")>]

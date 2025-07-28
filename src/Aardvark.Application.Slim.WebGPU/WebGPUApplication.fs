@@ -200,7 +200,10 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
                                 
                                 
                                 task.Run(fbo)
-                                surf.Present()
+                                match surf.Present() with
+                                | Status.Error -> Log.warn "could not present swapchain"
+                                | _ -> ()
+                                
                                 true
                         }
                             
@@ -237,16 +240,19 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
             
             Log.start "Features"
             
+
             let mutable unknown = ResizeArray()
             for f in adapter.Features.Features do
-                let str = string f
-                match System.Int32.TryParse str with
-                | (true, v) -> unknown.Add (sprintf "0x%X" v)
-                | _ -> Log.line "%s" str
+                if System.Enum.IsDefined(typeof<FeatureName>, f) then
+                    Log.line "%s" (string f)
+                else
+                    unknown.Add (sprintf "0x%X" (int f))
+            
             
             if unknown.Count > 0 then
                 Log.line "+%d Unknown Features" unknown.Count
-            
+                for u in unknown do
+                    Log.line "  %s" u
             Log.stop()
             
             Log.stop()
@@ -263,8 +269,7 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
                     DefaultQueue = { Label = "DefaultQueue" }
                 }
                 
-            
-                
+
             let runtime = new Runtime(device)
             return new WebGPUApplication(debug, instance, adapter, device, runtime)
         }

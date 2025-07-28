@@ -42,8 +42,8 @@ DllExport(bool) gpuAdapterHasFeature(WGPUAdapter self, WGPUFeatureName feature) 
 DllExport(void) gpuAdapterGetFeatures(WGPUAdapter self, WGPUSupportedFeatures* features) {
     return wgpuAdapterGetFeatures(self, features);
 }
-DllExport(WGPUFuture) gpuAdapterRequestDevice(WGPUAdapter self, const WGPUDeviceDescriptor* options, WGPURequestDeviceCallbackInfo callbackInfo) {
-    return wgpuAdapterRequestDevice(self, options, callbackInfo);
+DllExport(WGPUFuture) gpuAdapterRequestDevice(WGPUAdapter self, const WGPUDeviceDescriptor* descriptor, WGPURequestDeviceCallbackInfo callbackInfo) {
+    return wgpuAdapterRequestDevice(self, descriptor, callbackInfo);
 }
 DllExport(WGPUDevice) gpuAdapterCreateDevice(WGPUAdapter self, const WGPUDeviceDescriptor* descriptor) {
     return wgpuAdapterCreateDevice(self, descriptor);
@@ -481,7 +481,7 @@ DllExport(WGPUFuture) gpuInstanceRequestAdapter(WGPUInstance self, const WGPUReq
 DllExport(bool) gpuInstanceHasWGSLLanguageFeature(WGPUInstance self, WGPUWGSLLanguageFeatureName feature) {
     return wgpuInstanceHasWGSLLanguageFeature(self, feature);
 }
-DllExport(WGPUStatus) gpuInstanceGetWGSLLanguageFeatures(WGPUInstance self, WGPUSupportedWGSLLanguageFeatures* features) {
+DllExport(void) gpuInstanceGetWGSLLanguageFeatures(WGPUInstance self, WGPUSupportedWGSLLanguageFeatures* features) {
     return wgpuInstanceGetWGSLLanguageFeatures(self, features);
 }
 DllExport(void) gpuInstanceRelease(WGPUInstance self) {
@@ -490,8 +490,14 @@ DllExport(void) gpuInstanceRelease(WGPUInstance self) {
 DllExport(void) gpuInstanceAddRef(WGPUInstance self) {
     return wgpuInstanceAddRef(self);
 }
-DllExport(WGPUStatus) gpuGetInstanceCapabilities(WGPUInstanceCapabilities* capabilities) {
-    return wgpuGetInstanceCapabilities(capabilities);
+DllExport(void) gpuGetInstanceFeatures(WGPUSupportedInstanceFeatures* features) {
+    return wgpuGetInstanceFeatures(features);
+}
+DllExport(bool) gpuHasInstanceFeature(WGPUInstanceFeatureName feature) {
+    return wgpuHasInstanceFeature(feature);
+}
+DllExport(WGPUStatus) gpuGetInstanceLimits(WGPUInstanceLimits* limits) {
+    return wgpuGetInstanceLimits(limits);
 }
 DllExport(void) gpuPipelineLayoutSetLabel(WGPUPipelineLayout self, WGPUStringView label) {
     return wgpuPipelineLayoutSetLabel(self, label);
@@ -831,7 +837,7 @@ DllExport(WGPUStatus) gpuSurfaceGetCapabilities(WGPUSurface self, WGPUAdapter ad
 DllExport(void) gpuSurfaceGetCurrentTexture(WGPUSurface self, WGPUSurfaceTexture* surfaceTexture) {
     return wgpuSurfaceGetCurrentTexture(self, surfaceTexture);
 }
-DllExport(void) gpuSurfacePresent(WGPUSurface self) {
+DllExport(WGPUStatus) gpuSurfacePresent(WGPUSurface self) {
     return wgpuSurfacePresent(self);
 }
 DllExport(void) gpuSurfaceUnconfigure(WGPUSurface self) {

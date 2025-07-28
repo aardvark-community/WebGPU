@@ -6,18 +6,11 @@
 
 // Note: Often allocated as a static global. Do not add a complex constructor.
 typedef struct DawnProcTable {
-    WGPUProcAdapterInfoFreeMembers adapterInfoFreeMembers;
-    WGPUProcAdapterPropertiesMemoryHeapsFreeMembers adapterPropertiesMemoryHeapsFreeMembers;
-    WGPUProcAdapterPropertiesSubgroupMatrixConfigsFreeMembers adapterPropertiesSubgroupMatrixConfigsFreeMembers;
     WGPUProcCreateInstance createInstance;
-    WGPUProcDawnDrmFormatCapabilitiesFreeMembers dawnDrmFormatCapabilitiesFreeMembers;
-    WGPUProcGetInstanceCapabilities getInstanceCapabilities;
+    WGPUProcGetInstanceFeatures getInstanceFeatures;
+    WGPUProcGetInstanceLimits getInstanceLimits;
+    WGPUProcHasInstanceFeature hasInstanceFeature;
     WGPUProcGetProcAddress getProcAddress;
-    WGPUProcSharedBufferMemoryEndAccessStateFreeMembers sharedBufferMemoryEndAccessStateFreeMembers;
-    WGPUProcSharedTextureMemoryEndAccessStateFreeMembers sharedTextureMemoryEndAccessStateFreeMembers;
-    WGPUProcSupportedFeaturesFreeMembers supportedFeaturesFreeMembers;
-    WGPUProcSupportedWGSLLanguageFeaturesFreeMembers supportedWGSLLanguageFeaturesFreeMembers;
-    WGPUProcSurfaceCapabilitiesFreeMembers surfaceCapabilitiesFreeMembers;
 
     WGPUProcAdapterCreateDevice adapterCreateDevice;
     WGPUProcAdapterGetFeatures adapterGetFeatures;
@@ -29,6 +22,12 @@ typedef struct DawnProcTable {
     WGPUProcAdapterRequestDevice adapterRequestDevice;
     WGPUProcAdapterAddRef adapterAddRef;
     WGPUProcAdapterRelease adapterRelease;
+
+    WGPUProcAdapterInfoFreeMembers adapterInfoFreeMembers;
+
+    WGPUProcAdapterPropertiesMemoryHeapsFreeMembers adapterPropertiesMemoryHeapsFreeMembers;
+
+    WGPUProcAdapterPropertiesSubgroupMatrixConfigsFreeMembers adapterPropertiesSubgroupMatrixConfigsFreeMembers;
 
     WGPUProcBindGroupSetLabel bindGroupSetLabel;
     WGPUProcBindGroupAddRef bindGroupAddRef;
@@ -93,6 +92,8 @@ typedef struct DawnProcTable {
     WGPUProcComputePipelineSetLabel computePipelineSetLabel;
     WGPUProcComputePipelineAddRef computePipelineAddRef;
     WGPUProcComputePipelineRelease computePipelineRelease;
+
+    WGPUProcDawnDrmFormatCapabilitiesFreeMembers dawnDrmFormatCapabilitiesFreeMembers;
 
     WGPUProcDeviceCreateBindGroup deviceCreateBindGroup;
     WGPUProcDeviceCreateBindGroupLayout deviceCreateBindGroupLayout;
@@ -245,6 +246,8 @@ typedef struct DawnProcTable {
     WGPUProcSharedBufferMemoryAddRef sharedBufferMemoryAddRef;
     WGPUProcSharedBufferMemoryRelease sharedBufferMemoryRelease;
 
+    WGPUProcSharedBufferMemoryEndAccessStateFreeMembers sharedBufferMemoryEndAccessStateFreeMembers;
+
     WGPUProcSharedFenceExportInfo sharedFenceExportInfo;
     WGPUProcSharedFenceAddRef sharedFenceAddRef;
     WGPUProcSharedFenceRelease sharedFenceRelease;
@@ -258,6 +261,14 @@ typedef struct DawnProcTable {
     WGPUProcSharedTextureMemoryAddRef sharedTextureMemoryAddRef;
     WGPUProcSharedTextureMemoryRelease sharedTextureMemoryRelease;
 
+    WGPUProcSharedTextureMemoryEndAccessStateFreeMembers sharedTextureMemoryEndAccessStateFreeMembers;
+
+    WGPUProcSupportedFeaturesFreeMembers supportedFeaturesFreeMembers;
+
+    WGPUProcSupportedInstanceFeaturesFreeMembers supportedInstanceFeaturesFreeMembers;
+
+    WGPUProcSupportedWGSLLanguageFeaturesFreeMembers supportedWGSLLanguageFeaturesFreeMembers;
+
     WGPUProcSurfaceConfigure surfaceConfigure;
     WGPUProcSurfaceGetCapabilities surfaceGetCapabilities;
     WGPUProcSurfaceGetCurrentTexture surfaceGetCurrentTexture;
@@ -266,6 +277,8 @@ typedef struct DawnProcTable {
     WGPUProcSurfaceUnconfigure surfaceUnconfigure;
     WGPUProcSurfaceAddRef surfaceAddRef;
     WGPUProcSurfaceRelease surfaceRelease;
+
+    WGPUProcSurfaceCapabilitiesFreeMembers surfaceCapabilitiesFreeMembers;
 
     WGPUProcTextureCreateErrorView textureCreateErrorView;
     WGPUProcTextureCreateView textureCreateView;

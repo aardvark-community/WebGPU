@@ -280,3 +280,21 @@ type ImageExtensions private() =
             else
                 failwith $"bad format {data.Format.Format} (expected {dstFormat})"
         )
+
+    [<Extension>]
+    static member CreateTexture(this : Device, usage : TextureUsage, format : TextureFormat, size : V2i, ?levels : int, ?samples : int) =
+        let levels = defaultArg levels 1
+        let samples = defaultArg samples 1
+        
+        this.CreateTexture {
+            Next = null
+            Label = null
+            Usage = usage
+            Dimension = TextureDimension.D2D
+            Size = { Width = size.X; Height = size.Y; DepthOrArrayLayers = 1 }
+            Format = format
+            MipLevelCount = levels
+            SampleCount = samples
+            ViewFormats = [||]
+        }
+        

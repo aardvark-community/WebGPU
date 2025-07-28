@@ -124,9 +124,19 @@ module FunctionDef =
                
         let returns =
             match obj.TryGetProperty("returns") with
-            | (true, r) when r.ValueKind = JsonValueKind.String ->
-                r.GetString()
+            | (true, r) ->
+                if r.ValueKind = JsonValueKind.String then
+                    r.GetString()
+                elif r.ValueKind = JsonValueKind.Object then
+                    match r.TryGetProperty "type" with
+                    | (true, t) when t.ValueKind = JsonValueKind.String ->
+                        t.GetString()
+                    | _ ->
+                        "void"
+                else
+                    "void"
             | _ ->
+                
                 "void"
         
         let tags =
@@ -390,8 +400,20 @@ for kv in doc.RootElement.EnumerateObject() do
                         List.init (vs.GetArrayLength()) (fun i ->
                             let v = vs.[i]
                             let name = v.GetProperty("name").GetString()
-                            let v = v.GetProperty("value").GetInt32()
-                            name, v
+                            let value = v.GetProperty("value").GetInt32()
+                            
+                            let tags =
+                                match v.TryGetProperty "tags" with
+                                | (true, tags) when tags.ValueKind = JsonValueKind.Array ->
+                                    Array.init (tags.GetArrayLength()) (fun i -> tags.[i].GetString())
+                                | _ ->
+                                    [||]
+                            
+                            let value =
+                                if tags |> Array.exists (fun t -> t = "dawn") then 0x50000 ||| value
+                                else value
+                            
+                            name, value
                         )
                     | _ ->
                         []
