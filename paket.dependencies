@@ -15,8 +15,8 @@ nuget Silk.NET.Core                      = 2.15.0
 nuget Aardvark.PixImage.ImageSharp ~> 2.0.1
 nuget GLSLangSharp ~> 0.5.1
 nuget Aardvark.Data.Wavefront ~> 5.3.10
-nuget FShade.Core ~> 5.7.0-prerelease0011
-nuget FShade.Imperative ~> 5.7.0-prerelease0011
+nuget FShade.Core ~> 5.7.0-prerelease0013
+nuget FShade.Imperative ~> 5.7.0-prerelease0013
 
 nuget Microsoft.AspNetCore.Components.Forms ~> 8.0.10
 nuget Microsoft.AspNetCore.Components ~> 8.0.10

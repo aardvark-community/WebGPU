@@ -120,12 +120,6 @@ type WebGPUBufferExtensions private() =
     static member Mapped<'r>(buffer : Buffer, mode : MapMode, action : nativeint -> 'r) =
         buffer.Mapped(mode, 0L, buffer.Size, action)
          
-         
-    [<Extension>]
-    static member Clear(this : Buffer, value : uint32) =
-        use cmd = this.Device.CreateCommandEncoder { Label = null; Next = null }
-        cmd.ClearBuffer
-         
     [<Extension>]
     static member WriteBuffer<'a when 'a : unmanaged>(this : Queue, buffer : Buffer, data : System.ReadOnlySpan<'a>) =
         use ptr = fixed data
