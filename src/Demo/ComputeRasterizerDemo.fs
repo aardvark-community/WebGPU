@@ -124,6 +124,9 @@ module Obj =
                 failwith "Could not find stanford-bunny.obj in resources"
         loadMesh bunnyStream
 
+    let beetle() =
+        use s = System.IO.File.OpenRead "/Users/schorsch/Desktop/stanford-bunny.obj"
+        loadMesh s
     let ofIndexedGeometry (ig : IndexedGeometry) =
         let pos =
             match ig.IndexedAttributes.[DefaultSemantic.Positions] with
@@ -168,7 +171,7 @@ module Obj =
 
 let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d>) (proj : aval<Trafo3d>) (device : Device) (compile : Device -> Rasterizer) =
     
-    let vertices, normals, colors = Obj.bunny()
+    let vertices, normals, colors = Obj.beetle()
     
     
     let vertices = vertices |> Array.map (fun v -> V4f(v, 1.0f))
@@ -234,7 +237,7 @@ let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d
                 Positions = vertexBuffer
                 Normals = normalsBuffer
                 Colors = colorBuffer
-                ModelViewTrafo = mv
+                ModelViewTrafo = Trafo3d.RotationX(Constant.PiHalf) * mv
                 ProjTrafo = proj
                 ColorTexture = color
                 DepthBuffer = depth
@@ -248,7 +251,7 @@ let run() =
     Aardvark.Init()
     WebGPUShaderExtensions.ShaderCaching <- true
      
-    let rasterizer = BasicRasterizer.compile
+    let rasterizer = BinRasterizer.compile
      
     let app = WebGPUApplication.Create(true).Result
     let win = app.CreateGameWindow(vsync = true)

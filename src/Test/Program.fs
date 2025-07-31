@@ -16,6 +16,7 @@ let run() =
         Log.line "AdapterType:       %A" adapter.Info.AdapterType
         Log.line "VendorID:          0x%08X" adapter.Info.VendorID
         Log.line "DeviceID:          0x%08X" adapter.Info.DeviceID
+        Log.line "SubgroupSize:      %d - %d" adapter.Info.SubgroupMinSize adapter.Info.SubgroupMaxSize
         
         Log.start "Features"
         

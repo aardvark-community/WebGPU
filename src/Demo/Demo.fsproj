@@ -14,6 +14,7 @@
     <EmbeddedResource Include="resources\stanford-bunny.obj" />
     <Compile Include="Rasterizer.fs" />
     <Compile Include="BasicRasterizer.fs" />
+    <Compile Include="BinRasterizer.fs" />
     <Compile Include="ComputeRasterizerDemo.fs" />
     <Compile Include="RenderDemo.fs" />
     <Compile Include="Program.fs" />

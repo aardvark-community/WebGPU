@@ -237,6 +237,81 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
             Log.line "AdapterType:       %A" adapter.Info.AdapterType
             Log.line "VendorID:          0x%08X" adapter.Info.VendorID
             Log.line "DeviceID:          0x%08X" adapter.Info.DeviceID
+            Log.line "SubgroupSize:      %d - %d" adapter.Info.SubgroupMinSize adapter.Info.SubgroupMaxSize
+
+            // type Limits = 
+            // {
+            //     Next : ILimitsExtension
+            //     MaxTextureDimension1D : int
+            //     MaxTextureDimension2D : int
+            //     MaxTextureDimension3D : int
+            //     MaxTextureArrayLayers : int
+            //     MaxBindGroups : int
+            //     MaxBindGroupsPlusVertexBuffers : int
+            //     MaxBindingsPerBindGroup : int
+            //     MaxDynamicUniformBuffersPerPipelineLayout : int
+            //     MaxDynamicStorageBuffersPerPipelineLayout : int
+            //     MaxSampledTexturesPerShaderStage : int
+            //     MaxSamplersPerShaderStage : int
+            //     MaxStorageBuffersPerShaderStage : int
+            //     MaxStorageTexturesPerShaderStage : int
+            //     MaxUniformBuffersPerShaderStage : int
+            //     MaxUniformBufferBindingSize : int64
+            //     MaxStorageBufferBindingSize : int64
+            //     MinUniformBufferOffsetAlignment : int
+            //     MinStorageBufferOffsetAlignment : int
+            //     MaxVertexBuffers : int
+            //     MaxBufferSize : int64
+            //     MaxVertexAttributes : int
+            //     MaxVertexBufferArrayStride : int
+            //     MaxInterStageShaderVariables : int
+            //     MaxColorAttachments : int
+            //     MaxColorAttachmentBytesPerSample : int
+            //     MaxComputeWorkgroupStorageSize : int
+            //     MaxComputeInvocationsPerWorkgroup : int
+            //     MaxComputeWorkgroupSizeX : int
+            //     MaxComputeWorkgroupSizeY : int
+            //     MaxComputeWorkgroupSizeZ : int
+            //     MaxComputeWorkgroupsPerDimension : int
+            //     MaxImmediateSize : int
+            // }
+                        
+            Log.start "Limits"
+            
+            Log.line "MaxBindGroups: %d" adapter.Limits.MaxBindGroups
+            Log.line "MaxBindGroupsPlusVertexBuffers: %d" adapter.Limits.MaxBindGroupsPlusVertexBuffers
+            Log.line "MaxBindingsPerBindGroup: %d" adapter.Limits.MaxBindingsPerBindGroup
+            Log.line "MaxDynamicUniformBuffersPerPipelineLayout: %d" adapter.Limits.MaxDynamicUniformBuffersPerPipelineLayout
+            Log.line "MaxDynamicStorageBuffersPerPipelineLayout: %d" adapter.Limits.MaxDynamicStorageBuffersPerPipelineLayout
+            Log.line "MaxSampledTexturesPerShaderStage: %d" adapter.Limits.MaxSampledTexturesPerShaderStage
+            Log.line "MaxSamplersPerShaderStage: %d" adapter.Limits.MaxSamplersPerShaderStage
+            Log.line "MaxStorageBuffersPerShaderStage: %d" adapter.Limits.MaxStorageBuffersPerShaderStage
+            Log.line "MaxStorageTexturesPerShaderStage: %d" adapter.Limits.MaxStorageTexturesPerShaderStage
+            Log.line "MaxUniformBuffersPerShaderStage: %d" adapter.Limits.MaxUniformBuffersPerShaderStage
+            Log.line "MaxUniformBufferBindingSize: %d" adapter.Limits.MaxUniformBufferBindingSize
+            Log.line "MaxStorageBufferBindingSize: %d" adapter.Limits.MaxStorageBufferBindingSize
+            Log.line "MinUniformBufferOffsetAlignment: %d" adapter.Limits.MinUniformBufferOffsetAlignment
+            Log.line "MinStorageBufferOffsetAlignment: %d" adapter.Limits.MinStorageBufferOffsetAlignment
+            Log.line "MaxVertexBuffers: %d" adapter.Limits.MaxVertexBuffers
+            Log.line "MaxBufferSize: %d" adapter.Limits.MaxBufferSize
+            Log.line "MaxVertexAttributes: %d" adapter.Limits.MaxVertexAttributes
+            Log.line "MaxVertexBufferArrayStride: %d" adapter.Limits.MaxVertexBufferArrayStride
+            Log.line "MaxInterStageShaderVariables: %d" adapter.Limits.MaxInterStageShaderVariables
+            Log.line "MaxColorAttachments: %d" adapter.Limits.MaxColorAttachments
+            Log.line "MaxColorAttachmentBytesPerSample: %d" adapter.Limits.MaxColorAttachmentBytesPerSample
+            Log.line "MaxComputeWorkgroupStorageSize: %d" adapter.Limits.MaxComputeWorkgroupStorageSize
+            Log.line "MaxComputeInvocationsPerWorkgroup: %d" adapter.Limits.MaxComputeInvocationsPerWorkgroup
+            Log.line "MaxComputeWorkgroupSize: [%d, %d, %d]" adapter.Limits.MaxComputeWorkgroupSizeX adapter.Limits.MaxComputeWorkgroupSizeY adapter.Limits.MaxComputeWorkgroupSizeZ
+            Log.line "MaxComputeWorkgroupsPerDimension: %d" adapter.Limits.MaxComputeWorkgroupsPerDimension
+            Log.line "MaxImmediateSize: %d" adapter.Limits.MaxImmediateSize
+            Log.line "MaxTextureDimension1D: %d" adapter.Limits.MaxTextureDimension1D
+            Log.line "MaxTextureDimension2D: %d" adapter.Limits.MaxTextureDimension2D
+            Log.line "MaxTextureDimension3D: %d" adapter.Limits.MaxTextureDimension3D
+            Log.line "MaxTextureArrayLayers: %d" adapter.Limits.MaxTextureArrayLayers
+            
+            
+            
+            Log.stop()
             
             Log.start "Features"
             
