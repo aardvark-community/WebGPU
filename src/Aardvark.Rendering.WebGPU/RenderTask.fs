@@ -35,6 +35,9 @@ type RenderTask(device : Device, signature : IFramebufferSignature, objects : as
             use update = device.CreateCommandEncoder { Label = null; Next = null }
             use cmd = device.CreateCommandEncoder { Label = null; Next = null }
             
+            
+            
+            
             let depth =
                 match fbo.DepthStencil with
                 | Some depth ->

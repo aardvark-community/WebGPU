@@ -271,4 +271,5 @@ let run() =
     let task = computeRasterizerTask win.FramebufferSignature cam frustum app.Device rasterizer
 
     win.RenderTask <- task
+    win.RenderAsFastAsPossible <- true
     win.Run()
