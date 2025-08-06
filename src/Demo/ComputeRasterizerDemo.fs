@@ -195,9 +195,9 @@ let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d
     //         V4f.OOIO; V4f.OOIO; V4f.OOIO
     //     |]
         
-    let vertexBuffer = device.CreateBuffer(BufferUsage.Storage, vertices).Result
-    let normalsBuffer = device.CreateBuffer(BufferUsage.Storage, normals).Result
-    let colorBuffer = device.CreateBuffer(BufferUsage.Storage, colors).Result
+    let vertexBuffer = device.CreateBuffer(BufferUsage.Vertex ||| BufferUsage.Storage, vertices).Result
+    let normalsBuffer = device.CreateBuffer(BufferUsage.Vertex ||| BufferUsage.Storage, normals).Result
+    let colorBuffer = device.CreateBuffer(BufferUsage.Vertex ||| BufferUsage.Storage, colors).Result
     
     
     let mutable texSize = V2i.Zero
@@ -209,6 +209,10 @@ let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d
     let resolve = Resolve.compileRender signature ctex
     
     let rasterize = compile device
+    
+    let sw = System.Diagnostics.Stopwatch.StartNew()
+    let mutable sum = 0.0
+    let mutable cnt = 0
     
     RenderTask.custom (fun (t, _, o) ->
         let size = o.viewport.Size
@@ -232,6 +236,8 @@ let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d
             texSize <- size
             transact (fun () -> csize.Value <- size; ctex.Value <- color)
             
+        
+        let t0 = sw.Elapsed.TotalSeconds        
         let task = 
             rasterize {
                 Positions = vertexBuffer
@@ -243,6 +249,16 @@ let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d
                 DepthBuffer = depth
             }
         task.Wait()
+        
+        
+        let dt = sw.Elapsed.TotalSeconds - t0
+        sum <- sum + dt
+        cnt <- cnt + 1
+        if cnt > 30 then
+            Log.line "render: %.3fms" (1000.0 * sum / float cnt)
+            sum <- 0.0
+            cnt <- 0
+        
         resolve.Run(o)
     )
     
@@ -251,7 +267,7 @@ let run() =
     Aardvark.Init()
     WebGPUShaderExtensions.ShaderCaching <- true
      
-    let rasterizer = BinRasterizer.compile
+    let rasterizer = DefaultRasterizer.compile
      
     let app = WebGPUApplication.Create(true).Result
     let win = app.CreateGameWindow(vsync = true)

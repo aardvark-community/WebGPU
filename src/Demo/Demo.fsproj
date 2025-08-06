@@ -13,6 +13,7 @@
     <EmbeddedResource Include="resources\miramar_up.png" />
     <EmbeddedResource Include="resources\stanford-bunny.obj" />
     <Compile Include="Rasterizer.fs" />
+    <Compile Include="DefaultRasterizer.fs" />
     <Compile Include="BasicRasterizer.fs" />
     <Compile Include="BinRasterizer.fs" />
     <Compile Include="ComputeRasterizerDemo.fs" />
