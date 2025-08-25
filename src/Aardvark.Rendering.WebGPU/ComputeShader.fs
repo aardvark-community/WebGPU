@@ -231,7 +231,7 @@ type ComputeShader private (device : Device, pipeline : ComputePipeline, groupLa
         let sh = FShade.ComputeShader.ofFunction (V3i(1024, 1024, 1024)) shader
         ComputeShader.Compile(device, sh)
 
-    member x.Dispose(disposing : bool) =
+    member private x.Dispose(disposing : bool) =
         if disposing then System.GC.SuppressFinalize x
         pipeline.Dispose()
         for g in groupLayouts do
@@ -242,6 +242,9 @@ type ComputeShader private (device : Device, pipeline : ComputePipeline, groupLa
             
         for KeyValue(_, e) in uniformBufferReaders do
             for KeyValue(_, (_,_,free)) in e do free()
+           
+    member x.Dispose() =
+        x.Dispose(true)
             
         
     interface System.IDisposable with
