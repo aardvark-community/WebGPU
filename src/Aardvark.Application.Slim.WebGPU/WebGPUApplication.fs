@@ -224,7 +224,10 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
             let thread = 
                 startThread <| fun () ->
                     while true do
-                        instance.ProcessEvents()
+                        try
+                            instance.ProcessEvents()
+                        with e ->
+                            printfn "ERROR: %A" e
             
             let! adapter = instance.CreateAdapter()
                 

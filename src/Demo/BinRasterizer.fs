@@ -604,15 +604,38 @@ let createTempBuffers (vertexCount : int) (device : Device) =
     vps, pps, ns
     
 let compile (device : Device) : Rasterizer =
+    // Todo
+    let triangleChunkSize = 5
+    let binCount = 7
     
     let shader = device.CompileCompute Shader.rasterize
     let vertex = device.CompileCompute Shader.transform
     
     let mutable vps, pps, ns = createTempBuffers 11 device
         
+    let mutable tm = device.CreateBuffer {
+                Next = null
+                Label = null
+                Usage = BufferUsage.Storage ||| BufferUsage.CopySrc
+                Size = int64 sizeof<int> * int64 triangleChunkSize * int64 binCount
+                MappedAtCreation = false
+            }
+
+    let triangleMask = device.Download<int>(tm).Result |> Array.chunkBySize triangleChunkSize
+
+    let mutable ctm =
+        device.CreateBuffer {
+            Next = null
+            Label = null
+            Usage = BufferUsage.Storage ||| BufferUsage.CopySrc
+            Size = int64 sizeof<int> * int64 triangleChunkSize * int64 binCount
+            MappedAtCreation = false
+        }
+
     fun (input : RasterizerInput) ->
         
-        task {
+            task {
+
             let size = V2i(input.ColorTexture.Width, input.ColorTexture.Height)
             let color = input.ColorTexture
             let depth = input.DepthBuffer
@@ -634,7 +657,11 @@ let compile (device : Device) : Rasterizer =
                 vps <- a
                 pps <- b
                 ns <- c
-            
+
+            let triangleMask = device.Download<int>(tm).Result |> Array.chunkBySize triangleChunkSize
+            printf "asdf\n"
+            let triangleMask = device.Download<int>(tm).Result |> Array.chunkBySize triangleChunkSize
+            printf "asd2f\n"
             do! vertex.Run(ceilDiv vertexCount vertex.LocalSize.X, [
                 "VertexCount", vertexCount :> obj
                 "vertices", input.Positions
@@ -645,7 +672,13 @@ let compile (device : Device) : Rasterizer =
                 "vp", vps :> obj
                 "vn", ns :> obj
             ])
+            printf "asdf23423423\n"
             
+            let triangleMask = device.Download<int>(tm).Result |> Array.chunkBySize triangleChunkSize
+            printf "asdf\n"
+
+
+
             do! color.Clear(0xFF000000u)
             do! depth.Fill(16777215)
             do! shader.Run(V3i(1, binCount.X * binCount.Y, 1), [
@@ -661,4 +694,29 @@ let compile (device : Device) : Rasterizer =
                 "ViewportSize", size
                 "ModelViewProjTrafo", M44f (input.ModelViewTrafo * input.ProjTrafo).Forward
             ])
+
+                        
+            let mutable remainingTriangles = triangleCount
+            for i in 0 .. triangleCount / triangleChunkSize do
+                let mutable workGroupsX = triangleChunkSize
+                if remainingTriangles < triangleChunkSize then
+                    workGroupsX <- remainingTriangles
+
+                //do! binning.Run(V3i(ceilDiv workGroupsX binning.LocalSize.X, binCount.X * binCount.Y, 1), [
+                //    "TriangleCount", triangleCount :> obj
+                //    "TriangleChunkSize", triangleChunkSize
+                //    "LoopOffset", i
+                //    "ViewportSize", size
+                //    "BinCount", binCount
+                //    "positions", pps
+                //    "triangleMask", tm
+                //])
+
+                let triangleMask = device.Download<int>(tm).Result// |> Array.chunkBySize triangleChunkSize
+                printf "asdf\n"
+                //device.ScanRows(binCount.X * binCount.Y, triangleChunkSize, tm, ctm)
+
+                //do! rasterize2.Run(...)
+
+                remainingTriangles <- remainingTriangles - triangleChunkSize
         }

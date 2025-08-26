@@ -242,11 +242,17 @@ type WebGPUBufferExtensions private() =
     [<Extension>]
     static member Download<'a when 'a : unmanaged>(this : Device, src : BufferRange) =
         task {
+            printf "cp1\n"
             let dst = Array.zeroCreate<'a> (int (src.Size / int64 (typeof<'a>.GetCLRSize())))
+            printf "cp2\n"
             use enc = this.CreateCommandEncoder { Label = null; Next = null }
+            printf "cp3\n"
             enc.Download(src.Buffer, src.Offset, dst, 0, dst.Length)
+            printf "cp4\n"
             use cmd = enc.Finish { Label = null }
+            printf "cp5\n"
             do! this.Queue.Submit [| cmd |]
+            printf "cp6\n"
             return dst
         }
         
