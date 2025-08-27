@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Pinnable.fs" />
+    <Compile Include="WebGPUConfig.fs" />
     <Compile Include="Enums.fs" />
     <Compile Include="Wrapper.fs" />
     <Compile Include="FutureWaitPool.fs" />

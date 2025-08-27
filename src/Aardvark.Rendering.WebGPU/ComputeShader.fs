@@ -147,7 +147,7 @@ type ComputeShader private (device : Device, pipeline : ComputePipeline, groupLa
                     )
                 device.CreateBindGroup {
                     Next = null
-                    Label = sprintf "group %d" gi
+                    Label = nolabel()
                     Layout = groupLayouts.[gi]
                     Entries = data
                 }

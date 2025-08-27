@@ -203,6 +203,8 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
                                 match surf.Present() with
                                 | Status.Error -> Log.warn "could not present swapchain"
                                 | _ -> ()
+                                instance.ProcessEvents()
+                                device.Tick()
                                 
                                 true
                         }
@@ -220,16 +222,15 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
     static member Create(debug : bool) =
         task {
             let instance = WebGPU.CreateInstance()
-            
+            instance.ProcessEvents()
             // let thread = 
             //     startThread <| fun () ->
             //         while true do
             //             try
             //                 instance.ProcessEvents()
-            //                 printfn "events processed"
             //             with e ->
             //                 printfn "ERROR: %A" e
-            
+            //
             let! adapter = instance.CreateAdapter()
                 
             Log.start "WebGPUApplication"

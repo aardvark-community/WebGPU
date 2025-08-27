@@ -11,100 +11,6 @@ open System.Text.RegularExpressions
 open WebGPU
 open WebGPU.Raw.Label
 
-
-type FutureWaitPool(instance : nativeint, threadCount : int) =
-    
-    let futures = new System.Collections.Concurrent.BlockingCollection<WebGPU.Raw.Future>()
-    
-    let run() =
-        for f in futures.GetConsumingEnumerable() do
-            let wait = WebGPU.Raw.FutureWaitInfo(f, 0)
-            use ptr = fixed &wait
-            let mutable status = WebGPU.Raw.WebGPU.InstanceWaitAny(instance, 1un, ptr, System.UInt64.MaxValue)
-            if status <> WebGPU.WaitStatus.Success then
-                Log.warn "wait for 0x%X failed" f.Id
-            
-    let threads =
-        Array.init threadCount (fun _ ->
-            let thread = System.Threading.Thread(System.Threading.ThreadStart(run), IsBackground = true)
-            thread.Start()
-            thread
-        )
-                
-    member x.Add(f : WebGPU.Raw.Future) =
-        futures.Add f
-
-open System.Threading
-type Waiter(instance : Instance) =
-    
-    let l = obj()
-    let enqueued = System.Collections.Generic.List<Future>()
-    
-    
-    let run() =
-        while true do
-            let all = 
-                lock l (fun () ->
-                    while enqueued.Count = 0 do
-                        Monitor.Wait l |> ignore
-                    let res =
-                        enqueued.MapToArray(fun f ->
-                            WebGPU.Raw.FutureWaitInfo(WebGPU.Raw.Future(uint64 f.Id), 0)
-                        )
-                    enqueued.Clear()
-                    res
-                )
-            
-            let len = unativeint all.Length
-            use ptr = fixed all
-            let res = WebGPU.Raw.WebGPU.InstanceWaitAny(instance.Handle, len, ptr, 1000UL)
-            
-            match res with
-            | WaitStatus.Success ->
-                let nonFinished =
-                    all |> Array.choose (fun w ->
-                        if w.Completed = 0 then
-                            Some { Future.Id = int64 w.Future.Id }
-                        else
-                            printfn "finished 0x%X" w.Future.Id
-                            None
-                    )
-                    
-                lock l (fun () ->
-                    enqueued.AddRange nonFinished
-                    Monitor.PulseAll l
-                )
-                    
-            | WaitStatus.TimedOut ->
-                Log.line "timeout"
-            | _ ->
-                Log.error "wait failed"
-    
-    let thread = Thread(ThreadStart(run), IsBackground = true)
-    do thread.Start()
-    
-    member x.Add(f : Future) =
-        lock l (fun () ->
-            enqueued.Add f
-            Monitor.PulseAll l
-        )
-    
-[<AbstractClass; Sealed>]
-type InstanceExtensions private() =
-    
-    static let cache = ConcurrentDict(Dict<Instance, Waiter>())
-    
-    [<Extension>]
-    static member EnqueueWait(instance : Instance, f : Future) =
-        let w = cache.GetOrCreate(instance, fun i -> Waiter(i))
-        w.Add f
-    
-    [<Extension>]
-    static member EnqueueWait(device : Device, f : Future) =
-        let w = cache.GetOrCreate(device.Instance, fun i -> Waiter(i))
-        w.Add f
-    
-
 type FrontendDeviceDescriptor = 
     {
         Next : IDeviceDescriptorExtension
@@ -118,72 +24,73 @@ type FrontendDeviceDescriptor =
 
 #nowarn "9"
 
-type private GpuEnumerateAdaptersDelegate = delegate of nativeptr<WebGPU.Raw.RequestAdapterOptions> * int32 * nativeptr<nativeint> * nativeptr<nativeint> -> int
+type private GpuEnumerateAdaptersDelegate = delegate of nativeptr<WebGPU.Raw.InstanceDescriptor> * nativeptr<WebGPU.Raw.RequestAdapterOptions> * int32 * nativeptr<nativeint> * nativeptr<nativeint> -> int
+
+// typedef struct WGPUInstanceDescriptor {
+//     WGPUChainedStruct * nextInChain;
+//     size_t requiredFeatureCount;
+//     WGPUInstanceFeatureName const * requiredFeatures;
+//     WGPU_NULLABLE WGPUInstanceLimits const * requiredLimits;
+// } WGPUInstanceDescriptor WGPU_STRUCTURE_ATTRIBUTE;
 
 [<AbstractClass; Sealed>]
 type WebGPU private() =
-    // static let instanceFeatures =
-    //     lazy (
-    //         match RuntimeInformation.ProcessArchitecture with
-    //         | Architecture.Wasm ->
-    //             { TimedWaitAnyEnable = false; TimedWaitAnyMaxCount = 0L }
-    //         | _ -> 
-    //             let mutable ftrs = Unchecked.defaultof<WebGPU.Raw.InstanceFeatures>
-    //             use ptr = fixed &ftrs
-    //             let status = WebGPU.Raw.WebGPU.GetInstanceFeatures(ptr)
-    //             if status <> Status.Success then
-    //                 failwith $"could not get instance features: {status}"
-    //             InstanceFeatures.Read(Unchecked.defaultof<_>, &ftrs)
-    //     )
-    //
-    static let adaptersAndInstance =
-        lazy (
-            match RuntimeInformation.ProcessArchitecture with
-            | Architecture.Wasm ->
-                [||], new Instance(0n)
-            | _ ->
-                
-                let gpuEnumerateAdapters =
-                    let lib = Aardvark.LoadLibrary(typeof<WebGPU>.Assembly, "WebGPUNative")
-                    let sym = Aardvark.GetProcAddress(lib, "gpuEnumerateAdapters")
-                    Marshal.GetDelegateForFunctionPointer<GpuEnumerateAdaptersDelegate>(sym)
-                    
-                let opt =
-                    {
-                        Next = null
-                        CompatibleSurface = Surface.Null
-                        PowerPreference = PowerPreference.Undefined
-                        BackendType = BackendType.Undefined
-                        ForceFallbackAdapter = false
-                        FeatureLevel = FeatureLevel.Undefined
-                    }
-                
-                opt.Pin (Unchecked.defaultof<_>, fun pOpt ->
-                    
-                    let mutable arr = Array.zeroCreate 128
-                    use pAdapters = fixed arr
-                    let mutable instance = 0n
-                    use pInstance = fixed &instance
-                    let cnt = gpuEnumerateAdapters.Invoke(pOpt, arr.Length, pAdapters, pInstance)
-                    if cnt > arr.Length then
-                        WebGPU.Raw.WebGPU.InstanceRelease(instance)
-                        arr <- Array.zeroCreate cnt
-                        use pAdapters = fixed arr
-                        gpuEnumerateAdapters.Invoke(pOpt, arr.Length, pAdapters, pInstance) |> ignore
-                        
-                    
-                    let adapters = arr |> Array.truncate cnt |> Array.map (fun h -> new Adapter(h))
-                    let instance = new Instance(instance)
-                    adapters, instance
-                )
-    )
     
-    //static member InstanceFeatures = instanceFeatures.Value
-
+    
+    static let createInstanceAndGetAdapters (desc : nativeptr<WebGPU.Raw.InstanceDescriptor>) =
+        match RuntimeInformation.ProcessArchitecture with
+        | Architecture.Wasm ->
+            [||], new Instance(0n)
+        | _ ->
+            
+            let gpuEnumerateAdapters =
+                let lib = Aardvark.LoadLibrary(typeof<WebGPU>.Assembly, "WebGPUNative")
+                let sym = Aardvark.GetProcAddress(lib, "gpuEnumerateAdapters")
+                Marshal.GetDelegateForFunctionPointer<GpuEnumerateAdaptersDelegate>(sym)
+                
+            let opt =
+                {
+                    Next = null
+                    CompatibleSurface = Surface.Null
+                    PowerPreference = PowerPreference.Undefined
+                    BackendType = BackendType.Undefined
+                    ForceFallbackAdapter = false
+                    FeatureLevel = FeatureLevel.Undefined
+                }
+            
+            opt.Pin (Unchecked.defaultof<_>, fun pOpt ->
+                
+                let mutable arr = Array.zeroCreate 128
+                use pAdapters = fixed arr
+                let mutable instance = 0n
+                use pInstance = fixed &instance
+                let cnt = gpuEnumerateAdapters.Invoke(desc, pOpt, arr.Length, pAdapters, pInstance)
+                if cnt > arr.Length then
+                    WebGPU.Raw.WebGPU.InstanceRelease(instance)
+                    arr <- Array.zeroCreate cnt
+                    use pAdapters = fixed arr
+                    gpuEnumerateAdapters.Invoke(desc, pOpt, arr.Length, pAdapters, pInstance) |> ignore
+                    
+                
+                let adapters = arr |> Array.truncate cnt |> Array.map (fun h -> new Adapter(h))
+                let instance = new Instance(instance)
+                adapters, instance
+            )
+    static let instanceAdapters = System.Collections.Generic.Dictionary<Instance, Adapter[]>()
+    static member CreateInstance(desc : InstanceDescriptor) =
+        desc.Pin(Unchecked.defaultof<_>, fun pDesc ->
+            let a, i = createInstanceAndGetAdapters pDesc
+            lock instanceAdapters (fun () -> instanceAdapters.[i] <- a)
+            i.AddRef()
+            i
+        )
+    
     static member CreateInstance() =
-        let a, i = adaptersAndInstance.Value
-        i.AddRef()
-        i
+        WebGPU.CreateInstance { 
+            Next = null
+            RequiredFeatures = [| InstanceFeatureName.TimedWaitAny |]
+            RequiredLimits = { TimedWaitAnyMaxCount = 1L }
+        }
     
     [<Extension>]
     static member private RequestAdapterAsync(this : Instance, options : RequestAdapterOptions) =
@@ -205,9 +112,9 @@ type WebGPU private() =
         tcs.Task
         
     [<Extension>]
-    static member CreateAdapter (_instance : Instance, choose : Adapter[] -> Adapter) =
+    static member CreateAdapter (instance : Instance, choose : Adapter[] -> Adapter) =
      
-        let adapters, instance = adaptersAndInstance.Value
+        let adapters = instanceAdapters.[instance]
         
         task {
             if adapters.Length = 0 then
@@ -315,6 +222,7 @@ type WebGPUExtensions private() =
         let errCb : UncapturedErrorCallbackInfo =
             {
                 Callback = UncapturedErrorCallback(fun _ device typ str ->
+                    let str = WebGPU.Raw.Label.processMessage str
                     Report.ErrorNoPrefix($"{typ} ERROR: {str}")
                 )
             }
@@ -357,6 +265,7 @@ type WebGPUExtensions private() =
                     {
                         Callback =
                             LoggingCallback(fun _ t str ->
+                                let str = WebGPU.Raw.Label.processMessage str
                                 let lines = str.Split("\n")
                                 for line in lines do 
                                     match t with
@@ -507,7 +416,7 @@ type BufferRangeExtensions private() =
         let result =
             device.CreateBuffer {
                 Next = null
-                Label = defaultArg label null
+                Label = defaultArg label (nolabel())
                 Usage = usage ||| BufferUsage.CopySrc ||| BufferUsage.CopyDst
                 Size = size
                 MappedAtCreation = isMappable

@@ -5228,18 +5228,18 @@ type Instance internal(handle : nativeint) =
     static let device = Unchecked.defaultof<Device>
     static let nullptr = new Instance(Unchecked.defaultof<_>)
     static let waitPoolCache = System.Collections.Generic.Dictionary<nativeint, WebGPU.Raw.FutureWaitPool>()
-    static let getWaitPool (handle : nativeint) =
+    static let getWaitPool (handle : nativeint)=
         lock waitPoolCache (fun () ->
             match waitPoolCache.TryGetValue handle with
             | (true, c) -> c
             | _ ->
-                let c = WebGPU.Raw.FutureWaitPool(handle, 8)
+                let c = WebGPU.Raw.FutureWaitPool(handle)
                 waitPoolCache.[handle] <- c
                 c
         )
-    let waitPool = getWaitPool handle
+    let waitPool = lazy (getWaitPool handle)
     member x.EnqueueWait(f : Future) : unit =
-        waitPool.Add(WebGPU.Raw.Future(uint64 f.Id))
+        waitPool.Value.Add(WebGPU.Raw.Future(uint64 f.Id))
     member x.Handle = handle
     override x.ToString() = $"Instance(0x%08X{handle})"
     override x.GetHashCode() = hash handle

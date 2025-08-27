@@ -526,7 +526,7 @@ type DeviceScanExtensions private() =
 
 let scanTest() =
     Aardvark.Init()
-    WebGPUShaderExtensions.ShaderCaching <- true
+    WebGPUConfig.shaderCaching <- true
      
     let rasterizer = DefaultRasterizer.compile
      
@@ -563,8 +563,9 @@ let scanTest() =
 
 let run() =
     Aardvark.Init()
-    WebGPUShaderExtensions.ShaderCaching <- true
-     
+    WebGPUConfig.shaderCaching <- true
+    WebGPUConfig.captureStackTraces <- true
+    
     let rasterizer = BinRasterizer.compile
      
     let app = WebGPUApplication.Create(true).Result

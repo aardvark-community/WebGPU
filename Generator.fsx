@@ -699,8 +699,8 @@ module Native =
             printfn "#include \"dawn/webgpu.h\""
             printfn "#include \"dawn/native/DawnNative.h\""
             
-            printfn "DllExport(int) gpuEnumerateAdapters(const WGPURequestAdapterOptions* options, int adaptersLen, WGPUAdapter* adapters, WGPUInstance* inst) {"
-            printfn "    auto instance = std::make_unique<dawn::native::Instance>();"
+            printfn "DllExport(int) gpuEnumerateAdapters(const WGPUInstanceDescriptor* instanceDescriptor, WGPURequestAdapterOptions* options, int adaptersLen, WGPUAdapter* adapters, WGPUInstance* inst) {"
+            printfn "    auto instance = std::make_unique<dawn::native::Instance>(instanceDescriptor);"
             printfn "    auto i = instance->Get();"
             printfn "    *inst = i;"
             printfn "    wgpuInstanceAddRef(i);"
@@ -2150,19 +2150,18 @@ module Frontend =
                     
                 elif o.Name = "instance" then
                     printfn "    static let waitPoolCache = System.Collections.Generic.Dictionary<nativeint, WebGPU.Raw.FutureWaitPool>()"
-                    printfn "    static let getWaitPool (handle : nativeint) ="
+                    printfn "    static let getWaitPool (handle : nativeint)="
                     printfn "        lock waitPoolCache (fun () ->"
                     printfn "            match waitPoolCache.TryGetValue handle with"
                     printfn "            | (true, c) -> c"
                     printfn "            | _ ->"
-                    printfn "                let c = WebGPU.Raw.FutureWaitPool(handle, 8)"
+                    printfn "                let c = WebGPU.Raw.FutureWaitPool(handle)"
                     printfn "                waitPoolCache.[handle] <- c"
                     printfn "                c"
                     printfn "        )"
-                    printfn "    let waitPool = getWaitPool handle"
-                    
+                    printfn "    let waitPool = lazy (getWaitPool handle)"
                     printfn "    member x.EnqueueWait(f : Future) : unit ="
-                    printfn "        waitPool.Add(WebGPU.Raw.Future(uint64 f.Id))"
+                    printfn "        waitPool.Value.Add(WebGPU.Raw.Future(uint64 f.Id))"
                     
                 let (|SimpleGetter|_|) (m : FunctionDef) =
                     match m.Args with
