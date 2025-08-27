@@ -2147,7 +2147,23 @@ module Frontend =
                 
                 if o.Name = "device" then
                     printfn "    let mutable runtime : Aardvark.Rendering.IRuntime = Unchecked.defaultof<_>"
-        
+                    
+                elif o.Name = "instance" then
+                    printfn "    static let waitPoolCache = System.Collections.Generic.Dictionary<nativeint, WebGPU.Raw.FutureWaitPool>()"
+                    printfn "    static let getWaitPool (handle : nativeint) ="
+                    printfn "        lock waitPoolCache (fun () ->"
+                    printfn "            match waitPoolCache.TryGetValue handle with"
+                    printfn "            | (true, c) -> c"
+                    printfn "            | _ ->"
+                    printfn "                let c = WebGPU.Raw.FutureWaitPool(handle, 8)"
+                    printfn "                waitPoolCache.[handle] <- c"
+                    printfn "                c"
+                    printfn "        )"
+                    printfn "    let waitPool = getWaitPool handle"
+                    
+                    printfn "    member x.EnqueueWait(f : Future) : unit ="
+                    printfn "        waitPool.Add(WebGPU.Raw.Future(uint64 f.Id))"
+                    
                 let (|SimpleGetter|_|) (m : FunctionDef) =
                     match m.Args with
                     | [] when m.Name.StartsWith "get " && m.Return.TypeName <> "future" ->
@@ -2252,6 +2268,9 @@ module Frontend =
                     printfn "    member x.Runtime"
                     printfn "        with get() : Aardvark.Rendering.IRuntime = runtime"
                     printfn "        and set (v : Aardvark.Rendering.IRuntime) = runtime <- v"
+                    
+                    printfn "    member x.EnqueueWait(f : Future) : unit ="
+                    printfn "        adapter.Value.Instance.EnqueueWait(f)"
                 if o.Name = "buffer" then
                     printfn "    interface Aardvark.Rendering.IBufferRange with"
                     printfn "        member x.Buffer = x"
@@ -2378,8 +2397,7 @@ module Frontend =
                             
                             if m.Name = "submit" && o.Name = "queue" then
                                 printfn "        let tcs = System.Threading.Tasks.TaskCompletionSource<unit>()"
-                                //printfn "        let cleanup() = for c in commands do c.RunCompleted()"
-                                printfn "        this.OnSubmittedWorkDone { Mode = CallbackMode.AllowProcessEvents; Callback = QueueWorkDoneCallback(fun d _ _ -> d.Dispose(); tcs.SetResult()) } |> ignore"
+                                printfn "        this.OnSubmittedWorkDone { Mode = CallbackMode.WaitAnyOnly; Callback = QueueWorkDoneCallback(fun d _ _ -> d.Dispose(); tcs.SetResult()) } |> device.EnqueueWait"
                                 printfn "        task {"
                                 printfn "            do! tcs.Task"
                                 printfn "            for c in commands do do! c.RunCompleted()"

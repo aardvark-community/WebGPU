@@ -9,7 +9,101 @@ open System.Threading.Tasks
 open Aardvark.Base
 open System.Text.RegularExpressions
 open WebGPU
+open WebGPU.Raw.Label
 
+
+type FutureWaitPool(instance : nativeint, threadCount : int) =
+    
+    let futures = new System.Collections.Concurrent.BlockingCollection<WebGPU.Raw.Future>()
+    
+    let run() =
+        for f in futures.GetConsumingEnumerable() do
+            let wait = WebGPU.Raw.FutureWaitInfo(f, 0)
+            use ptr = fixed &wait
+            let mutable status = WebGPU.Raw.WebGPU.InstanceWaitAny(instance, 1un, ptr, System.UInt64.MaxValue)
+            if status <> WebGPU.WaitStatus.Success then
+                Log.warn "wait for 0x%X failed" f.Id
+            
+    let threads =
+        Array.init threadCount (fun _ ->
+            let thread = System.Threading.Thread(System.Threading.ThreadStart(run), IsBackground = true)
+            thread.Start()
+            thread
+        )
+                
+    member x.Add(f : WebGPU.Raw.Future) =
+        futures.Add f
+
+open System.Threading
+type Waiter(instance : Instance) =
+    
+    let l = obj()
+    let enqueued = System.Collections.Generic.List<Future>()
+    
+    
+    let run() =
+        while true do
+            let all = 
+                lock l (fun () ->
+                    while enqueued.Count = 0 do
+                        Monitor.Wait l |> ignore
+                    let res =
+                        enqueued.MapToArray(fun f ->
+                            WebGPU.Raw.FutureWaitInfo(WebGPU.Raw.Future(uint64 f.Id), 0)
+                        )
+                    enqueued.Clear()
+                    res
+                )
+            
+            let len = unativeint all.Length
+            use ptr = fixed all
+            let res = WebGPU.Raw.WebGPU.InstanceWaitAny(instance.Handle, len, ptr, 1000UL)
+            
+            match res with
+            | WaitStatus.Success ->
+                let nonFinished =
+                    all |> Array.choose (fun w ->
+                        if w.Completed = 0 then
+                            Some { Future.Id = int64 w.Future.Id }
+                        else
+                            printfn "finished 0x%X" w.Future.Id
+                            None
+                    )
+                    
+                lock l (fun () ->
+                    enqueued.AddRange nonFinished
+                    Monitor.PulseAll l
+                )
+                    
+            | WaitStatus.TimedOut ->
+                Log.line "timeout"
+            | _ ->
+                Log.error "wait failed"
+    
+    let thread = Thread(ThreadStart(run), IsBackground = true)
+    do thread.Start()
+    
+    member x.Add(f : Future) =
+        lock l (fun () ->
+            enqueued.Add f
+            Monitor.PulseAll l
+        )
+    
+[<AbstractClass; Sealed>]
+type InstanceExtensions private() =
+    
+    static let cache = ConcurrentDict(Dict<Instance, Waiter>())
+    
+    [<Extension>]
+    static member EnqueueWait(instance : Instance, f : Future) =
+        let w = cache.GetOrCreate(instance, fun i -> Waiter(i))
+        w.Add f
+    
+    [<Extension>]
+    static member EnqueueWait(device : Device, f : Future) =
+        let w = cache.GetOrCreate(device.Instance, fun i -> Waiter(i))
+        w.Add f
+    
 
 type FrontendDeviceDescriptor = 
     {
@@ -97,7 +191,7 @@ type WebGPU private() =
         
         let info : RequestAdapterCallbackInfo =
             {
-                Mode = CallbackMode.AllowProcessEvents
+                Mode = CallbackMode.WaitAnyOnly
                 Callback =
                     RequestAdapterCallback(fun disp status adapter message ->
                         disp.Dispose()
@@ -107,7 +201,7 @@ type WebGPU private() =
                     )
             }
         
-        this.RequestAdapter(options, info) |> ignore
+        this.RequestAdapter(options, info) |> this.EnqueueWait
         tcs.Task
         
     [<Extension>]
@@ -184,6 +278,10 @@ type WebGPU private() =
     //         Features = WebGPU.InstanceFeatures
     //     }
 
+
+      
+
+
 [<AbstractClass; Sealed>]
 type WebGPUExtensions private() =
     
@@ -195,14 +293,15 @@ type WebGPUExtensions private() =
     [<Extension>]
     static member RequestDeviceAsync(this : Adapter, options : FrontendDeviceDescriptor) =
         let tcs = TaskCompletionSource<Device>()
-        
+            
         let err =
             if options.DebugOutput then
                 {
-                    Mode = CallbackMode.AllowProcessEvents
+                    Mode = CallbackMode.AllowSpontaneous
                     DeviceLostCallbackInfo.Callback =
                         DeviceLostCallback(fun _disp device typ message ->
                             let t = System.Diagnostics.StackTrace(4) |> string
+                            let message = WebGPU.Raw.Label.processMessage message
                             let message = enumRx.Replace(message, "$1.") + "\n" + t
                             let lines = message.Split('\n')
                             Report.ErrorNoPrefix($"{typ} ERROR:")
@@ -308,38 +407,38 @@ type WebGPUExtensions private() =
     static member Wait(this : Queue) =
         let tcs = TaskCompletionSource()
         this.OnSubmittedWorkDone {
-            QueueWorkDoneCallbackInfo.Mode = CallbackMode.AllowSpontaneous
+            QueueWorkDoneCallbackInfo.Mode = CallbackMode.WaitAnyOnly
             Callback =
                 QueueWorkDoneCallback(fun d s msg ->
                     match s with
                     | QueueWorkDoneStatus.Success -> tcs.SetResult()
                     | _ -> tcs.SetException(Exception (sprintf "could not wait for queue %A: %s" s msg))
                 )
-        } |> ignore
+        } |> this.Device.EnqueueWait
         tcs.Task
    
     [<Extension>]
     static member PopErrorScope(device : Device) =
         let tcs = TaskCompletionSource<_>()
         device.PopErrorScope {
-            Mode = CallbackMode.AllowProcessEvents
+            Mode = CallbackMode.WaitAnyOnly
             Callback = PopErrorScopeCallback (fun d status typ message ->
                 d.Dispose()
                 tcs.SetResult(typ, message)
                 ()
             )
-        } |> ignore
+        } |> device.EnqueueWait
         tcs.Task
 
     [<Extension>]
     static member GetCompilationInfo(this : ShaderModule) =
         let tcs = TaskCompletionSource<_>()
         this.GetCompilationInfo {
-            Mode = CallbackMode.AllowProcessEvents
+            Mode = CallbackMode.WaitAnyOnly
             Callback = CompilationInfoCallback(fun d status info ->
                 tcs.SetResult(info)
             )
-        } |> ignore
+        } |> this.Device.EnqueueWait
         tcs.Task
 
     [<Extension>]
@@ -375,7 +474,7 @@ type WebGPUExtensions private() =
         
         let shader =
             device.CreateShaderModule {
-                Label = null
+                Label = WebGPU.Raw.Label.nolabel()
                 Next = { ShaderSourceSPIRV.Next = null; ShaderSourceSPIRV.Code = spirv }
             }
             
@@ -423,7 +522,7 @@ type BufferRangeExtensions private() =
             use tmp = 
                 device.CreateBuffer {
                     Next = null
-                    Label = null
+                    Label = nolabel()
                     Usage = BufferUsage.MapWrite ||| BufferUsage.CopySrc
                     Size = size
                     MappedAtCreation = true
@@ -433,9 +532,9 @@ type BufferRangeExtensions private() =
             data.CopyTo(System.Span<'a>(NativePtr.toVoidPtr (NativePtr.ofNativeInt<byte> dst), data.Length))
             tmp.Unmap()
             
-            use enc = device.CreateCommandEncoder { Label = null; Next = null }
+            use enc = device.CreateCommandEncoder { Label = nolabel(); Next = null }
             enc.CopyBufferToBuffer(tmp, 0L, result, 0L, size)
-            use cmd = enc.Finish { Label = null }
+            use cmd = enc.Finish { Label = nolabel() }
             task {
                 do! device.Queue.Submit [| cmd |]
                 return result
@@ -461,7 +560,7 @@ type BufferRangeExtensions private() =
     static member CreateView(tex : Texture, usage : TextureUsage, level : int) =
         tex.CreateView {
             Next = null
-            Label = null
+            Label = nolabel()
             Format = tex.Format
             Dimension =
                 match tex.Dimension with
@@ -497,7 +596,7 @@ type BufferRangeExtensions private() =
         
         tex.CreateView {
             Next = null
-            Label = null
+            Label = nolabel() 
             Format = tex.Format
             Dimension = viewDimension
             BaseMipLevel = 0
@@ -510,6 +609,9 @@ type BufferRangeExtensions private() =
 
 [<AutoOpen>]
 module ``F# Extensions`` =
+    
+    let inline nolabel() =
+        WebGPU.Raw.Label.nolabel()
     
     let mipMapLevels1d (size : int) =
         1 + int (log2 (float size) |> floor)

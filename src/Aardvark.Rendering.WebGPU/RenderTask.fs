@@ -32,8 +32,8 @@ type RenderTask(device : Device, signature : IFramebufferSignature, objects : as
                     if all.Remove o then
                         o.Release()
            
-            use update = device.CreateCommandEncoder { Label = null; Next = null }
-            use cmd = device.CreateCommandEncoder { Label = null; Next = null }
+            use update = device.CreateCommandEncoder { Label = nolabel(); Next = null }
+            use cmd = device.CreateCommandEncoder { Label = nolabel(); Next = null }
             
             
             
@@ -67,7 +67,7 @@ type RenderTask(device : Device, signature : IFramebufferSignature, objects : as
                     
             use renc = 
                 cmd.BeginRenderPass {
-                    Label = null
+                    Label = nolabel()
                     Next = null
                     ColorAttachments =
                         fbo.ColorAttachments |> Array.map (fun tex ->
@@ -88,9 +88,9 @@ type RenderTask(device : Device, signature : IFramebufferSignature, objects : as
             for o in all do
                 renc.Render(o, update, token)
                   
-            use update = update.Finish { Label = null}
+            use update = update.Finish { Label = nolabel() }
             renc.End()
-            use render = cmd.Finish { Label = null}
+            use render = cmd.Finish { Label = nolabel() }
             
             let t = device.Queue.Submit [| update; render |]
             t.Wait()
@@ -124,7 +124,7 @@ type ClearTask(device : Device, signature : IFramebufferSignature, values : aval
         x.EvaluateAlways token (fun token ->
             let fbo = output.framebuffer :?> Framebuffer
             
-            use enc = device.CreateCommandEncoder { Label = null; Next = null }
+            use enc = device.CreateCommandEncoder { Label = nolabel(); Next = null }
             
             let values = values.GetValue(token)
             
@@ -168,7 +168,7 @@ type ClearTask(device : Device, signature : IFramebufferSignature, values : aval
                     
             use renc = 
                 enc.BeginRenderPass {
-                    Label = null
+                    Label = nolabel()
                     Next = null
                     ColorAttachments =
                         fbo.ColorAttachments |> Array.mapi (fun i tex ->
@@ -209,7 +209,7 @@ type ClearTask(device : Device, signature : IFramebufferSignature, values : aval
                 }
             
             renc.End()
-            use cmd = enc.Finish { Label = null}
+            use cmd = enc.Finish { Label = nolabel() }
             let t = device.Queue.Submit [| cmd |]
             t.Wait()
             

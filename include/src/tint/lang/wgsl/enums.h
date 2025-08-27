@@ -114,6 +114,8 @@ constexpr std::string_view kChromiumDiagnosticRuleStrings[] = {
 enum class Extension : uint8_t {
     kUndefined,
     kChromiumDisableUniformityAnalysis,
+    kChromiumExperimentalBarycentricCoord,
+    kChromiumExperimentalDynamicBinding,
     kChromiumExperimentalFramebufferFetch,
     kChromiumExperimentalImmediate,
     kChromiumExperimentalPixelLocal,
@@ -123,6 +125,7 @@ enum class Extension : uint8_t {
     kClipDistances,
     kDualSourceBlending,
     kF16,
+    kPrimitiveIndex,
     kSubgroups,
 };
 
@@ -146,6 +149,8 @@ Extension ParseExtension(std::string_view str);
 
 constexpr std::string_view kExtensionStrings[] = {
     "chromium_disable_uniformity_analysis",
+    "chromium_experimental_barycentric_coord",
+    "chromium_experimental_dynamic_binding",
     "chromium_experimental_framebuffer_fetch",
     "chromium_experimental_immediate",
     "chromium_experimental_pixel_local",
@@ -155,12 +160,15 @@ constexpr std::string_view kExtensionStrings[] = {
     "clip_distances",
     "dual_source_blending",
     "f16",
+    "primitive_index",
     "subgroups",
 };
 
 /// All extensions
 static constexpr Extension kAllExtensions[] = {
     Extension::kChromiumDisableUniformityAnalysis,
+    Extension::kChromiumExperimentalBarycentricCoord,
+    Extension::kChromiumExperimentalDynamicBinding,
     Extension::kChromiumExperimentalFramebufferFetch,
     Extension::kChromiumExperimentalImmediate,
     Extension::kChromiumExperimentalPixelLocal,
@@ -170,6 +178,7 @@ static constexpr Extension kAllExtensions[] = {
     Extension::kClipDistances,
     Extension::kDualSourceBlending,
     Extension::kF16,
+    Extension::kPrimitiveIndex,
     Extension::kSubgroups,
 };
 
@@ -177,6 +186,7 @@ static constexpr Extension kAllExtensions[] = {
 /// @see src/tint/lang/wgsl/wgsl.def for language feature descriptions
 enum class LanguageFeature : uint8_t {
     kUndefined,
+    kChromiumPrint,
     kChromiumTestingExperimental,
     kChromiumTestingShipped,
     kChromiumTestingShippedWithKillswitch,
@@ -200,6 +210,7 @@ std::string_view ToString(LanguageFeature value);
 LanguageFeature ParseLanguageFeature(std::string_view str);
 
 constexpr std::string_view kLanguageFeatureStrings[] = {
+    "chromium_print",
     "chromium_testing_experimental",
     "chromium_testing_shipped",
     "chromium_testing_shipped_with_killswitch",
@@ -215,6 +226,7 @@ constexpr std::string_view kLanguageFeatureStrings[] = {
 
 /// All features
 static constexpr LanguageFeature kAllLanguageFeatures[] = {
+    LanguageFeature::kChromiumPrint,
     LanguageFeature::kChromiumTestingExperimental,
     LanguageFeature::kChromiumTestingShipped,
     LanguageFeature::kChromiumTestingShippedWithKillswitch,
@@ -427,6 +439,7 @@ enum class BuiltinFn : uint8_t {
     kSubgroupMatrixStore,
     kSubgroupMatrixMultiply,
     kSubgroupMatrixMultiplyAccumulate,
+    kPrint,
     kTintMaterialize,
     kNone,
 };
@@ -602,6 +615,7 @@ constexpr BuiltinFn kBuiltinFns[] = {
     BuiltinFn::kSubgroupMatrixStore,
     BuiltinFn::kSubgroupMatrixMultiply,
     BuiltinFn::kSubgroupMatrixMultiplyAccumulate,
+    BuiltinFn::kPrint,
     BuiltinFn::kTintMaterialize,
 };
 
@@ -758,6 +772,7 @@ constexpr const char* kBuiltinFnStrings[] = {
     "subgroupMatrixStore",
     "subgroupMatrixMultiply",
     "subgroupMatrixMultiplyAccumulate",
+    "print",
     "__tint_materialize",
 };
 

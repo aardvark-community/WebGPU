@@ -92,7 +92,7 @@ type ImageExtensions private() =
                     use tmp =
                         device.CreateBuffer {
                             Next = null
-                            Label = null
+                            Label = WebGPU.Raw.Label.nolabel()
                             Usage = BufferUsage.CopySrc ||| BufferUsage.MapWrite
                             Size = int64 fakebpr * int64 size.Y
                             MappedAtCreation = true
@@ -126,7 +126,7 @@ type ImageExtensions private() =
                             
                     tmp.Unmap()
                     
-                    //use enc = device.CreateCommandEncoder { Label = null; Next = null }
+                    //use enc = device.CreateCommandEncoder { Label = nolabel(); Next = null }
                     let src : TexelCopyBufferInfo =
                         {
                             Layout =
@@ -288,7 +288,7 @@ type ImageExtensions private() =
         
         this.CreateTexture {
             Next = null
-            Label = null
+            Label = WebGPU.Raw.Label.nolabel()
             Usage = usage
             Dimension = TextureDimension.D2D
             Size = { Width = size.X; Height = size.Y; DepthOrArrayLayers = 1 }

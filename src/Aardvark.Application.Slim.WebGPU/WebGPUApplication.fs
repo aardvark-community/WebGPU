@@ -54,7 +54,7 @@ type WebGPUGlfwExtensions private() =
             }
         
         this.CreateSurface surfaceDesc
-             
+           
 
 type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, device : Device, runtime : Runtime) =
     inherit Aardvark.Application.Slim.Application(runtime, WebGPUApplication.Interop(instance, adapter, device), false)
@@ -70,7 +70,7 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
                 let surf = 
                     instance.CreateGLFWSurface {
                         Glfw = glfw
-                        Label = null
+                        Label = nolabel()
                         Window = window
                     }
                     
@@ -141,7 +141,7 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
                         let depth =
                             device.CreateTexture {
                                 Next = null
-                                Label = null
+                                Label = nolabel()
                                 Usage = TextureUsage.RenderAttachment
                                 Dimension = TextureDimension.D2D
                                 Size = { Width = size.X; Height = size.Y; DepthOrArrayLayers = 1 }
@@ -154,7 +154,7 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
                         let depthView =
                             depth.CreateView {
                                 Next = null
-                                Label = null
+                                Label = nolabel()
                                 Format = TextureFormat.Depth24PlusStencil8
                                 Dimension = TextureViewDimension.D2D
                                 BaseMipLevel = 0
@@ -221,10 +221,14 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
         task {
             let instance = WebGPU.CreateInstance()
             
-            let thread = 
-                startThread <| fun () ->
-                    while true do
-                        instance.ProcessEvents()
+            // let thread = 
+            //     startThread <| fun () ->
+            //         while true do
+            //             try
+            //                 instance.ProcessEvents()
+            //                 printfn "events processed"
+            //             with e ->
+            //                 printfn "ERROR: %A" e
             
             let! adapter = instance.CreateAdapter()
                 

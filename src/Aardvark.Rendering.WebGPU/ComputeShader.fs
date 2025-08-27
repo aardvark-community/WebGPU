@@ -37,7 +37,7 @@ type ComputeShader private (device : Device, pipeline : ComputePipeline, groupLa
                     let buffer =
                         device.CreateBuffer {
                             Next = null
-                            Label = null
+                            Label = nolabel()
                             Usage = BufferUsage.Uniform ||| BufferUsage.CopyDst
                             Size = int64 ub.ubSize
                             MappedAtCreation = false
@@ -146,6 +146,7 @@ type ComputeShader private (device : Device, pipeline : ComputePipeline, groupLa
                             BindGroupEntry.Null    
                     )
                 device.CreateBindGroup {
+                    Next = null
                     Label = sprintf "group %d" gi
                     Layout = groupLayouts.[gi]
                     Entries = data
@@ -155,8 +156,8 @@ type ComputeShader private (device : Device, pipeline : ComputePipeline, groupLa
         
         task {
             try
-                use enc = device.CreateCommandEncoder { Label = null; Next = null }
-                use pass = enc.BeginComputePass { Label = null; TimestampWrites = undefined }
+                use enc = device.CreateCommandEncoder { Label = nolabel(); Next = null }
+                use pass = enc.BeginComputePass { Label = nolabel(); TimestampWrites = undefined }
                 
                 pass.SetPipeline pipeline
                 for KeyValue(gi, group) in groups do
@@ -164,7 +165,7 @@ type ComputeShader private (device : Device, pipeline : ComputePipeline, groupLa
                     
                 pass.DispatchWorkgroups(workGroups.X, workGroups.Y, workGroups.Z)
                 pass.End()
-                use cmd = enc.Finish { Label = null }
+                use cmd = enc.Finish { Label = nolabel() }
                 
                 
                 do! device.Queue.Submit([| cmd |])
@@ -186,7 +187,7 @@ type ComputeShader private (device : Device, pipeline : ComputePipeline, groupLa
         
         let sm =
             device.CreateShaderModule {
-                Label = null
+                Label = nolabel()
                 Next = { ShaderSourceWGSL.Next = null; ShaderSourceWGSL.Code = wgsl.codes.[FShade.ShaderStage.Compute] }
             }
             
@@ -213,14 +214,14 @@ type ComputeShader private (device : Device, pipeline : ComputePipeline, groupLa
         let layout =
             device.CreatePipelineLayout {
                 Next = null
-                Label = null
+                Label = nolabel()
                 BindGroupLayouts = groupLayouts
                 ImmediateSize = 0
             }
         
         let pipe = 
             device.CreateComputePipeline {
-                Label = null
+                Label = nolabel()
                 Layout = layout
                 Compute = compute
             }

@@ -41,9 +41,9 @@ DllExport(int) transpileSpirV(const uint32_t* spv, int spvLength, char** wgsl, s
 	options.allowed_features = tint::wgsl::AllowedFeatures::Everything();
 
 	auto bin = std::vector<uint32_t>(spv, spv + spvLength);
-	auto m = tint::spirv::reader::Read(bin, options);
-	if(!m.IsValid()) {
-		auto err = m.Diagnostics().Str();
+	tint::Result<tint::core::ir::Module> m = tint::spirv::reader::ReadIR(bin, options);
+	if(m != tint::Success) {
+		auto err = m.Failure().reason;
 
 		auto res = new char[err.size() + 1];
 		strcpy(res, err.c_str());
@@ -53,8 +53,7 @@ DllExport(int) transpileSpirV(const uint32_t* spv, int spvLength, char** wgsl, s
 		return -1;
 	}
 
-
-	auto result = tint::wgsl::writer::Generate(m, {});
+	auto result = tint::wgsl::writer::WgslFromIR(m.Get(), {});
 
 	auto wgslStr = result->wgsl;
 

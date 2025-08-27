@@ -228,7 +228,7 @@ let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d
             depth <-
                 device.CreateBuffer{
                     Next = null
-                    Label = null
+                    Label = nolabel()
                     Usage = BufferUsage.Storage
                     Size = int64 size.X * int64 size.Y * 4L
                     MappedAtCreation = false
@@ -565,7 +565,7 @@ let run() =
     Aardvark.Init()
     WebGPUShaderExtensions.ShaderCaching <- true
      
-    let rasterizer = DefaultRasterizer.compile
+    let rasterizer = BinRasterizer.compile
      
     let app = WebGPUApplication.Create(true).Result
     let win = app.CreateGameWindow(vsync = true)

@@ -145,6 +145,15 @@ type BindGroupEntry =
         new(binding : uint32, buffer : nativeint, offset : uint64, size : uint64, sampler : nativeint, textureView : nativeint) = BindGroupEntry(0n, binding, buffer, offset, size, sampler, textureView)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
+type BindGroupDynamicBindingArray = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public SType : SType
+        val mutable public DynamicArraySize : uint32
+        new(nextInChain : nativeint, sType : SType, dynamicArraySize : uint32) = { NextInChain = nextInChain; SType = sType; DynamicArraySize = dynamicArraySize }
+        new(dynamicArraySize : uint32) = BindGroupDynamicBindingArray(0n, Unchecked.defaultof<SType>, dynamicArraySize)
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
 type BindGroupDescriptor = 
     struct
         val mutable public NextInChain : nativeint
@@ -262,6 +271,24 @@ type BindGroupLayoutEntry =
         val mutable public StorageTexture : StorageTextureBindingLayout
         new(nextInChain : nativeint, binding : uint32, visibility : ShaderStage, bindingArraySize : uint32, buffer : BufferBindingLayout, sampler : SamplerBindingLayout, texture : TextureBindingLayout, storageTexture : StorageTextureBindingLayout) = { NextInChain = nextInChain; Binding = binding; Visibility = visibility; BindingArraySize = bindingArraySize; Buffer = buffer; Sampler = sampler; Texture = texture; StorageTexture = storageTexture }
         new(binding : uint32, visibility : ShaderStage, bindingArraySize : uint32, buffer : BufferBindingLayout, sampler : SamplerBindingLayout, texture : TextureBindingLayout, storageTexture : StorageTextureBindingLayout) = BindGroupLayoutEntry(0n, binding, visibility, bindingArraySize, buffer, sampler, texture, storageTexture)
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type DynamicBindingArrayLayout = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public Start : uint32
+        val mutable public Kind : DynamicBindingKind
+        new(nextInChain : nativeint, start : uint32, kind : DynamicBindingKind) = { NextInChain = nextInChain; Start = start; Kind = kind }
+        new(start : uint32, kind : DynamicBindingKind) = DynamicBindingArrayLayout(0n, start, kind)
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type BindGroupLayoutDynamicBindingArray = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public SType : SType
+        val mutable public DynamicArray : DynamicBindingArrayLayout
+        new(nextInChain : nativeint, sType : SType, dynamicArray : DynamicBindingArrayLayout) = { NextInChain = nextInChain; SType = sType; DynamicArray = dynamicArray }
+        new(dynamicArray : DynamicBindingArrayLayout) = BindGroupLayoutDynamicBindingArray(0n, Unchecked.defaultof<SType>, dynamicArray)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type BindGroupLayoutDescriptor = 
@@ -569,6 +596,15 @@ type DawnHostMappedPointerLimits =
         val mutable public HostMappedPointerAlignment : uint32
         new(nextInChain : nativeint, sType : SType, hostMappedPointerAlignment : uint32) = { NextInChain = nextInChain; SType = sType; HostMappedPointerAlignment = hostMappedPointerAlignment }
         new(hostMappedPointerAlignment : uint32) = DawnHostMappedPointerLimits(0n, Unchecked.defaultof<SType>, hostMappedPointerAlignment)
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
+type DynamicBindingArrayLimits = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public SType : SType
+        val mutable public MaxDynamicBindingArraySize : uint32
+        new(nextInChain : nativeint, sType : SType, maxDynamicBindingArraySize : uint32) = { NextInChain = nextInChain; SType = sType; MaxDynamicBindingArraySize = maxDynamicBindingArraySize }
+        new(maxDynamicBindingArraySize : uint32) = DynamicBindingArrayLimits(0n, Unchecked.defaultof<SType>, maxDynamicBindingArraySize)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SupportedFeatures = 
@@ -1716,6 +1752,17 @@ type TextureViewDescriptor =
         new(label : StringView, format : TextureFormat, dimension : TextureViewDimension, baseMipLevel : uint32, mipLevelCount : uint32, baseArrayLayer : uint32, arrayLayerCount : uint32, aspect : TextureAspect, usage : TextureUsage) = TextureViewDescriptor(0n, label, format, dimension, baseMipLevel, mipLevelCount, baseArrayLayer, arrayLayerCount, aspect, usage)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
+type TexelBufferViewDescriptor = 
+    struct
+        val mutable public NextInChain : nativeint
+        val mutable public Label : StringView
+        val mutable public Format : TextureFormat
+        val mutable public Offset : uint64
+        val mutable public Size : uint64
+        new(nextInChain : nativeint, label : StringView, format : TextureFormat, offset : uint64, size : uint64) = { NextInChain = nextInChain; Label = label; Format = format; Offset = offset; Size = size }
+        new(label : StringView, format : TextureFormat, offset : uint64, size : uint64) = TexelBufferViewDescriptor(0n, label, format, offset, size)
+    end
+[<Struct; StructLayout(LayoutKind.Sequential)>]
 type TextureComponentSwizzleDescriptor = 
     struct
         val mutable public NextInChain : nativeint
@@ -2731,6 +2778,12 @@ module WebGPU =
     extern void TextureViewRelease(nativeint self)
     [<DllImport("WebGPUNative", EntryPoint="gpuTextureViewAddRef")>]
     extern void TextureViewAddRef(nativeint self)
+    [<DllImport("WebGPUNative", EntryPoint="gpuTexelBufferViewSetLabel")>]
+    extern void TexelBufferViewSetLabel(nativeint self, StringView label)
+    [<DllImport("WebGPUNative", EntryPoint="gpuTexelBufferViewRelease")>]
+    extern void TexelBufferViewRelease(nativeint self)
+    [<DllImport("WebGPUNative", EntryPoint="gpuTexelBufferViewAddRef")>]
+    extern void TexelBufferViewAddRef(nativeint self)
 type WebGPUCallbacks() =
     static let requestAdapterCallbackCallbacks = Dictionary<nativeint, RequestAdapterCallback>()
     static let mutable requestAdapterCallbackCurrent = 0n

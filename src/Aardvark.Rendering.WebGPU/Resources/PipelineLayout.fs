@@ -247,7 +247,8 @@ type WebGPUPipelineLayoutExtensions private() =
         let groupLayouts =
             groupDescriptors |> MapExt.map (fun gi bindings ->
                 device.CreateBindGroupLayout {
-                    Label = null
+                    Next = null
+                    Label = nolabel()
                     Entries = bindings |> MapExt.values |> Array.ofSeq
                 }    
             )
@@ -270,7 +271,7 @@ type WebGPUPipelineLayoutExtensions private() =
         let layout = 
             device.CreatePipelineLayout {
                 Next = null
-                Label = null
+                Label = nolabel()
                 BindGroupLayouts = groupLayouts
                 ImmediateSize = 0
             }

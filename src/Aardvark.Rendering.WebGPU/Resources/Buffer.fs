@@ -20,7 +20,7 @@ type BufferExtensions private() =
                     else size
                 use tmp =
                     encoder.Device.CreateBuffer {
-                        Label = null
+                        Label = nolabel()
                         Next = null
                         Size = size
                         Usage = BufferUsage.MapWrite ||| BufferUsage.CopySrc

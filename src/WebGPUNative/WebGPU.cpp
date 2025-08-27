@@ -903,3 +903,12 @@ DllExport(void) gpuTextureViewRelease(WGPUTextureView self) {
 DllExport(void) gpuTextureViewAddRef(WGPUTextureView self) {
     return wgpuTextureViewAddRef(self);
 }
+DllExport(void) gpuTexelBufferViewSetLabel(WGPUTexelBufferView self, WGPUStringView label) {
+    return wgpuTexelBufferViewSetLabel(self, label);
+}
+DllExport(void) gpuTexelBufferViewRelease(WGPUTexelBufferView self) {
+    return wgpuTexelBufferViewRelease(self);
+}
+DllExport(void) gpuTexelBufferViewAddRef(WGPUTexelBufferView self) {
+    return wgpuTexelBufferViewAddRef(self);
+}

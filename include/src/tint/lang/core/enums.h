@@ -528,6 +528,7 @@ enum class BuiltinValue : uint8_t {
     kUndefined,
     kCullDistance,  // Tint-internal enum entry - not parsed
     kPointSize,     // Tint-internal enum entry - not parsed
+    kBarycentricCoord,
     kClipDistances,
     kFragDepth,
     kFrontFacing,
@@ -537,6 +538,7 @@ enum class BuiltinValue : uint8_t {
     kLocalInvocationIndex,
     kNumWorkgroups,
     kPosition,
+    kPrimitiveIndex,
     kSampleIndex,
     kSampleMask,
     kSubgroupId,
@@ -565,11 +567,23 @@ auto& operator<<(STREAM& out, BuiltinValue value) {
 BuiltinValue ParseBuiltinValue(std::string_view str);
 
 constexpr std::string_view kBuiltinValueStrings[] = {
-    "clip_distances",         "frag_depth",     "front_facing",
-    "global_invocation_id",   "instance_index", "local_invocation_id",
-    "local_invocation_index", "num_workgroups", "position",
-    "sample_index",           "sample_mask",    "subgroup_id",
-    "subgroup_invocation_id", "subgroup_size",  "vertex_index",
+    "barycentric_coord",
+    "clip_distances",
+    "frag_depth",
+    "front_facing",
+    "global_invocation_id",
+    "instance_index",
+    "local_invocation_id",
+    "local_invocation_index",
+    "num_workgroups",
+    "position",
+    "primitive_index",
+    "sample_index",
+    "sample_mask",
+    "subgroup_id",
+    "subgroup_invocation_id",
+    "subgroup_size",
+    "vertex_index",
     "workgroup_id",
 };
 
@@ -860,6 +874,7 @@ enum class BuiltinFn : uint8_t {
     kSubgroupMatrixStore,
     kSubgroupMatrixMultiply,
     kSubgroupMatrixMultiplyAccumulate,
+    kPrint,
     kNone,
 };
 
@@ -1032,6 +1047,7 @@ constexpr BuiltinFn kBuiltinFns[] = {
     BuiltinFn::kSubgroupMatrixStore,
     BuiltinFn::kSubgroupMatrixMultiply,
     BuiltinFn::kSubgroupMatrixMultiplyAccumulate,
+    BuiltinFn::kPrint,
 };
 
 /// All builtin function names
@@ -1185,6 +1201,7 @@ constexpr const char* kBuiltinFnStrings[] = {
     "subgroupMatrixStore",
     "subgroupMatrixMultiply",
     "subgroupMatrixMultiplyAccumulate",
+    "print",
 };
 
 /// Determines if the given `f` is a coarse derivative.

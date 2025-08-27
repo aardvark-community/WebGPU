@@ -8,6 +8,7 @@
     <Compile Include="Pinnable.fs" />
     <Compile Include="Enums.fs" />
     <Compile Include="Wrapper.fs" />
+    <Compile Include="FutureWaitPool.fs" />
     <Compile Include="Frontend.fs" />
     <Compile Include="BufferExtensions.fs" />
     <Compile Include="TextureExtensions.fs" />

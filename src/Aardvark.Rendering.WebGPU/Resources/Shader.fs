@@ -321,7 +321,7 @@ type WebGPUShaderExtensions private() =
                     | None ->
                         [||]
                 device.CreatePipelineLayout {
-                    Label = null
+                    Label = nolabel()
                     Next = null
                     BindGroupLayouts = entries
                     ImmediateSize = 0
