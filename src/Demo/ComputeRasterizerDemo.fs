@@ -125,7 +125,7 @@ module Obj =
         loadMesh bunnyStream
 
     let beetle() =
-        use s = System.IO.File.OpenRead "/Users/schorsch/Desktop/stanford-bunny.obj"
+        use s = System.IO.File.OpenRead @"C:\Users\georg\Desktop\stanford-bunny.obj"
         loadMesh s
     let ofIndexedGeometry (ig : IndexedGeometry) =
         let pos =

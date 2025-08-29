@@ -146,7 +146,7 @@ type WebGPUBufferExtensions private() =
     [<Extension>]
     static member Upload<'a when 'a : unmanaged>(this : CommandEncoder, src : System.ReadOnlySpan<'a>, dst : Buffer, dstOffset : int64) : unit =
         let size = int64 src.Length * int64 sizeof<'a>
-        use tmp = dst.Device.CreateBuffer { Next = null; Label = WebGPU.Raw.Label.nolabel(); Size = size; Usage = BufferUsage.MapWrite ||| BufferUsage.CopySrc; MappedAtCreation = true }
+        use tmp = dst.Device.CreateBuffer { Next = null; Label = WebGPU.Raw.WebGPUDebug.nolabel(); Size = size; Usage = BufferUsage.MapWrite ||| BufferUsage.CopySrc; MappedAtCreation = true }
         let dstPtr = tmp.GetMappedRange(0L, size)
         let dstSpan = System.Span<'a>(NativePtr.toVoidPtr (NativePtr.ofNativeInt<byte> dstPtr), src.Length)
         src.CopyTo(dstSpan)
@@ -194,7 +194,7 @@ type WebGPUBufferExtensions private() =
     [<Extension>]
     static member Download<'a when 'a : unmanaged>(this : CommandEncoder, src : Buffer, srcOffset : int64, dst : System.Memory<'a>) =
         let size = int64 dst.Length * int64 sizeof<'a>
-        let tmp = src.Device.CreateBuffer { Next = null; Label = WebGPU.Raw.Label.nolabel(); Size = size; Usage = BufferUsage.MapRead ||| BufferUsage.CopyDst; MappedAtCreation = false }
+        let tmp = src.Device.CreateBuffer { Next = null; Label = WebGPU.Raw.WebGPUDebug.nolabel(); Size = size; Usage = BufferUsage.MapRead ||| BufferUsage.CopyDst; MappedAtCreation = false }
 
         this.CopyBufferToBuffer(src, srcOffset, tmp, 0L, size)
         this.AddAfterRun (fun () ->
@@ -233,9 +233,9 @@ type WebGPUBufferExtensions private() =
         
     [<Extension>]
     static member Download<'a when 'a : unmanaged>(this : Device, src : BufferRange, dst : 'a[]) =
-        use enc = this.CreateCommandEncoder { Label = WebGPU.Raw.Label.nolabel(); Next = null }
+        use enc = this.CreateCommandEncoder { Label = WebGPU.Raw.WebGPUDebug.nolabel(); Next = null }
         enc.Download(src.Buffer, src.Offset, dst, 0, dst.Length)
-        use cmd = enc.Finish { Label = WebGPU.Raw.Label.nolabel() }
+        use cmd = enc.Finish { Label = WebGPU.Raw.WebGPUDebug.nolabel() }
         this.Queue.Submit [| cmd |]
         
     
@@ -243,9 +243,9 @@ type WebGPUBufferExtensions private() =
     static member Download<'a when 'a : unmanaged>(this : Device, src : BufferRange) =
         task {
             let dst = Array.zeroCreate<'a> (int (src.Size / int64 (typeof<'a>.GetCLRSize())))
-            use enc = this.CreateCommandEncoder { Label = WebGPU.Raw.Label.nolabel(); Next = null }
+            use enc = this.CreateCommandEncoder { Label = WebGPU.Raw.WebGPUDebug.nolabel(); Next = null }
             enc.Download(src.Buffer, src.Offset, dst, 0, dst.Length)
-            use cmd = enc.Finish { Label = WebGPU.Raw.Label.nolabel() }
+            use cmd = enc.Finish { Label = WebGPU.Raw.WebGPUDebug.nolabel() }
             do! this.Queue.Submit [| cmd |] 
             return dst
         }

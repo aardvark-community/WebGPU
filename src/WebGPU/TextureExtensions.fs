@@ -92,7 +92,7 @@ type ImageExtensions private() =
                     use tmp =
                         device.CreateBuffer {
                             Next = null
-                            Label = WebGPU.Raw.Label.nolabel()
+                            Label = WebGPU.Raw.WebGPUDebug.nolabel()
                             Usage = BufferUsage.CopySrc ||| BufferUsage.MapWrite
                             Size = int64 fakebpr * int64 size.Y
                             MappedAtCreation = true
@@ -288,7 +288,7 @@ type ImageExtensions private() =
         
         this.CreateTexture {
             Next = null
-            Label = WebGPU.Raw.Label.nolabel()
+            Label = WebGPU.Raw.WebGPUDebug.nolabel()
             Usage = usage
             Dimension = TextureDimension.D2D
             Size = { Width = size.X; Height = size.Y; DepthOrArrayLayers = 1 }

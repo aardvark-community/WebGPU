@@ -28,8 +28,9 @@ type internal FutureWaitPool(instance : nativeint) =
         futures.Add(struct(f, stack))
         
         
-module Label =
+module WebGPUDebug =
     let mutable private currentId = 0
+    let private shaderCode = System.Collections.Concurrent.ConcurrentDictionary<string, string>()
     let private table = System.Collections.Concurrent.ConcurrentDictionary<string, int * string>()
     let private rx = System.Text.RegularExpressions.Regex @"\$\$\$[^\$]+\$\$\$"
     
@@ -38,15 +39,25 @@ module Label =
         let str = g.ToByteArray() |> System.Convert.ToBase64String
         $"$$${str}$$$"
     
+    let registerShaderModuleCode (label : string) (code : string) =
+        if WebGPU.WebGPUConfig.captureStackTraces then
+            if not (System.String.IsNullOrEmpty label) then
+                shaderCode.TryAdd(label, code) |> ignore
+    
     let processMessage (msg : string) =
         if WebGPU.WebGPUConfig.captureStackTraces then
             let stacks = System.Collections.Generic.Dictionary<string, string>()
+            
+            let usedCodes = System.Collections.Generic.Dictionary<string, string>()
             
             let newMsg = 
                 rx.Replace(msg, fun m ->
                     match table.TryGetValue m.Value with
                     | (true, (index, sf)) ->
                         let name = sprintf "%03d" index
+                        match shaderCode.TryGetValue m.Value with
+                        | (true, code) -> usedCodes.[name] <- code
+                        | _ -> ()
                         stacks.[name] <- sf
                         name
                     | _ ->
@@ -59,6 +70,13 @@ module Label =
             for KeyValue(name, stack) in stacks do
                 res.AppendLine $"--- stack for {name} ---" |> ignore
                 res.AppendLine stack |> ignore
+                
+            for KeyValue(name, code) in usedCodes do
+                res.AppendLine $"--- code for {name} ---" |> ignore
+                res.AppendLine code |> ignore
+                
+                
+                
             res.ToString()
         else
             msg
@@ -68,10 +86,6 @@ module Label =
             let index = System.Threading.Interlocked.Increment &currentId
             let f = System.Diagnostics.StackTrace(1, true)
             let fStr = string f
-            
-            
-            
-            
             let id = randomString()
             table.TryAdd(id, (index, fStr)) |> ignore
             id

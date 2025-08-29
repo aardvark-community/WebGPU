@@ -186,9 +186,12 @@ type ComputeShader private (device : Device, pipeline : ComputePipeline, groupLa
         let wgsl = shader.GetWGSLCode()
         
         let sm =
+            let label = nolabel()
+            let code = wgsl.codes.[FShade.ShaderStage.Compute]
+            WebGPU.Raw.WebGPUDebug.registerShaderModuleCode label code
             device.CreateShaderModule {
-                Label = nolabel()
-                Next = { ShaderSourceWGSL.Next = null; ShaderSourceWGSL.Code = wgsl.codes.[FShade.ShaderStage.Compute] }
+                Label = label
+                Next = { ShaderSourceWGSL.Next = null; ShaderSourceWGSL.Code = code }
             }
             
         let compute =

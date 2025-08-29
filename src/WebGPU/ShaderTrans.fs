@@ -14,6 +14,9 @@ module ShaderTranspiler =
     extern int private freeWGSL(byte* ptr)
       
     let toWGSL (stage : ShaderStage) (entryPoint : string) (glsl : string) =
+        
+        let glsl = glsl.Replace("writeonly", "")
+        
         let glslStage =
             match stage with
             | ShaderStage.Compute -> GLSLang.ShaderStage.Compute

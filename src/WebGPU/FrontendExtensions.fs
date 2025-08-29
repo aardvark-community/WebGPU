@@ -9,7 +9,7 @@ open System.Threading.Tasks
 open Aardvark.Base
 open System.Text.RegularExpressions
 open WebGPU
-open WebGPU.Raw.Label
+open WebGPU.Raw.WebGPUDebug
 
 type FrontendDeviceDescriptor = 
     {
@@ -208,7 +208,7 @@ type WebGPUExtensions private() =
                     DeviceLostCallbackInfo.Callback =
                         DeviceLostCallback(fun _disp device typ message ->
                             let t = System.Diagnostics.StackTrace(4) |> string
-                            let message = WebGPU.Raw.Label.processMessage message
+                            let message = WebGPU.Raw.WebGPUDebug.processMessage message
                             let message = enumRx.Replace(message, "$1.") + "\n" + t
                             let lines = message.Split('\n')
                             Report.ErrorNoPrefix($"{typ} ERROR:")
@@ -222,7 +222,7 @@ type WebGPUExtensions private() =
         let errCb : UncapturedErrorCallbackInfo =
             {
                 Callback = UncapturedErrorCallback(fun _ device typ str ->
-                    let str = WebGPU.Raw.Label.processMessage str
+                    let str = WebGPU.Raw.WebGPUDebug.processMessage str
                     Report.ErrorNoPrefix($"{typ} ERROR: {str}")
                 )
             }
@@ -265,7 +265,7 @@ type WebGPUExtensions private() =
                     {
                         Callback =
                             LoggingCallback(fun _ t str ->
-                                let str = WebGPU.Raw.Label.processMessage str
+                                let str = WebGPU.Raw.WebGPUDebug.processMessage str
                                 let lines = str.Split("\n")
                                 for line in lines do 
                                     match t with
@@ -354,8 +354,10 @@ type WebGPUExtensions private() =
     static member CompileShader(device : Device, shaderCode : string, ?label : string) =
         
         let shader =
+            let label = defaultArg label (nolabel())
+            WebGPU.Raw.WebGPUDebug.registerShaderModuleCode label shaderCode
             device.CreateShaderModule {
-                Label = defaultArg label null
+                Label = label
                 Next = { ShaderSourceWGSL.Next = null; ShaderSourceWGSL.Code = shaderCode }
             }
             
@@ -383,7 +385,7 @@ type WebGPUExtensions private() =
         
         let shader =
             device.CreateShaderModule {
-                Label = WebGPU.Raw.Label.nolabel()
+                Label = WebGPU.Raw.WebGPUDebug.nolabel()
                 Next = { ShaderSourceSPIRV.Next = null; ShaderSourceSPIRV.Code = spirv }
             }
             
@@ -520,7 +522,7 @@ type BufferRangeExtensions private() =
 module ``F# Extensions`` =
     
     let inline nolabel() =
-        WebGPU.Raw.Label.nolabel()
+        WebGPU.Raw.WebGPUDebug.nolabel()
     
     let mipMapLevels1d (size : int) =
         1 + int (log2 (float size) |> floor)

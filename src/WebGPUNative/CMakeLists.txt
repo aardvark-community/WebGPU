@@ -5,7 +5,7 @@ project(WebGPUNative)
 
 
 # set(CMAKE_PLATFORM_TOOLSET "v141")
-set(CMAKE_BUILD_TYPE, "Release")
+set(CMAKE_BUILD_TYPE "Release")
 if(UNIX)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -ffunction-sections -fdata-sections -fvisibility=hidden")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -ffunction-sections -fdata-sections -fvisibility=hidden")
@@ -13,6 +13,8 @@ endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 set(FILES WebGPU.cpp ShaderTrans.cpp)
 set(DAWN_LIBRARY_NAME "")
 if(APPLE)
@@ -24,6 +26,7 @@ elseif(UNIX)
     set(DAWN_LIBRARY_NAME "libwebgpu_dawn.so")
 elseif(WIN32)
     add_compile_definitions(NOMINMAX)
+    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/Zc:preprocessor>")
     set(DAWN_LIBRARY_NAME "webgpu_dawn.dll")
 endif()
 
