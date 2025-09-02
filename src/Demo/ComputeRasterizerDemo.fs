@@ -12,6 +12,11 @@ open FSharp.Data.Adaptive
 open Microsoft.FSharp.NativeInterop
 open Demo
 
+
+let ceilDiv (a : int) (b : int) =
+    if a % b = 0 then a / b
+    else 1 + a / b
+
 type Marker = Marker
 
 module Resolve =
@@ -125,8 +130,126 @@ module Obj =
         loadMesh bunnyStream
 
     let beetle() =
-        use s = System.IO.File.OpenRead @"C:\Users\georg\Desktop\stanford-bunny.obj"
-        loadMesh s
+        //use s = System.IO.File.OpenRead "C:/Users/Simon/Desktop/stanford-bunny.obj"
+        //let tmp = "c:/Dev/VRVis/WebGPU/src/Demo/resources/exterior.obj"
+        let tmp = "c:/Dev/VRVis/WebGPU/src/Demo/resources/sponza.obj"
+        //let tmp = "C:/Users/Simon/Desktop/stanford-bunny.obj"
+        let mesh = Aardvark.Data.Wavefront.ObjParser.Load tmp
+        //System.IO.File.Delete tmp
+
+        let positions =
+            match mesh.Vertices with
+            | :? System.Collections.Generic.IList<V3f> as v -> v.ToArray(v.Count)
+            | :? System.Collections.Generic.IList<V3d> as v -> v.ToArray(v.Count) |> Array.map V3f
+            | :? System.Collections.Generic.IList<V4f> as v -> v.ToArray(v.Count) |> Array.map Vec.xyz
+            | :? System.Collections.Generic.IList<V4d> as v -> v.ToArray(v.Count) |> Array.map V3f
+            | _ -> failwith ""
+
+        let bounds = Box3f positions |> Box3d
+
+        let trafo =
+            Trafo3d.Translation(-bounds.Center) *
+            Trafo3d.Scale(2.0 / bounds.Size.NormMax)
+        match mesh.Normals with
+        | null ->
+            [||], [||], [||]
+
+        | normals ->
+            let positions = positions |> Array.map (fun p -> trafo.Forward.TransformPos (V3d p) |> V3f)
+            let normals = normals.ToArray(normals.Count) |> Array.map (fun n -> trafo.Backward.TransposedTransformDir (V3d n) |> Vec.normalize |> V3f)
+
+            let colors =
+                match mesh.VertexColors with
+                | null ->  Array.create positions.Length C4b.White
+                | cs -> cs.ToArray(cs.Count) |> Array.map (fun c -> c.ToC3b().ToC4b())
+
+
+            let ps = ResizeArray()
+            let ns = ResizeArray()
+            let cs = ResizeArray()
+
+            for set in mesh.FaceSets do
+
+                let iPos = set.VertexIndices
+                let iNormals =
+                    if isNull set.NormalIndices then iPos
+                    else set.NormalIndices
+                let iColors = set.VertexIndices
+
+                for ti in 0 .. set.ElementCount - 1 do
+                    let fi = set.FirstIndices.[ti]
+                    let cnt = set.FirstIndices.[ti+1] - fi
+
+                    if cnt = 3 then
+                        cs.Add colors.[iColors.[fi + 0]]
+                        cs.Add colors.[iColors.[fi + 1]]
+                        cs.Add colors.[iColors.[fi + 2]]
+
+                        ps.Add positions.[iPos.[fi + 0]]
+                        ps.Add positions.[iPos.[fi + 1]]
+                        ps.Add positions.[iPos.[fi + 2]]
+
+                        ns.Add normals.[iNormals.[fi + 0]]
+                        ns.Add normals.[iNormals.[fi + 1]]
+                        ns.Add normals.[iNormals.[fi + 2]]
+
+            ps.ToArray(), ns.ToArray(), cs.ToArray()
+
+    let triangles(size : V2i) (xAmount : int32) =
+        //printf $"{size.X} {size.Y}\n"
+
+        let cameraXDistance = -1 |> float32
+        let fov = 1.57079632679f
+        let alpha = fov / 2.0f;
+
+        let aspectRatio = (float32 size.X / float32 size.Y)
+
+        let binSizePx = 32
+        let binCountX = ceilDiv size.X binSizePx
+        let binCountY = ceilDiv size.Y binSizePx
+
+        let yScale = float32 binSizePx / float32 size.X
+        let zScale = float32 binSizePx / float32 size.Y
+
+        let yHalfViewPortSize = cameraXDistance * tan(alpha)
+        let zHalfViewPortSize = cameraXDistance * tan(alpha) / aspectRatio
+
+        let binSizeX = 2.0f * yHalfViewPortSize / float32 binCountX
+        let binSizeY = 2.0f * zHalfViewPortSize / float32 binCountY
+
+        let ps = ResizeArray()
+        let ns = ResizeArray()
+        let cs = ResizeArray()
+
+        let margin = 0.1f
+
+        printf $"size: {size.X} x {size.Y}\n"
+        printf $"binCount: {binCountX * binCountY}\n"
+        for i in 0 .. binCountX * binCountY - 1 do
+            for j in 0 .. xAmount - 1 do
+                let xBin = i % binCountX
+                let yBin = i / binCountX
+
+                let yTrans = float32 xBin * binSizeX - yHalfViewPortSize + binSizeX / 2.0f
+                let zTrans = float32 yBin * binSizeY - zHalfViewPortSize// + binSizeY / 2.0f
+
+                ps.Add ((Trafo3f.Scale(1.0f, yScale, zScale) * Trafo3f.Translation(0.0f, yTrans, zTrans)).TransformPos(V3f(0.0f, -yHalfViewPortSize + yHalfViewPortSize * margin, zHalfViewPortSize - zHalfViewPortSize * margin)))
+                ps.Add ((Trafo3f.Scale(1.0f, yScale, zScale) * Trafo3f.Translation(0.0f, yTrans, zTrans)).TransformPos(V3f(0.0f, 0.0f, -zHalfViewPortSize + zHalfViewPortSize * margin)))
+                ps.Add ((Trafo3f.Scale(1.0f, yScale, zScale) * Trafo3f.Translation(0.0f, yTrans, zTrans)).TransformPos(V3f(0.0f, yHalfViewPortSize - yHalfViewPortSize * margin, zHalfViewPortSize - zHalfViewPortSize * margin)))
+
+
+                ns.Add (V3f(1, 0, 0))
+                ns.Add (V3f(1, 0, 0))
+                ns.Add (V3f(1, 0, 0))
+
+                cs.Add (V3f(1, 1, 1))
+                cs.Add (V3f(1, 1, 1))
+                cs.Add (V3f(1, 1, 1))
+
+        printf $"Created {ps.Count / 3} triangles\n"
+        ps.ToArray(), ns.ToArray(), cs.ToArray()
+
+
     let ofIndexedGeometry (ig : IndexedGeometry) =
         let pos =
             match ig.IndexedAttributes.[DefaultSemantic.Positions] with
@@ -169,10 +292,11 @@ module Obj =
         pos, ns, cs
         
 
-let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d>) (proj : aval<Trafo3d>) (device : Device) (compile : Device -> Rasterizer) =
+let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d>) (proj : aval<Trafo3d>) (device : Device) (compile : Device -> Rasterizer) (windowSize : V2i) =
     
     let vertices, normals, colors = Obj.beetle()
-    
+    //let vertices, normals, colors = Obj.triangles windowSize 1
+
     
     let vertices = vertices |> Array.map (fun v -> V4f(v, 1.0f))
     let normals = normals |> Array.map (fun v -> V4f(v, 0.0f))
@@ -243,7 +367,9 @@ let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d
                 Positions = vertexBuffer
                 Normals = normalsBuffer
                 Colors = colorBuffer
-                ModelViewTrafo = Trafo3d.RotationX(Constant.PiHalf) * mv
+                //ModelViewTrafo = Trafo3d.RotationX(-Constant.PiHalf) * mv
+                //ModelViewTrafo = Trafo3d.RotationX(Constant.PiHalf) * mv
+                ModelViewTrafo = mv
                 ProjTrafo = proj
                 ColorTexture = color
                 DepthBuffer = depth
@@ -254,7 +380,7 @@ let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d
         let dt = sw.Elapsed.TotalSeconds - t0
         sum <- sum + dt
         cnt <- cnt + 1
-        if cnt > 30 then
+        if cnt > 10 then
             Log.line "render: %.3fms" (1000.0 * sum / float cnt)
             sum <- 0.0
             cnt <- 0
@@ -263,9 +389,9 @@ let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d
     )
 
 
-module ScanKernels = 
-    open FShade 
-    
+module ScanKernels =
+    open FShade
+
     [<Literal>]
     let scanSize = 128
 
@@ -280,13 +406,13 @@ module ScanKernels =
             let inputSize : int = uniform?Arguments?inputSize
             let outputOffset : int = uniform?Arguments?outputOffset
             let outputDelta : int = uniform?Arguments?outputDelta
-            let rowLength : int = uniform?Arguments?rowLength 
-            
+            let rowLength : int = uniform?Arguments?rowLength
+
             let line = getGlobalId().Y
             let inputOffset = rowLength * line + inputOffset
             let outputOffset = rowLength * line + outputOffset
-            
-            
+
+
             let mem : int[] = allocateShared scanSize
             let gid = getGlobalId().X
             let group = getWorkGroupId().X
@@ -296,8 +422,8 @@ module ScanKernels =
 
             let lai = lid0
             let lbi = lid0 + halfScanSize
-            let ai  = 2 * gid0 - lid0 
-            let bi  = ai + halfScanSize 
+            let ai  = 2 * gid0 - lid0
+            let bi  = ai + halfScanSize
 
 
             if ai < inputSize then mem.[lai] <- inputData.[inputOffset + ai * inputDelta]
@@ -353,12 +479,12 @@ module ScanKernels =
             let inputSize : int = uniform?Arguments?inputSize
             let outputOffset : int = uniform?Arguments?outputOffset
             let outputDelta : int = uniform?Arguments?outputDelta
-            let rowLength : int = uniform?Arguments?rowLength 
+            let rowLength : int = uniform?Arguments?rowLength
 
             let line = getGlobalId().Y
             let inputOffset = rowLength * line + inputOffset
             let outputOffset = rowLength * line + outputOffset
-            
+
             let mem : int[] = allocateShared scanSize
             let gid = getGlobalId().X
             let group = getWorkGroupId().X
@@ -368,8 +494,8 @@ module ScanKernels =
 
             let lai = lid0
             let lbi = lid0 + halfScanSize
-            let ai  = 2 * gid0 - lid0 
-            let bi  = ai + halfScanSize 
+            let ai  = 2 * gid0 - lid0
+            let bi  = ai + halfScanSize
 
 
             if ai < inputSize then mem.[lai] <- data.[inputOffset + ai * inputDelta]
@@ -425,17 +551,17 @@ module ScanKernels =
             let outputDelta : int = uniform?Arguments?outputDelta
             let groupSize : int = uniform?Arguments?groupSize
             let count : int = uniform?Arguments?count
-            let rowLength : int = uniform?Arguments?rowLength 
+            let rowLength : int = uniform?Arguments?rowLength
 
             let line = getGlobalId().Y
             let inputOffset = rowLength * line + inputOffset
             let outputOffset = rowLength * line + outputOffset
-            
+
             let id = getGlobalId().X + groupSize
 
             if id < count then
                 let block = id / groupSize - 1
-              
+
                 let iid = inputOffset + block * inputDelta
                 let oid = outputOffset + id * outputDelta
 
@@ -448,22 +574,22 @@ type private Scanner(device : Device) =
     static let ceilDiv a b =
         if a % b = 0 then a / b
         else a / b + 1
-    
+
     let scan = device.CompileCompute ScanKernels.scanKernel
     let scanInPlace = device.CompileCompute ScanKernels.scanKernelInPlace
     let fixup = device.CompileCompute ScanKernels.fixupKernelInPlace
-    
+
     member x.Run(rows : int, columns : int, src : Buffer, dst : Buffer) =
         let rowLength = columns
         let rec run (src : Buffer) (srcOffset : int) (srcStride : int) (srcCount : int) (dst : Buffer) (dstOffset : int) (dstStride : int) (dstCount : int) =
             if srcCount > 1 then
-                
+
                 let kernel =
                     if src = dst then scanInPlace
                     else scan
-                
-                
-                
+
+
+
                 kernel.Run(V2i(ceilDiv srcCount ScanKernels.scanSize, rows), [
                     "rowLength", rowLength :> obj
                     "inputOffset", srcOffset :> obj
@@ -475,18 +601,18 @@ type private Scanner(device : Device) =
                     "outputData", dst :> obj
                     "data", src :> obj
                 ]).Wait()
-        
+
                 //let oSums = output.Skip(Kernels.scanSize - 1).Strided(Kernels.scanSize)
-    
+
                 let oSumsOffset = dstOffset + (ScanKernels.scanSize - 1) * dstStride
                 let oSumsStride = dstStride * ScanKernels.scanSize
                 let oSumsCount =
                     let lastIndex = dstOffset + (dstCount - 1) * dstStride
-                    
+
                     // n <= (lastIndex - oSumsOffset) / oSumsStride
-                    
+
                     (lastIndex - oSumsOffset) / oSumsStride + 1
-    
+
                 if oSumsCount > 0 then
                     run dst oSumsOffset oSumsStride oSumsCount dst oSumsOffset oSumsStride oSumsCount
                     if dstCount > ScanKernels.scanSize then
@@ -507,21 +633,21 @@ type private Scanner(device : Device) =
         scan.Dispose()
         scanInPlace.Dispose()
         fixup.Dispose()
-    
+
     interface System.IDisposable with
         member x.Dispose() = x.Dispose()
 
 [<AbstractClass; Sealed>]
 type DeviceScanExtensions private() =
     static let cache = Dict<Device, Scanner>()
-    
+
     [<Extension>]
     static member ScanRows(device : Device, rows : int, columns : int, src : Buffer, dst : Buffer) =
         let scan = lock cache (fun () -> cache.GetOrCreate(device, fun d -> new Scanner(d)))
         scan.Run(rows, columns, src, dst)
-    
-    
-    
+
+
+
 
 
 let scanTest() =
@@ -529,26 +655,26 @@ let scanTest() =
     WebGPUConfig.shaderCaching <- true
      
     let rasterizer = DefaultRasterizer.compile
-     
+
     let app = WebGPUApplication.Create(true).Result
     let win = app.CreateGameWindow(vsync = true)
-    
-    
+
+
     let device = app.Device
 
     let r = RandomSystem()
-    
+
     let rows = 1234
     let columns = 4321
-    
+
     let arr = Array.init (rows * columns) (fun i -> r.UniformInt(100))
     let a = device.CreateBuffer(BufferUsage.Storage ||| BufferUsage.CopyDst, arr).Result
     let b = device.CreateBuffer(BufferUsage.Storage ||| BufferUsage.CopySrc, arr).Result
     device.ScanRows(rows, columns, a, b)
-    
-    
+
+
     let prefix = device.Download<int>(b).Result |> Array.chunkBySize columns
-    
+
     let reff =
         arr |> Array.chunkBySize columns |> Array.map (fun arr ->
             let reff = Array.zeroCreate arr.Length
@@ -558,33 +684,33 @@ let scanTest() =
                 reff.[i] <- sum
             reff
         )
-    
-    printfn "(%A)" (reff = prefix) 
+
+    printfn "(%A)" (reff = prefix)
 
 let run() =
     Aardvark.Init()
-    WebGPUConfig.shaderCaching <- true
+    WebGPUConfig.shaderCaching <- false
     WebGPUConfig.captureStackTraces <- true
-    
-    let rasterizer = BinRasterizer.compile
+
+    let rasterizer = BinRasterizer.compile "all"
+    //let rasterizer = DefaultRasterizer.compile
      
     let app = WebGPUApplication.Create(true).Result
     let win = app.CreateGameWindow(vsync = true)
-    
-    
+
     let cam =
-        CameraView.lookAt (V3d(4,3,2)) V3d.Zero V3d.OOI
+        //CameraView.lookAt (V3d(3,2,1)) V3d.Zero V3d.OOI
+        //CameraView.lookAt (V3d(0, 0.7, -0.5)) (V3d(0.1, 0, -0.5)) V3d.OOI
+        CameraView.lookAt (V3d(-1.0f, 0.0f, 0.0f)) (V3d(0.5, 0, 0)) V3d.OOI
         |> DefaultCameraController.control win.Mouse win.Keyboard win.Time
         |> AVal.map CameraView.viewTrafo
-    
+
     let frustum =
         win.Sizes |> AVal.map (fun s ->
             Frustum.perspective 90.0 0.1 100.0 (float s.X / float s.Y) |> Frustum.projTrafo
         )
     
-    
-    
-    let task = computeRasterizerTask win.FramebufferSignature cam frustum app.Device rasterizer
+    let task = computeRasterizerTask win.FramebufferSignature cam frustum app.Device rasterizer win.WindowSize
 
     win.RenderTask <- task
     win.RenderAsFastAsPossible <- true

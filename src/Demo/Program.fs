@@ -5,6 +5,8 @@ open Aardvark.Base
 open WebGPU
 open Aardvark.Application.Slim
 
+open BenchmarkDotNet.Attributes;
+
 module Shader =
     open FShade
     
@@ -186,30 +188,44 @@ module AtomicQueue =
         
         let arr = device.Download<int>(result).Result |> Array.sort
         printfn "%A" arr
-    
+   
 
-[<EntryPoint>]
-let main _argv =
-    //
-    // let rand = RandomSystem()
-    //
-    // for i in 1 .. 1000 do
-    //     let p0 = rand.UniformV4f()
-    //     let p1 = rand.UniformV4f()
-    //     let p2 = rand.UniformV4f()
-    //     Rast.triangleRay p0 p1 p2 (V3f(0,0,-1)) (V3f(0,0,1))
-    //
-    //
-    // let p0 = V4f(0.123,0.35436,0,3.23)
-    // let p1 = V4f(1.32423,0.234,-0.234,1.0)
-    // let p2 = V4f(0.118,-0.123,0.1231,1.2)
-    //
-    // Rast.triangleRay p0 p1 p2 (V3f(0,0,-1)) (V3f(0,0,1))
-    //
-    //
-    //AtomicQueue.run()
-    //writeRGBA()
-    ComputeRasterizerDemo.run()
-    //RenderDemo.run()
-        
-    0
+module Program =
+
+    open BenchmarkDotNet.Running;
+    open BenchmarkDotNet.Configs
+    open BenchmarkDotNet.Jobs
+    open BenchmarkDotNet.Toolchains
+
+    [<EntryPoint>]
+    let main _argv =
+        //
+        // let rand = RandomSystem()
+        //
+        // for i in 1 .. 1000 do
+        //     let p0 = rand.UniformV4f()
+        //     let p1 = rand.UniformV4f()
+        //     let p2 = rand.UniformV4f()
+        //     Rast.triangleRay p0 p1 p2 (V3f(0,0,-1)) (V3f(0,0,1))
+        //
+        //
+        // let p0 = V4f(0.123,0.35436,0,3.23)
+        // let p1 = V4f(1.32423,0.234,-0.234,1.0)
+        // let p2 = V4f(0.118,-0.123,0.1231,1.2)
+        //
+        // Rast.triangleRay p0 p1 p2 (V3f(0,0,-1)) (V3f(0,0,1))
+        //
+        //
+        //AtomicQueue.run()
+        //writeRGBA()
+        //let (app, win, cam, frustum, rasterizer) = BinRasterizerTest.Test.init()
+        //BinRasterizerTest.Test.run app win cam frustum rasterizer
+    
+        //ComputeRasterizerDemo.run()
+        //ComputeRasterizerDemo.scanTest()
+        //RenderDemo.run()
+        BinRasterizerTest.Benchmarks.runBenchmark(_argv) |> ignore
+
+
+
+        0

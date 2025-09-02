@@ -67,16 +67,16 @@ module Shader =
     open FShade
     
     [<Literal>]
-    let binSize = 32
+    let binSize = 128
     
-    [<Literal>]
-    let binLength = 1024
-    
-    [<Literal>]
-    let doubleBinLength = 2048
-    
-    [<Literal>]
-    let halfBinLength = 512
+    //[<Literal>]
+    //let binLength = 4096
+    //
+    //[<Literal>]
+    //let doubleBinLength = 8192
+    //
+    //[<Literal>]
+    //let halfBinLength = 2048
     
     type UniformScope with
         member x.BinCount : V2i = uniform?BinCount
@@ -459,7 +459,7 @@ module Shader =
 
         }
 
-    [<LocalSize(X = 256, Y = 1)>]
+    [<LocalSize(X = 64, Y = 1)>]
     let binTriangles (positions : V4f[]) (triangleMask : int[]) =
         compute {
             let gId = getGlobalId()
@@ -485,7 +485,7 @@ module Shader =
         }
 
     
-    [<LocalSize(X = 256, Y = 1)>]
+    [<LocalSize(X = 64, Y = 1)>]
     let compactPrefixSum (triangleMask : int[]) (prefixSum : int[])  (compactedTriangleMask : int[]) =
         compute {
             let gId = getGlobalId()
@@ -497,259 +497,253 @@ module Shader =
         }
 
 
-    [<LocalSize(X = binLength, Y = 1)>]
-    let rasterize (color : UIntImage2d<Formats.r32ui>) (depth : int[]) (positions : V4f[]) (viewPositions : V4f[]) (viewNormals : V4f[]) =
-        compute {
-            let triangleMask = allocateShared<int> doubleBinLength
-            let tids = allocateShared<int> doubleBinLength
+    //[<LocalSize(X = binLength, Y = 1)>]
+    //let rasterize (color : UIntImage2d<Formats.r32ui>) (depth : int[]) (positions : V4f[]) (viewPositions : V4f[]) (viewNormals : V4f[]) =
+    //    compute {
+    //        let triangleMask = allocateShared<int> doubleBinLength
+    //        let tids = allocateShared<int> doubleBinLength
             
-            //let triangleMat = allocateShared<V2f> (3 * doubleBinLength)
+    //        //let triangleMat = allocateShared<V2f> (3 * doubleBinLength)
             
-            let localId = getLocalId().X
-            let binIndex = getGlobalId().Y
+    //        let localId = getLocalId().X
+    //        let binIndex = getGlobalId().Y
             
-            let binId = V2i(binIndex % uniform.BinCount.X, binIndex / uniform.BinCount.X)
+    //        let binId = V2i(binIndex % uniform.BinCount.X, binIndex / uniform.BinCount.X)
             
-            let px = binId * binSize + V2i(localId % binSize, localId / binSize)
-            let di = px.X + px.Y * uniform.ViewportSize.X
+    //        let px = binId * binSize + V2i(localId % binSize, localId / binSize)
+    //        let di = px.X + px.Y * uniform.ViewportSize.X
             
-            let offset = binId * binSize
-            let minTc = (V2f offset + V2f.Half) / V2f uniform.ViewportSize
-            let maxTc = (V2f (offset + V2i(binSize, binSize)) - V2f.Half) / V2f uniform.ViewportSize
-            let minNdc = 2.0f * minTc - V2f.II
-            let maxNdc = 2.0f * maxTc - V2f.II
-            let mutable triangleOffset = 0
+    //        let offset = binId * binSize
+    //        let minTc = (V2f offset + V2f.Half) / V2f uniform.ViewportSize
+    //        let maxTc = (V2f (offset + V2i(binSize, binSize)) - V2f.Half) / V2f uniform.ViewportSize
+    //        let minNdc = 2.0f * minTc - V2f.II
+    //        let maxNdc = 2.0f * maxTc - V2f.II
+    //        let mutable triangleOffset = 0
             
-            let mutable finalColor = V4f.Zero
-            let mutable finalDepth = 1.0f
+    //        let mutable finalColor = V4f.Zero
+    //        let mutable finalDepth = 1.0f
             
-            while triangleOffset < uniform.TriangleCount do
-                let tid0 = triangleOffset + getLocalId().X * 2
-                let tid1 = tid0 + 1
-                let mutable intersects0 = 0
-                let mutable intersects1 = 0
+    //        while triangleOffset < uniform.TriangleCount do
+    //            let tid0 = triangleOffset + getLocalId().X * 2
+    //            let tid1 = tid0 + 1
+    //            let mutable intersects0 = 0
+    //            let mutable intersects1 = 0
                 
-                let bMin = V3f(minNdc, -1.0f)
-                let bMax = V3f(maxNdc, 1.0f)
-                if tid0 < uniform.TriangleCount then
-                    let oo = tid0 * 3
-                    let p0 = positions.[oo + 0]
-                    let p1 = positions.[oo + 1]
-                    let p2 = positions.[oo + 2]
+    //            let bMin = V3f(minNdc, -1.0f)
+    //            let bMax = V3f(maxNdc, 1.0f)
+    //            if tid0 < uniform.TriangleCount then
+    //                let oo = tid0 * 3
+    //                let p0 = positions.[oo + 0]
+    //                let p1 = positions.[oo + 1]
+    //                let p2 = positions.[oo + 2]
                     
-                    intersects0 <- if boxTriangle2 bMin bMax p0 p1 p2 then 1 else 0
+    //                intersects0 <- if boxTriangle2 bMin bMax p0 p1 p2 then 1 else 0
                     
-                if tid1 < uniform.TriangleCount then
-                    let oo = tid1 * 3
-                    let p0 = positions.[oo + 0]
-                    let p1 = positions.[oo + 1]
-                    let p2 = positions.[oo + 2]
+    //            if tid1 < uniform.TriangleCount then
+    //                let oo = tid1 * 3
+    //                let p0 = positions.[oo + 0]
+    //                let p1 = positions.[oo + 1]
+    //                let p2 = positions.[oo + 2]
                 
-                    intersects1 <- if boxTriangle2 bMin bMax p0 p1 p2 then 1 else 0
+    //                intersects1 <- if boxTriangle2 bMin bMax p0 p1 p2 then 1 else 0
                     
-                let lid0 = 2*localId
-                let lid1 = lid0 + 1
+    //            let lid0 = 2*localId
+    //            let lid1 = lid0 + 1
                     
-                triangleMask.[lid0] <- intersects0
-                triangleMask.[lid1] <- intersects1
-                barrier()
+    //            triangleMask.[lid0] <- intersects0
+    //            triangleMask.[lid1] <- intersects1
+    //            barrier()
                 
-                // scan the triangle-mask
-                let mutable s = 1
-                let mutable d = 2
+    //            // scan the triangle-mask
+    //            let mutable s = 1
+    //            let mutable d = 2
                 
-                let mutable nThreads = binLength
+    //            let mutable nThreads = binLength
                 
-                while nThreads >= 1 do
-                    if localId < nThreads then
-                        let ri = d * localId + d - 1
-                        let li = ri - s
-                        triangleMask.[ri] <- triangleMask.[ri] + triangleMask.[li]
+    //            while nThreads >= 1 do
+    //                if localId < nThreads then
+    //                    let ri = d * localId + d - 1
+    //                    let li = ri - s
+    //                    triangleMask.[ri] <- triangleMask.[ri] + triangleMask.[li]
                         
-                    //
-                    // if lid % d = d-1 then
-                    //     triangleMask.[lid] <- triangleMask.[lid] + triangleMask.[lid - s]
-                    barrier()
-                    nThreads <- nThreads / 2
-                    s <- s * 2
-                    d <- d * 2
+    //                //
+    //                // if lid % d = d-1 then
+    //                //     triangleMask.[lid] <- triangleMask.[lid] + triangleMask.[lid - s]
+    //                barrier()
+    //                nThreads <- nThreads / 2
+    //                s <- s * 2
+    //                d <- d * 2
                     
-                s <- s / 4
-                d <- d / 4
-                nThreads <- 2
+    //            s <- s / 4
+    //            d <- d / 4
+    //            nThreads <- 2
                 
-                while d > 1 do
+    //            while d > 1 do
                     
-                    if localId < nThreads - 1 then
-                        let li = d * localId + d - 1
-                        let ri = li + s
-                        triangleMask.[ri] <- triangleMask.[ri] + triangleMask.[li]
-                    //     
-                    // if lid % d = d-1 && lid + s < binLength then
-                    //     triangleMask.[lid + s] <- triangleMask.[lid + s] + triangleMask.[lid] 
-                    barrier()
-                    s <- s / 2
-                    d <- d / 2
-                    nThreads <- nThreads * 2
+    //                if localId < nThreads - 1 then
+    //                    let li = d * localId + d - 1
+    //                    let ri = li + s
+    //                    triangleMask.[ri] <- triangleMask.[ri] + triangleMask.[li]
+    //                //     
+    //                // if lid % d = d-1 && lid + s < binLength then
+    //                //     triangleMask.[lid + s] <- triangleMask.[lid + s] + triangleMask.[lid] 
+    //                barrier()
+    //                s <- s / 2
+    //                d <- d / 2
+    //                nThreads <- nThreads * 2
                     
                 
                     
-                // compact the triangle-ids into tids
-                if intersects0 <> 0 then
-                    //let oo = tid0 * 3
-                    //let p0 = positions.[oo + 0]
-                    //let p1 = positions.[oo + 1]
-                    //let p2 = positions.[oo + 2]
-                    //
-                    //let v0 = p0.XY / p0.W
-                    //let v1 = p1.XY / p1.W
-                    //let v2 = p2.XY / p2.W
-                    //
-                    //let u = v1 - v0
-                    //let v = v2 - v0
-                    //
-                    //let M = M22f.FromCols(u, v).Inverse
-                    //let k = -M * v0
+    //            // compact the triangle-ids into tids
+    //            if intersects0 <> 0 then
+    //                //let oo = tid0 * 3
+    //                //let p0 = positions.[oo + 0]
+    //                //let p1 = positions.[oo + 1]
+    //                //let p2 = positions.[oo + 2]
+    //                //
+    //                //let v0 = p0.XY / p0.W
+    //                //let v1 = p1.XY / p1.W
+    //                //let v2 = p2.XY / p2.W
+    //                //
+    //                //let u = v1 - v0
+    //                //let v = v2 - v0
+    //                //
+    //                //let M = M22f.FromCols(u, v).Inverse
+    //                //let k = -M * v0
                     
-                    let index = if lid0 > 0 then triangleMask.[lid0-1] else 0
+    //                let index = if lid0 > 0 then triangleMask.[lid0-1] else 0
                     
-                    //triangleMat.[3*index] <- M.R0
-                    //triangleMat.[3*index + 1] <- M.R1
-                    //triangleMat.[3*index + 2] <- k
+    //                //triangleMat.[3*index] <- M.R0
+    //                //triangleMat.[3*index + 1] <- M.R1
+    //                //triangleMat.[3*index + 2] <- k
                 
-                    tids.[index] <- tid0
-                if intersects1 <> 0 then
-                    //let oo = tid1 * 3
-                    //let p0 = positions.[oo + 0]
-                    //let p1 = positions.[oo + 1]
-                    //let p2 = positions.[oo + 2]
-                    //
-                    //let v0 = p0.XY / p0.W
-                    //let v1 = p1.XY / p1.W
-                    //let v2 = p2.XY / p2.W
-                    //
-                    //let u = v1 - v0
-                    //let v = v2 - v0
-                    //
-                    //let M = M22f.FromCols(u, v).Inverse
-                    //let k = -M * v0
+    //                tids.[index] <- tid0
+    //            if intersects1 <> 0 then
+    //                //let oo = tid1 * 3
+    //                //let p0 = positions.[oo + 0]
+    //                //let p1 = positions.[oo + 1]
+    //                //let p2 = positions.[oo + 2]
+    //                //
+    //                //let v0 = p0.XY / p0.W
+    //                //let v1 = p1.XY / p1.W
+    //                //let v2 = p2.XY / p2.W
+    //                //
+    //                //let u = v1 - v0
+    //                //let v = v2 - v0
+    //                //
+    //                //let M = M22f.FromCols(u, v).Inverse
+    //                //let k = -M * v0
                     
-                    let index = triangleMask.[lid1-1]
+    //                let index = triangleMask.[lid1-1]
                     
-                    //triangleMat.[3*index] <- M.R0
-                    //triangleMat.[3*index + 1] <- M.R1
-                    //triangleMat.[3*index + 2] <- k
+    //                //triangleMat.[3*index] <- M.R0
+    //                //triangleMat.[3*index + 1] <- M.R1
+    //                //triangleMat.[3*index + 2] <- k
                 
-                    tids.[index] <- tid1
-                barrier()
-                
-                
-                // each thread is now a pixel
-                let triangleCount = triangleMask.[doubleBinLength - 1]
+    //                tids.[index] <- tid1
+    //            barrier()
                 
                 
-                //color.[px] <- V4ui(packUnorm4x8 (Heat.heat (float32 triangleCount / float32 (min uniform.TriangleCount binLength))))
-                //finalColor <- Heat.heat (float32 triangleCount / float32 (min uniform.TriangleCount binLength))
+    //            // each thread is now a pixel
+    //            let triangleCount = triangleMask.[doubleBinLength - 1]
                 
-                //color.[px] <- V4ui(packUnorm4x8 (V4f(V2f px / V2f uniform.ViewportSize, 1.0f, 1.0f)))
                 
-                //color.[px] <- V4ui(255, 0, 0, 1)
-                //finalColor <- V4f(triangleCount / uniform.TriangleCount, 1, 1, 1)
-                //let di = px.X + px.Y * uniform.ViewportSize.X
-                //depth.[di] <- 1
+    //            //color.[px] <- V4ui(packUnorm4x8 (Heat.heat (float32 triangleCount / float32 (min uniform.TriangleCount binLength))))
+    //            //finalColor <- Heat.heat (float32 triangleCount / float32 (min uniform.TriangleCount binLength))
+                
+    //            //color.[px] <- V4ui(packUnorm4x8 (V4f(V2f px / V2f uniform.ViewportSize, 1.0f, 1.0f)))
+                
+    //            //color.[px] <- V4ui(255, 0, 0, 1)
+    //            //finalColor <- V4f(triangleCount / uniform.TriangleCount, 1, 1, 1)
+    //            //let di = px.X + px.Y * uniform.ViewportSize.X
+    //            //depth.[di] <- 1
             
-                let tc = (V2f px + V2f.Half) / V2f uniform.ViewportSize
-                let ndc = 2.0f * tc - V2f.II
+    //            let tc = (V2f px + V2f.Half) / V2f uniform.ViewportSize
+    //            let ndc = 2.0f * tc - V2f.II
                 
-                //finalColor <- V4f(triangleMask.[doubleBinLength - 1], triangleMask.[doubleBinLength - 1], 1, 1)
+    //            //finalColor <- V4f(triangleMask.[doubleBinLength - 1], triangleMask.[doubleBinLength - 1], 1, 1)
             
-                //finalColor <- V4f(float32(binId.X + uniform.BinCount.X * binId.Y) / float32(uniform.BinCount.X * uniform.BinCount.Y), 0.0f, 0.0f, 1.0f)
-                //color.[px] <- V4ui(packUnorm4x8 (V4f(V2f px / V2f uniform.ViewportSize, 1.0f, 1.0f)))
+    //            //finalColor <- V4f(float32(binId.X + uniform.BinCount.X * binId.Y) / float32(uniform.BinCount.X * uniform.BinCount.Y), 0.0f, 0.0f, 1.0f)
+    //            //color.[px] <- V4ui(packUnorm4x8 (V4f(V2f px / V2f uniform.ViewportSize, 1.0f, 1.0f)))
                 
-                // rasterize the pixel for each triangle
-                for i in 0 .. triangleCount-1 do
-                    let tid = tids.[i]
-                    let vi0 = 3*tid + 0
-                    let vi1 = vi0 + 1
-                    let vi2 = vi0 + 2
+    //            // rasterize the pixel for each triangle
+    //            for i in 0 .. triangleCount-1 do
+    //                let tid = tids.[i]
+    //                let vi0 = 3*tid + 0
+    //                let vi1 = vi0 + 1
+    //                let vi2 = vi0 + 2
                     
-                    let p0 = positions.[vi0]
-                    let p1 = positions.[vi1]
-                    let p2 = positions.[vi2]
+    //                let p0 = positions.[vi0]
+    //                let p1 = positions.[vi1]
+    //                let p2 = positions.[vi2]
                     
-                    let f0 = p0.XY - ndc*p0.W
-                    let f1 = p1.XY - ndc*p1.W
-                    let f2 = p2.XY - ndc*p2.W
+    //                let f0 = p0.XY - ndc*p0.W
+    //                let f1 = p1.XY - ndc*p1.W
+    //                let f2 = p2.XY - ndc*p2.W
                     
-                    let c0 = f0 - f2
-                    let c1 = f1 - f2
+    //                let c0 = f0 - f2
+    //                let c1 = f1 - f2
                     
-                    let det = c0.X*c1.Y - c0.Y*c1.X
-                    let r0 = V2f(c1.Y / det, -c1.X / det)
-                    let r1 = V2f(-c0.Y / det, c0.X / det)
+    //                let det = c0.X*c1.Y - c0.Y*c1.X
+    //                let r0 = V2f(c1.Y / det, -c1.X / det)
+    //                let r1 = V2f(-c0.Y / det, c0.X / det)
                     
-                    let a = -Vec.dot r0 f2
-                    let b = -Vec.dot r1 f2
-                    let c = (1.0f - a - b)
+    //                let a = -Vec.dot r0 f2
+    //                let b = -Vec.dot r1 f2
+    //                let c = (1.0f - a - b)
                 
                 
-                    //let x = triangleMat.[3 * i].Dot(ndc)
-                    //let y = triangleMat.[3 * i + 1].Dot(ndc)
-                    //let k = triangleMat.[3 * i + 2]
+    //                //let x = triangleMat.[3 * i].Dot(ndc)
+    //                //let y = triangleMat.[3 * i + 1].Dot(ndc)
+    //                //let k = triangleMat.[3 * i + 2]
                     
-                    //let lambda = V2f(x, y) + k
-                    //if lambda.X >= 0.0f && lambda.Y >= 0.0f && lambda.X + lambda.Y <= 1.0f then
-                    //if (contains positions.[vi0].XY positions.[vi1].XY positions.[vi2].XY ndc) then
-                    //    finalColor <- V4f(1, 1, 1, 1)
-                    if a >= 0.0f && b >= 0.0f && c >= 0.0f && a <= 1.0f && b <= 1.0f && c <= 1.0f then
-                        let pos = a*p0 + b*p1 + c*p2
-                        if pos.Z >= -pos.W && pos.Z <= pos.W then
-                            let projected = pos.XYZ / pos.W
+    //                //let lambda = V2f(x, y) + k
+    //                //if lambda.X >= 0.0f && lambda.Y >= 0.0f && lambda.X + lambda.Y <= 1.0f then
+    //                //if (contains positions.[vi0].XY positions.[vi1].XY positions.[vi2].XY ndc) then
+    //                //    finalColor <- V4f(1, 1, 1, 1)
+    //                if a >= 0.0f && b >= 0.0f && c >= 0.0f && a <= 1.0f && b <= 1.0f && c <= 1.0f then
+    //                    let pos = a*p0 + b*p1 + c*p2
+    //                    if pos.Z >= -pos.W && pos.Z <= pos.W then
+    //                        let projected = pos.XYZ / pos.W
                          
-                            //let newDepth = projected.Z * 16777215.0f |> int
-                            let newDepth = projected.Z
-                            //let mutable tmp = 0
-                            //tmp <- newDepth
+    //                        //let newDepth = projected.Z * 16777215.0f |> int
+    //                        let newDepth = projected.Z
+    //                        //let mutable tmp = 0
+    //                        //tmp <- newDepth
                     
-                            //if newDepth <= depth.[di] then
-                            if newDepth <= finalDepth then
-                                //let mutable tmp = 0
-                                //tmp <- newDepth
-                                //depth.[di] <- newDepth
-                                let vp = a*viewPositions.[vi0] + b*viewPositions.[vi1] + c*viewPositions.[vi2]
-                                let vn = (a*viewNormals.[vi0] + b*viewNormals.[vi1] + c*viewNormals.[vi2]).XYZ |> Vec.normalize
+    //                        //if newDepth <= depth.[di] then
+    //                        if newDepth <= finalDepth then
+    //                            //let mutable tmp = 0
+    //                            //tmp <- newDepth
+    //                            //depth.[di] <- newDepth
+    //                            let vp = a*viewPositions.[vi0] + b*viewPositions.[vi1] + c*viewPositions.[vi2]
+    //                            let vn = (a*viewNormals.[vi0] + b*viewNormals.[vi1] + c*viewNormals.[vi2]).XYZ |> Vec.normalize
                                  
-                                let light = V3f.Zero
-                                let lightDir = Vec.normalize (light - vp.XYZ)
-                                let diffuse = Vec.dot lightDir vn |> abs
+    //                            let light = V3f.Zero
+    //                            let lightDir = Vec.normalize (light - vp.XYZ)
+    //                            let diffuse = Vec.dot lightDir vn |> abs
                          
-                                let light = 0.2f + 0.8f*diffuse
+    //                            let light = 0.2f + 0.8f*diffuse
                                  
-                                //depth.[di] <- newDepth
-                                finalDepth <- newDepth
-                                //color.[px] <- V4ui (packUnorm4x8(V4f(V3f.III * light, 1.0f)))
-                                finalColor <- V4f(V3f.III * light, 1.0f)
+    //                            //depth.[di] <- newDepth
+    //                            finalDepth <- newDepth
+    //                            //color.[px] <- V4ui (packUnorm4x8(V4f(V3f.III * light, 1.0f)))
+    //                            finalColor <- V4f(V3f.III * light, 1.0f)
                 
                 
-                triangleOffset <- triangleOffset + binLength * 2
+    //            triangleOffset <- triangleOffset + binLength * 2
             
-            //let di = px.X + px.Y * uniform.ViewportSize.X
-            //
-            depth.[di] <- finalDepth * 16777215.0f |> int
-            color.[px] <- V4ui(packUnorm4x8(finalColor))
-        }
+    //        //let di = px.X + px.Y * uniform.ViewportSize.X
+    //        //
+    //        depth.[di] <- finalDepth * 16777215.0f |> int
+    //        color.[px] <- V4ui(packUnorm4x8(finalColor))
+    //    }
     
 
 
     [<LocalSize(X = 8, Y = 8)>]
     let rasterize2 (color : UIntImage2d<Formats.r32ui>) (depth : int[]) (positions : V4f[]) (viewPositions : V4f[]) (viewNormals : V4f[]) (prefixSum : int[]) (tids : int[]) =
         compute {
-            //let localId = getLocalId().X
-            //let binIndex = getGlobalId().Y
-            //
-            
-            //
-            //let px = binId * binSize + V2i(localId % binSize, localId / binSize)
             let px = getGlobalId().XY
             let di = px.X + px.Y * uniform.ViewportSize.X
 
@@ -760,6 +754,9 @@ module Shader =
             
             let tc = (V2f px + V2f.Half) / V2f uniform.ViewportSize
             let ndc = 2.0f * tc - V2f.II
+            
+            let mutable finalColor = unpackUnorm4x8 (color.[px].X)
+            let mutable finalDepth = depth.[di]
             //color.[px] <- V4ui (packUnorm4x8(Heat.heat (float32 (triangleCount) / 10.0f)))
             // rasterize the pixel for each triangle
             for i in 0 .. triangleCount-1 do
@@ -793,7 +790,7 @@ module Shader =
                         let projected = pos.XYZ / pos.W
                         let newDepth = projected.Z * 16777215.0f |> int
                 
-                        if newDepth <= depth.[di] then
+                        if newDepth <= finalDepth then
                             let vp = a*viewPositions.[vi0] + b*viewPositions.[vi1] + c*viewPositions.[vi2]
                             let vn = (a*viewNormals.[vi0] + b*viewNormals.[vi1] + c*viewNormals.[vi2]).XYZ |> Vec.normalize
                              
@@ -803,8 +800,11 @@ module Shader =
                      
                             let light = 0.2f + 0.8f*diffuse
                              
-                            depth.[di] <- newDepth
-                            color.[px] <- V4ui (packUnorm4x8(V4f(V3f.III * light, 1.0f)))
+                            finalDepth <- newDepth
+                            finalColor <- V4f(V3f.III * light, 1.0f)
+                            
+            depth.[di] <- finalDepth
+            color.[px] <- V4ui (packUnorm4x8(finalColor))
         }
     
     
@@ -838,10 +838,11 @@ let createTempBuffers (vertexCount : int) (device : Device) =
         }
     vps, pps, ns
     
-let compile (device : Device) : Rasterizer =
+let compile (actBlock : string) (device : Device)  : Rasterizer =
     // Todo
     let triangleChunkSize = 65536
-    let binCount = 768
+    let binCount = ceilDiv 1024 Shader.binSize * ceilDiv 768 Shader.binSize
+    //let binCount = ceilDiv 1280 Shader.binSize * ceilDiv 720 Shader.binSize
     
     //let shader = device.CompileCompute Shader.rasterize
     let binning = device.CompileCompute Shader.binTriangles
@@ -922,38 +923,46 @@ let compile (device : Device) : Rasterizer =
                 if remainingTriangles < triangleChunkSize then
                     workGroupsX <- remainingTriangles
             
-                do! binning.Run(V3i(ceilDiv workGroupsX binning.LocalSize.X, binCount.X * binCount.Y, 1), [
-                    "TriangleCount", triangleCount :> obj
-                    "TriangleChunkSize", triangleChunkSize
-                    "LoopOffset", i
-                    "ViewportSize", size
-                    "BinCount", binCount
-                    "positions", pps
-                    "triangleMask", tm
-                ])
+                //if ((actMask &&& 0x1) = 1) then
+                if actBlock = "binning" || actBlock = "all" then
+                    do! binning.Run(V3i(ceilDiv workGroupsX binning.LocalSize.X, binCount.X * binCount.Y, 1), [
+                        "TriangleCount", triangleCount :> obj
+                        "TriangleChunkSize", triangleChunkSize
+                        "LoopOffset", i
+                        "ViewportSize", size
+                        "BinCount", binCount
+                        "positions", pps
+                        "triangleMask", tm
+                    ])
             
-                device.ScanRows(binCount.X * binCount.Y, triangleChunkSize, tm, prefixSum)
+                //if ((actMask &&& 0x10) >>> 0x8 = 1) then
+                if actBlock = "scan" || actBlock = "all" then
+                    device.ScanRows(binCount.X * binCount.Y, triangleChunkSize, tm, prefixSum)
                 
-                do! compact.Run(V3i(ceilDiv workGroupsX binning.LocalSize.X, binCount.X * binCount.Y, 1), [
-                    "TriangleChunkSize", triangleChunkSize :> obj
-                    "LoopOffset", i
-                    "triangleMask", tm
-                    "prefixSum", prefixSum
-                    "compactedTriangleMask", ctm
-                ])
+                //if ((actMask &&& 0x100) >>> 0xFF = 1) then
+                if actBlock = "compact" || actBlock = "all" then
+                    do! compact.Run(V3i(ceilDiv workGroupsX binning.LocalSize.X, binCount.X * binCount.Y, 1), [
+                        "TriangleChunkSize", triangleChunkSize :> obj
+                        "LoopOffset", i
+                        "triangleMask", tm
+                        "prefixSum", prefixSum
+                        "compactedTriangleMask", ctm
+                    ])
 
-                do! raster.Run(V3i(ceilDiv size.X raster.LocalSize.X, ceilDiv size.Y raster.LocalSize.Y, 1), [
-                    "color", colorView :> obj
-                    "depth", depth
-                    "positions", pps
-                    "viewPositions", vps
-                    "viewNormals", ns
-                    "TriangleChunkSize", triangleChunkSize
-                    "prefixSum", prefixSum
-                    "tids", ctm
-                    "BinCount", binCount
-                    "ViewportSize", size
-                ])
+                //if ((actMask &&& 0x1000) >>> 0xFFF = 1) then
+                if actBlock = "raster" || actBlock = "all" then
+                    do! raster.Run(V3i(ceilDiv size.X raster.LocalSize.X, ceilDiv size.Y raster.LocalSize.Y, 1), [
+                        "color", colorView :> obj
+                        "depth", depth
+                        "positions", pps
+                        "viewPositions", vps
+                        "viewNormals", ns
+                        "TriangleChunkSize", triangleChunkSize
+                        "prefixSum", prefixSum
+                        "tids", ctm
+                        "BinCount", binCount
+                        "ViewportSize", size
+                    ])
             
                 remainingTriangles <- remainingTriangles - triangleChunkSize
             //let triangleMask = device.Download<int>(tm).Result |> Array.chunkBySize triangleChunkSize
