@@ -17,6 +17,7 @@ nuget GLSLangSharp ~> 0.5.1
 nuget Aardvark.Data.Wavefront ~> 5.3.10
 nuget FShade.Core ~> 5.7.0-prerelease0013
 nuget FShade.Imperative ~> 5.7.0-prerelease0013
+nuget BenchmarkDotNet ~> 0.15.2
 
 nuget Microsoft.AspNetCore.Components.Forms ~> 8.0.10
 nuget Microsoft.AspNetCore.Components ~> 8.0.10

@@ -2414,7 +2414,7 @@ module Frontend =
                         printfn "        x.RunCleanup()"
                     printfn "        x.Release()"
                     printfn "    member x.Dispose() = x.Dispose(true)"
-                    printfn "    override x.Finalize() = x.Dispose(false)"
+                    //printfn "    override x.Finalize() = x.Dispose(false)"
                     printfn "    interface System.IDisposable with"
                     printfn "        member x.Dispose() = x.Dispose(true)"
              

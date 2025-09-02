@@ -34,6 +34,7 @@ type ComputeShader private (device : Device, pipeline : ComputePipeline, groupLa
             entries |> MapExt.choose (fun _ entry ->
                 match entry with
                 | WGSLBindGroupEntry.UniformBuffer ub ->
+                    let mutable refCount = 1
                     let buffer =
                         device.CreateBuffer {
                             Next = null
@@ -59,8 +60,9 @@ type ComputeShader private (device : Device, pipeline : ComputePipeline, groupLa
                         device.Queue.WriteBuffer(buffer, 0L, memory, ub.ubSize)
                                 
                     let free() =
-                        buffer.Dispose()
-                        System.Runtime.InteropServices.Marshal.FreeHGlobal memory
+                        if System.Threading.Interlocked.Decrement(&refCount) = 0 then
+                            buffer.Dispose()
+                            System.Runtime.InteropServices.Marshal.FreeHGlobal memory
                                 
                     Some (buffer, update, free)
                 | _ ->
@@ -256,7 +258,7 @@ type ComputeShader private (device : Device, pipeline : ComputePipeline, groupLa
             x.Dispose(true)
             
     override x.Finalize() =
-        x.Dispose false
+        () //x.Dispose false
 
 [<AbstractClass; Sealed>]
 type ComputeShaderExtensions private() =

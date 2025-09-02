@@ -217,7 +217,9 @@ type WebGPUApplication(debug : bool, instance : Instance, adapter : Adapter, dev
         }
     
     override x.Destroy() =
-        ()
+        device.Dispose()
+        adapter.Dispose()
+        instance.Dispose()
     
     static member Create(debug : bool) =
         task {

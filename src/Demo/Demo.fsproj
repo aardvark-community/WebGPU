@@ -18,7 +18,8 @@
     <Compile Include="BinRasterizer.fs" />
     <Compile Include="ComputeRasterizerDemo.fs" />
     <Compile Include="RenderDemo.fs" />
-    <Compile Include="Program.fs" />
+	<Compile Include="BinRasterizerTest.fs" />
+	<Compile Include="Program.fs" />
     <Content Include="paket.references" />
   </ItemGroup>
   <ItemGroup>

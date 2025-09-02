@@ -95,7 +95,7 @@ type WebGPUPipelineLayoutExtensions private() =
                         | Some g -> g
                         | None -> MapExt.empty
                     g |> MapExt.add b.imageBinding (
-                        if isCompute then
+                        if true || isCompute then
                             BindGroupLayoutEntry.StorageTexture(b.imageBinding, getStages b.imageName, {
                                 StorageTextureBindingLayout.ViewDimension = viewDimension
                                 StorageTextureBindingLayout.Access = StorageTextureAccess.ReadWrite
