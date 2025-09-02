@@ -31,19 +31,23 @@ static std::mutex tintInitMtx;
 static bool tintInit = false;
 
 DllExport(int) transpileSpirV(const uint32_t* spv, int spvLength, char** wgsl, size_t* wgslSize) {
-    std::lock_guard<std::mutex> lock(tintInitMtx);
+	std::lock_guard<std::mutex> lock(tintInitMtx);
 	if (!tintInit) {
 		tint::Initialize();
 		tintInit = true;
 	}
-	tint::spirv::reader::Options options;
-	options.allow_non_uniform_derivatives = true;
-	options.allowed_features = tint::wgsl::AllowedFeatures::Everything();
 
+	tint::wgsl::writer::Options options;
+	options.allowed_features = tint::wgsl::AllowedFeatures::Everything();
+	options.allow_non_uniform_derivatives = true;
+	options.allow_non_uniform_subgroup_operations = true;
+	options.minify = false;
 	auto bin = std::vector<uint32_t>(spv, spv + spvLength);
-	auto m = tint::spirv::reader::Read(bin, options);
-	if(!m.IsValid()) {
-		auto err = m.Diagnostics().Str();
+
+	auto result = tint::SpirvToWgsl(bin, options);
+
+	if(result != tint::Success) {
+		auto err = result.Failure().reason;
 
 		auto res = new char[err.size() + 1];
 		strcpy(res, err.c_str());
@@ -53,12 +57,7 @@ DllExport(int) transpileSpirV(const uint32_t* spv, int spvLength, char** wgsl, s
 		return -1;
 	}
 
-
-	auto result = tint::wgsl::writer::Generate(m, {});
-
-	auto wgslStr = result->wgsl;
-
-
+	auto wgslStr = result.Get();
 	auto res = new char[wgslStr.size() + 1];
 	strcpy(res, wgslStr.c_str());
 	*wgsl = res;

@@ -39,6 +39,7 @@ type BufferFillExtensions private() =
                 }
             let layout =
                 device.CreateBindGroupLayout {
+                    Next = null
                     Label = "fillBuffer32Layout"
                     Entries =
                         [|
@@ -92,6 +93,7 @@ type BufferFillExtensions private() =
                 
                 use group =
                     device.CreateBindGroup {
+                        Next = null
                         Label = "fillBuffer32BindGroup"
                         Layout = layout
                         Entries =
@@ -102,7 +104,7 @@ type BufferFillExtensions private() =
                     }
                 use enc = device.CreateCommandEncoder { Label = "fillBuffer32Encoder"; Next = null }
                 enc.Upload(System.ReadOnlySpan<uint32> ubMem, ub, 0L)
-                use comp = enc.BeginComputePass { Label = null; TimestampWrites = PassTimestampWrites.Null }
+                use comp = enc.BeginComputePass { Label = nolabel(); TimestampWrites = PassTimestampWrites.Null }
                 comp.SetPipeline(pipeline)
                 comp.SetBindGroup(0, group, [||])
                 comp.DispatchWorkgroups(ceilDiv cnt 64, 1, 1)

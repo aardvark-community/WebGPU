@@ -13,7 +13,11 @@ type IExtension =
 [<AllowNullLiteral>]
 type IAdapterInfoExtension = inherit IExtension
 [<AllowNullLiteral>]
+type IBindGroupDescriptorExtension = inherit IExtension
+[<AllowNullLiteral>]
 type IBindGroupEntryExtension = inherit IExtension
+[<AllowNullLiteral>]
+type IBindGroupLayoutDescriptorExtension = inherit IExtension
 [<AllowNullLiteral>]
 type IBindGroupLayoutEntryExtension = inherit IExtension
 [<AllowNullLiteral>]
@@ -86,11 +90,23 @@ module private ExtensionDecoder =
                     let rr = NativePtr.toByRef (NativePtr.ofNativeInt<WebGPU.Raw.AdapterPropertiesSubgroupMatrixConfigs> (ptr))
                     AdapterPropertiesSubgroupMatrixConfigs.Read(device, &rr) :> obj :?> 'a
                 | _ -> failwithf "bad s type: %A" sType
+            elif typeof<'a> = typeof<IBindGroupDescriptorExtension> then
+                match sType with
+                | SType.BindGroupDynamicBindingArray ->
+                    let rr = NativePtr.toByRef (NativePtr.ofNativeInt<WebGPU.Raw.BindGroupDynamicBindingArray> (ptr))
+                    BindGroupDynamicBindingArray.Read(device, &rr) :> obj :?> 'a
+                | _ -> failwithf "bad s type: %A" sType
             elif typeof<'a> = typeof<IBindGroupEntryExtension> then
                 match sType with
                 | SType.ExternalTextureBindingEntry ->
                     let rr = NativePtr.toByRef (NativePtr.ofNativeInt<WebGPU.Raw.ExternalTextureBindingEntry> (ptr))
                     ExternalTextureBindingEntry.Read(device, &rr) :> obj :?> 'a
+                | _ -> failwithf "bad s type: %A" sType
+            elif typeof<'a> = typeof<IBindGroupLayoutDescriptorExtension> then
+                match sType with
+                | SType.BindGroupLayoutDynamicBindingArray ->
+                    let rr = NativePtr.toByRef (NativePtr.ofNativeInt<WebGPU.Raw.BindGroupLayoutDynamicBindingArray> (ptr))
+                    BindGroupLayoutDynamicBindingArray.Read(device, &rr) :> obj :?> 'a
                 | _ -> failwithf "bad s type: %A" sType
             elif typeof<'a> = typeof<IBindGroupLayoutEntryExtension> then
                 match sType with
@@ -178,6 +194,9 @@ module private ExtensionDecoder =
                 | SType.DawnHostMappedPointerLimits ->
                     let rr = NativePtr.toByRef (NativePtr.ofNativeInt<WebGPU.Raw.DawnHostMappedPointerLimits> (ptr))
                     DawnHostMappedPointerLimits.Read(device, &rr) :> obj :?> 'a
+                | SType.DynamicBindingArrayLimits ->
+                    let rr = NativePtr.toByRef (NativePtr.ofNativeInt<WebGPU.Raw.DynamicBindingArrayLimits> (ptr))
+                    DynamicBindingArrayLimits.Read(device, &rr) :> obj :?> 'a
                 | _ -> failwithf "bad s type: %A" sType
             elif typeof<'a> = typeof<IPipelineLayoutDescriptorExtension> then
                 match sType with
@@ -1027,8 +1046,41 @@ type BindGroupEntry =
             Sampler = new Sampler(device, backend.Sampler)
             TextureView = new TextureView(backend.TextureView)
         }
+type BindGroupDynamicBindingArray = 
+    {
+        Next : IBindGroupDescriptorExtension
+        DynamicArraySize : int
+    }
+    static member Null = Unchecked.defaultof<BindGroupDynamicBindingArray>
+    [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
+    member this.Pin<'r>(device : Device, action : nativeptr<WebGPU.Raw.BindGroupDynamicBindingArray> -> 'r) : 'r = 
+        if isNull (this :> obj) then
+            action (NativePtr.ofNativeInt 0n)
+        else
+            PinHelper.PinNullable(this.Next, fun nextInChain ->
+                let sType = SType.BindGroupDynamicBindingArray
+                let mutable value =
+                    new WebGPU.Raw.BindGroupDynamicBindingArray(
+                        nextInChain,
+                        sType,
+                        uint32(this.DynamicArraySize)
+                    )
+                use ptr = fixed &value
+                action ptr
+            )
+    interface IExtension with
+        member x.Pin<'r>(action : nativeint -> 'r) = x.Pin(Unchecked.defaultof<_>, fun ptr -> action(NativePtr.toNativeInt ptr))
+    interface IBindGroupDescriptorExtension
+    interface WebGPU.Raw.IPinnable<Device, WebGPU.Raw.BindGroupDynamicBindingArray> with
+        member x.Pin(device, action) = x.Pin(device, action)
+    static member Read(device : Device, backend : inref<WebGPU.Raw.BindGroupDynamicBindingArray>) = 
+        {
+            Next = ExtensionDecoder.decode<IBindGroupDescriptorExtension> device backend.NextInChain
+            DynamicArraySize = int(backend.DynamicArraySize)
+        }
 type BindGroupDescriptor = 
     {
+        Next : IBindGroupDescriptorExtension
         Label : string
         Layout : BindGroupLayout
         Entries : array<BindGroupEntry>
@@ -1039,27 +1091,29 @@ type BindGroupDescriptor =
         if isNull (this :> obj) then
             action (NativePtr.ofNativeInt 0n)
         else
-            let nextInChain = 0n
-            let _labelArr = if isNull this.Label then null else Encoding.UTF8.GetBytes(this.Label)
-            use _labelPtr = fixed _labelArr
-            let _labelLen = WebGPU.Raw.StringView(_labelPtr, if isNull _labelArr then 0un else unativeint _labelArr.Length)
-            WebGPU.Raw.Pinnable.pinArray device this.Entries (fun entriesPtr ->
-                let entriesLen = unativeint this.Entries.Length
-                let mutable value =
-                    new WebGPU.Raw.BindGroupDescriptor(
-                        nextInChain,
-                        _labelLen,
-                        this.Layout.Handle,
-                        entriesLen,
-                        entriesPtr
-                    )
-                use ptr = fixed &value
-                action ptr
+            PinHelper.PinNullable(this.Next, fun nextInChain ->
+                let _labelArr = if isNull this.Label then null else Encoding.UTF8.GetBytes(this.Label)
+                use _labelPtr = fixed _labelArr
+                let _labelLen = WebGPU.Raw.StringView(_labelPtr, if isNull _labelArr then 0un else unativeint _labelArr.Length)
+                WebGPU.Raw.Pinnable.pinArray device this.Entries (fun entriesPtr ->
+                    let entriesLen = unativeint this.Entries.Length
+                    let mutable value =
+                        new WebGPU.Raw.BindGroupDescriptor(
+                            nextInChain,
+                            _labelLen,
+                            this.Layout.Handle,
+                            entriesLen,
+                            entriesPtr
+                        )
+                    use ptr = fixed &value
+                    action ptr
+                )
             )
     interface WebGPU.Raw.IPinnable<Device, WebGPU.Raw.BindGroupDescriptor> with
         member x.Pin(device, action) = x.Pin(device, action)
     static member Read(device : Device, backend : inref<WebGPU.Raw.BindGroupDescriptor>) = 
         {
+            Next = ExtensionDecoder.decode<IBindGroupDescriptorExtension> device backend.NextInChain
             Label = let _labelPtr = NativePtr.toNativeInt(backend.Label.Data) in if _labelPtr = 0n then null else Marshal.PtrToStringUTF8(_labelPtr, int(backend.Label.Length))
             Layout = new BindGroupLayout(backend.Layout)
             Entries = let ptr = backend.Entries in Array.init (int backend.EntryCount) (fun i -> let r = NativePtr.toByRef (NativePtr.add ptr i) in BindGroupEntry.Read(device, &r))
@@ -1447,8 +1501,70 @@ type BindGroupLayoutEntry =
             Texture = TextureBindingLayout.Read(device, &backend.Texture)
             StorageTexture = StorageTextureBindingLayout.Read(device, &backend.StorageTexture)
         }
+type DynamicBindingArrayLayout = 
+    {
+        Start : int
+        Kind : DynamicBindingKind
+    }
+    static member Null = Unchecked.defaultof<DynamicBindingArrayLayout>
+    [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
+    member this.Pin<'r>(device : Device, action : nativeptr<WebGPU.Raw.DynamicBindingArrayLayout> -> 'r) : 'r = 
+        if isNull (this :> obj) then
+            action (NativePtr.ofNativeInt 0n)
+        else
+            let nextInChain = 0n
+            let mutable value =
+                new WebGPU.Raw.DynamicBindingArrayLayout(
+                    nextInChain,
+                    uint32(this.Start),
+                    this.Kind
+                )
+            use ptr = fixed &value
+            action ptr
+    interface WebGPU.Raw.IPinnable<Device, WebGPU.Raw.DynamicBindingArrayLayout> with
+        member x.Pin(device, action) = x.Pin(device, action)
+    static member Read(device : Device, backend : inref<WebGPU.Raw.DynamicBindingArrayLayout>) = 
+        {
+            Start = int(backend.Start)
+            Kind = backend.Kind
+        }
+type BindGroupLayoutDynamicBindingArray = 
+    {
+        Next : IBindGroupLayoutDescriptorExtension
+        DynamicArray : DynamicBindingArrayLayout
+    }
+    static member Null = Unchecked.defaultof<BindGroupLayoutDynamicBindingArray>
+    [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
+    member this.Pin<'r>(device : Device, action : nativeptr<WebGPU.Raw.BindGroupLayoutDynamicBindingArray> -> 'r) : 'r = 
+        if isNull (this :> obj) then
+            action (NativePtr.ofNativeInt 0n)
+        else
+            PinHelper.PinNullable(this.Next, fun nextInChain ->
+                let sType = SType.BindGroupLayoutDynamicBindingArray
+                this.DynamicArray.Pin(device, fun _dynamicArrayPtr ->
+                    let mutable value =
+                        new WebGPU.Raw.BindGroupLayoutDynamicBindingArray(
+                            nextInChain,
+                            sType,
+                            (if NativePtr.toNativeInt _dynamicArrayPtr = 0n then Unchecked.defaultof<_> else NativePtr.read _dynamicArrayPtr)
+                        )
+                    use ptr = fixed &value
+                    action ptr
+                )
+            )
+    interface IExtension with
+        member x.Pin<'r>(action : nativeint -> 'r) = x.Pin(Unchecked.defaultof<_>, fun ptr -> action(NativePtr.toNativeInt ptr))
+    interface IBindGroupLayoutDescriptorExtension
+    interface WebGPU.Raw.IPinnable<Device, WebGPU.Raw.BindGroupLayoutDynamicBindingArray> with
+        member x.Pin(device, action) = x.Pin(device, action)
+    static member Read(device : Device, backend : inref<WebGPU.Raw.BindGroupLayoutDynamicBindingArray>) = 
+        {
+            Next = ExtensionDecoder.decode<IBindGroupLayoutDescriptorExtension> device backend.NextInChain
+            DynamicArray = DynamicBindingArrayLayout.Read(device, &backend.DynamicArray)
+        }
 type BindGroupLayoutDescriptor = 
     {
+        Next : IBindGroupLayoutDescriptorExtension
         Label : string
         Entries : array<BindGroupLayoutEntry>
     }
@@ -1458,26 +1574,28 @@ type BindGroupLayoutDescriptor =
         if isNull (this :> obj) then
             action (NativePtr.ofNativeInt 0n)
         else
-            let nextInChain = 0n
-            let _labelArr = if isNull this.Label then null else Encoding.UTF8.GetBytes(this.Label)
-            use _labelPtr = fixed _labelArr
-            let _labelLen = WebGPU.Raw.StringView(_labelPtr, if isNull _labelArr then 0un else unativeint _labelArr.Length)
-            WebGPU.Raw.Pinnable.pinArray device this.Entries (fun entriesPtr ->
-                let entriesLen = unativeint this.Entries.Length
-                let mutable value =
-                    new WebGPU.Raw.BindGroupLayoutDescriptor(
-                        nextInChain,
-                        _labelLen,
-                        entriesLen,
-                        entriesPtr
-                    )
-                use ptr = fixed &value
-                action ptr
+            PinHelper.PinNullable(this.Next, fun nextInChain ->
+                let _labelArr = if isNull this.Label then null else Encoding.UTF8.GetBytes(this.Label)
+                use _labelPtr = fixed _labelArr
+                let _labelLen = WebGPU.Raw.StringView(_labelPtr, if isNull _labelArr then 0un else unativeint _labelArr.Length)
+                WebGPU.Raw.Pinnable.pinArray device this.Entries (fun entriesPtr ->
+                    let entriesLen = unativeint this.Entries.Length
+                    let mutable value =
+                        new WebGPU.Raw.BindGroupLayoutDescriptor(
+                            nextInChain,
+                            _labelLen,
+                            entriesLen,
+                            entriesPtr
+                        )
+                    use ptr = fixed &value
+                    action ptr
+                )
             )
     interface WebGPU.Raw.IPinnable<Device, WebGPU.Raw.BindGroupLayoutDescriptor> with
         member x.Pin(device, action) = x.Pin(device, action)
     static member Read(device : Device, backend : inref<WebGPU.Raw.BindGroupLayoutDescriptor>) = 
         {
+            Next = ExtensionDecoder.decode<IBindGroupLayoutDescriptorExtension> device backend.NextInChain
             Label = let _labelPtr = NativePtr.toNativeInt(backend.Label.Data) in if _labelPtr = 0n then null else Marshal.PtrToStringUTF8(_labelPtr, int(backend.Label.Length))
             Entries = let ptr = backend.Entries in Array.init (int backend.EntryCount) (fun i -> let r = NativePtr.toByRef (NativePtr.add ptr i) in BindGroupLayoutEntry.Read(device, &r))
         }
@@ -2564,6 +2682,8 @@ type Device internal(handle : nativeint) as device =
     member x.Runtime
         with get() : Aardvark.Rendering.IRuntime = runtime
         and set (v : Aardvark.Rendering.IRuntime) = runtime <- v
+    member x.EnqueueWait(f : Future) : unit =
+        adapter.Value.Instance.EnqueueWait(f)
     member device.CreateBindGroup(descriptor : BindGroupDescriptor) : BindGroup =
         descriptor.Pin(device, fun _descriptorPtr ->
             let res = WebGPU.Raw.WebGPU.DeviceCreateBindGroup(handle, _descriptorPtr)
@@ -3129,6 +3249,38 @@ type DawnHostMappedPointerLimits =
         {
             Next = ExtensionDecoder.decode<ILimitsExtension> device backend.NextInChain
             HostMappedPointerAlignment = int(backend.HostMappedPointerAlignment)
+        }
+type DynamicBindingArrayLimits = 
+    {
+        Next : ILimitsExtension
+        MaxDynamicBindingArraySize : int
+    }
+    static member Null = Unchecked.defaultof<DynamicBindingArrayLimits>
+    [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
+    member this.Pin<'r>(device : Device, action : nativeptr<WebGPU.Raw.DynamicBindingArrayLimits> -> 'r) : 'r = 
+        if isNull (this :> obj) then
+            action (NativePtr.ofNativeInt 0n)
+        else
+            PinHelper.PinNullable(this.Next, fun nextInChain ->
+                let sType = SType.DynamicBindingArrayLimits
+                let mutable value =
+                    new WebGPU.Raw.DynamicBindingArrayLimits(
+                        nextInChain,
+                        sType,
+                        uint32(this.MaxDynamicBindingArraySize)
+                    )
+                use ptr = fixed &value
+                action ptr
+            )
+    interface IExtension with
+        member x.Pin<'r>(action : nativeint -> 'r) = x.Pin(Unchecked.defaultof<_>, fun ptr -> action(NativePtr.toNativeInt ptr))
+    interface ILimitsExtension
+    interface WebGPU.Raw.IPinnable<Device, WebGPU.Raw.DynamicBindingArrayLimits> with
+        member x.Pin(device, action) = x.Pin(device, action)
+    static member Read(device : Device, backend : inref<WebGPU.Raw.DynamicBindingArrayLimits>) = 
+        {
+            Next = ExtensionDecoder.decode<ILimitsExtension> device backend.NextInChain
+            MaxDynamicBindingArraySize = int(backend.MaxDynamicBindingArraySize)
         }
 type SupportedFeatures = 
     {
@@ -5075,6 +5227,19 @@ type ImageCopyExternalTexture =
 type Instance internal(handle : nativeint) =
     static let device = Unchecked.defaultof<Device>
     static let nullptr = new Instance(Unchecked.defaultof<_>)
+    static let waitPoolCache = System.Collections.Generic.Dictionary<nativeint, WebGPU.Raw.FutureWaitPool>()
+    static let getWaitPool (handle : nativeint)=
+        lock waitPoolCache (fun () ->
+            match waitPoolCache.TryGetValue handle with
+            | (true, c) -> c
+            | _ ->
+                let c = WebGPU.Raw.FutureWaitPool(handle)
+                waitPoolCache.[handle] <- c
+                c
+        )
+    let waitPool = lazy (getWaitPool handle)
+    member x.EnqueueWait(f : Future) : unit =
+        waitPool.Value.Add(WebGPU.Raw.Future(uint64 f.Id))
     member x.Handle = handle
     override x.ToString() = $"Instance(0x%08X{handle})"
     override x.GetHashCode() = hash handle
@@ -5715,7 +5880,7 @@ type Queue internal(device : Device, handle : nativeint) =
         let res = WebGPU.Raw.WebGPU.QueueSubmit(handle, commandsLen, commandsPtr)
         res
         let tcs = System.Threading.Tasks.TaskCompletionSource<unit>()
-        this.OnSubmittedWorkDone { Mode = CallbackMode.AllowProcessEvents; Callback = QueueWorkDoneCallback(fun d _ _ -> d.Dispose(); tcs.SetResult()) } |> ignore
+        this.OnSubmittedWorkDone { Mode = CallbackMode.WaitAnyOnly; Callback = QueueWorkDoneCallback(fun d _ _ -> d.Dispose(); tcs.SetResult()) } |> device.EnqueueWait
         task {
             do! tcs.Task
             for c in commands do do! c.RunCompleted()
@@ -8024,6 +8189,42 @@ type TextureViewDescriptor =
             Aspect = backend.Aspect
             Usage = backend.Usage
         }
+type TexelBufferViewDescriptor = 
+    {
+        Label : string
+        Format : TextureFormat
+        Offset : int64
+        Size : int64
+    }
+    static member Null = Unchecked.defaultof<TexelBufferViewDescriptor>
+    [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]
+    member this.Pin<'r>(device : Device, action : nativeptr<WebGPU.Raw.TexelBufferViewDescriptor> -> 'r) : 'r = 
+        if isNull (this :> obj) then
+            action (NativePtr.ofNativeInt 0n)
+        else
+            let nextInChain = 0n
+            let _labelArr = if isNull this.Label then null else Encoding.UTF8.GetBytes(this.Label)
+            use _labelPtr = fixed _labelArr
+            let _labelLen = WebGPU.Raw.StringView(_labelPtr, if isNull _labelArr then 0un else unativeint _labelArr.Length)
+            let mutable value =
+                new WebGPU.Raw.TexelBufferViewDescriptor(
+                    nextInChain,
+                    _labelLen,
+                    this.Format,
+                    uint64(this.Offset),
+                    uint64(this.Size)
+                )
+            use ptr = fixed &value
+            action ptr
+    interface WebGPU.Raw.IPinnable<Device, WebGPU.Raw.TexelBufferViewDescriptor> with
+        member x.Pin(device, action) = x.Pin(device, action)
+    static member Read(device : Device, backend : inref<WebGPU.Raw.TexelBufferViewDescriptor>) = 
+        {
+            Label = let _labelPtr = NativePtr.toNativeInt(backend.Label.Data) in if _labelPtr = 0n then null else Marshal.PtrToStringUTF8(_labelPtr, int(backend.Label.Length))
+            Format = backend.Format
+            Offset = int64(backend.Offset)
+            Size = int64(backend.Size)
+        }
 type TextureComponentSwizzleDescriptor = 
     {
         Next : ITextureViewDescriptorExtension
@@ -8080,6 +8281,36 @@ type TextureView internal(handle : nativeint) =
         res
     member this.AddRef() : unit =
         let res = WebGPU.Raw.WebGPU.TextureViewAddRef(handle)
+        res
+    member private x.Dispose(disposing : bool) =
+        if disposing then System.GC.SuppressFinalize(x)
+        x.Release()
+    member x.Dispose() = x.Dispose(true)
+    override x.Finalize() = x.Dispose(false)
+    interface System.IDisposable with
+        member x.Dispose() = x.Dispose(true)
+type TexelBufferView internal(handle : nativeint) =
+    static let device = Unchecked.defaultof<Device>
+    static let nullptr = new TexelBufferView(Unchecked.defaultof<_>)
+    member x.Handle = handle
+    override x.ToString() = $"TexelBufferView(0x%08X{handle})"
+    override x.GetHashCode() = hash handle
+    override x.Equals(obj) =
+        match obj with
+        | :? TexelBufferView as other -> other.Handle = x.Handle
+        | _ -> false
+    static member Null = nullptr
+    member this.SetLabel(label : string) : unit =
+        let _labelArr = if isNull label then null else Encoding.UTF8.GetBytes(label)
+        use _labelPtr = fixed _labelArr
+        let _labelLen = WebGPU.Raw.StringView(_labelPtr, if isNull _labelArr then 0un else unativeint _labelArr.Length)
+        let res = WebGPU.Raw.WebGPU.TexelBufferViewSetLabel(handle, _labelLen)
+        res
+    member this.Release() : unit =
+        let res = WebGPU.Raw.WebGPU.TexelBufferViewRelease(handle)
+        res
+    member this.AddRef() : unit =
+        let res = WebGPU.Raw.WebGPU.TexelBufferViewAddRef(handle)
         res
     member private x.Dispose(disposing : bool) =
         if disposing then System.GC.SuppressFinalize(x)

@@ -25,7 +25,7 @@ type WebGPUSamplerExtensions private() =
             | _ -> samplerDesc.MaxAnisotropy |> Option.defaultValue 1
             
         this.CreateSampler {
-            Label = null
+            Label = nolabel()
             Next = null
             MinFilter = min
             MipmapFilter = mip

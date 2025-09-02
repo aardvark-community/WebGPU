@@ -95,7 +95,7 @@ let compile (device : Device) : Rasterizer =
     
     let pipe =
         device.CreateRenderPipeline {
-            Label = null
+            Label = nolabel()
             Layout = program.PipelineLayout
             Vertex = {
                 Module = program.ShaderModules.[FShade.ShaderStage.Vertex]
@@ -156,7 +156,8 @@ let compile (device : Device) : Rasterizer =
     
     let g0 = 
         device.CreateBindGroup {
-            Label = null
+            Next = null
+            Label = nolabel()
             Layout = program.BindGroupLayouts.[0]
             Entries =
                 [|
@@ -180,11 +181,11 @@ let compile (device : Device) : Rasterizer =
             uboMem.[fProj.ufOffset / sizeof<M44f>] <- M44f (input.ProjTrafo * repairProj).Forward
             use cView = input.ColorTexture.CreateView(TextureUsage.RenderAttachment)
             use dView = depthTex.CreateView(TextureUsage.RenderAttachment)
-            use enc = device.CreateCommandEncoder { Label = null; Next = null }
+            use enc = device.CreateCommandEncoder { Label = nolabel(); Next = null }
             enc.Upload(uboMem, ubo)
             use renc = 
                 enc.BeginRenderPass {
-                    Label = null
+                    Label = nolabel()
                     Next = null
                     ColorAttachments =
                         [|
@@ -223,7 +224,7 @@ let compile (device : Device) : Rasterizer =
             renc.Draw(int input.Positions.Size / sizeof<V4f>, 1, 0, 0)
             renc.End()
             
-            use cmd = enc.Finish { Label = null }
+            use cmd = enc.Finish { Label = nolabel() }
             
             do! device.Queue.Submit [| cmd |]
         }

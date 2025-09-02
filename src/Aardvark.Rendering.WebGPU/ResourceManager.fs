@@ -203,7 +203,7 @@ type ResourceManager(device : Device) =
                     let value = adaptiveValue.GetValueUntyped token
                     let res =
                         device.CreateBuffer {
-                            Label = null
+                            Label = nolabel()
                             Next = null
                             Size = adaptiveValue.ContentType.GetCLRSize()
                             Usage = usage
@@ -242,7 +242,7 @@ type ResourceManager(device : Device) =
                         let size = value.GetSizeInBytes()
                         let res =
                             device.CreateBuffer {
-                                Label = null
+                                Label = nolabel()
                                 Next = null
                                 Size = size
                                 Usage = usage
@@ -306,7 +306,7 @@ type ResourceManager(device : Device) =
                     let tex =
                         device.CreateTexture {
                             Next = null
-                            Label = null
+                            Label = nolabel()
                             Usage = TextureUsage.StorageBinding ||| TextureUsage.TextureBinding ||| TextureUsage.CopyDst ||| TextureUsage.CopySrc
                             Dimension = TextureDimension.D2D
                             Size = { Width = img.Size.X; Height = img.Size.Y; DepthOrArrayLayers = 1 }
@@ -362,7 +362,7 @@ type ResourceManager(device : Device) =
                     let tex =
                         device.CreateTexture {
                             Next = null
-                            Label = null
+                            Label = nolabel()
                             Usage = TextureUsage.StorageBinding ||| TextureUsage.TextureBinding ||| TextureUsage.CopyDst ||| TextureUsage.CopySrc
                             Dimension = dim
                             Size = { Width = texSize.X; Height = texSize.Y; DepthOrArrayLayers = texSize.Z }
@@ -398,7 +398,7 @@ type ResourceManager(device : Device) =
                     let tex =
                         device.CreateTexture {
                             Next = null
-                            Label = null
+                            Label = nolabel()
                             Usage = TextureUsage.StorageBinding ||| TextureUsage.TextureBinding ||| TextureUsage.CopyDst ||| TextureUsage.CopySrc
                             Dimension = TextureDimension.D2D
                             Size = { Width = level0.Size.X; Height = level0.Size.Y; DepthOrArrayLayers = 1 }
@@ -432,7 +432,7 @@ type ResourceManager(device : Device) =
                     let tex =
                         device.CreateTexture {
                             Next = null
-                            Label = null
+                            Label = nolabel()
                             Usage = TextureUsage.StorageBinding ||| TextureUsage.TextureBinding ||| TextureUsage.CopyDst ||| TextureUsage.CopySrc
                             Dimension = TextureDimension.D3D
                             Size = { Width = level0.Size.X; Height = level0.Size.Y; DepthOrArrayLayers = level0.Size.Z }
@@ -467,7 +467,7 @@ type ResourceManager(device : Device) =
                     let tex =
                         device.CreateTexture {
                             Next = null
-                            Label = null
+                            Label = nolabel()
                             Usage = TextureUsage.StorageBinding ||| TextureUsage.TextureBinding ||| TextureUsage.CopyDst ||| TextureUsage.CopySrc
                             Dimension = TextureDimension.D2D
                             Size = { Width = anyFace.BaseSize.X; Height = anyFace.BaseSize.Y; DepthOrArrayLayers = 6 }
@@ -681,7 +681,7 @@ type ResourceManager(device : Device) =
                     
                     let pipeline = 
                         device.CreateRenderPipeline {
-                            Label = null
+                            Label = nolabel()
                             Layout = layout
                             Vertex = {
                                 Module = shaders.[FShade.ShaderStage.Vertex]
@@ -756,7 +756,7 @@ type ResourceManager(device : Device) =
                         failwith $"missing uniform: {f.ufName}"
             )
         uboCache.GetOrCreate((template, args), fun (template, args) ->
-            //let buffer = device.CreateBuffer { Label = null; Next = null; Size = int64 template.ubSize; Usage = BufferUsage.CopyDst ||| BufferUsage.Uniform; MappedAtCreation = false }
+            //let buffer = device.CreateBuffer { Label = nolabel(); Next = null; Size = int64 template.ubSize; Usage = BufferUsage.CopyDst ||| BufferUsage.Uniform; MappedAtCreation = false }
             let writers =
                 (template.ubFields, args) ||> List.map2 (fun f v ->
                     let offset = nativeint f.ufOffset
@@ -766,7 +766,7 @@ type ResourceManager(device : Device) =
             let data = Array.create template.ubSize 0uy
             { new AdaptiveResource<Buffer>() with
                 override x.Create(enc, token) =
-                    let buffer = device.CreateBuffer { Label = null; Next = null; Size = int64 template.ubSize; Usage = BufferUsage.CopyDst ||| BufferUsage.Uniform; MappedAtCreation = false }
+                    let buffer = device.CreateBuffer { Label = nolabel(); Next = null; Size = int64 template.ubSize; Usage = BufferUsage.CopyDst ||| BufferUsage.Uniform; MappedAtCreation = false }
                     use ptr = fixed data
                     writers |> List.iter (fun (offset, value, writer) ->
                         writer.Write(token, value, NativePtr.toNativeInt ptr + offset)
@@ -889,7 +889,8 @@ type ResourceManager(device : Device) =
                                     BindGroupEntry.TextureView(bid, t.GetHandle(enc, token))
                             )
                         device.CreateBindGroup {
-                            Label = null
+                            Next = null
+                            Label = nolabel()
                             Layout = bindGroupLayouts.[group]
                             Entries = List.toArray entries
                         }

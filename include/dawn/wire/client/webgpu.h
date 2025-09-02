@@ -316,6 +316,11 @@ DAWN_WIRE_EXPORT void wgpuDawnWireClientSurfaceRelease(WGPUSurface surface) WGPU
 // Methods of SurfaceCapabilities
 DAWN_WIRE_EXPORT void wgpuDawnWireClientSurfaceCapabilitiesFreeMembers(WGPUSurfaceCapabilities surfaceCapabilities) WGPU_FUNCTION_ATTRIBUTE;
 
+// Methods of TexelBufferView
+DAWN_WIRE_EXPORT void wgpuDawnWireClientTexelBufferViewSetLabel(WGPUTexelBufferView texelBufferView, WGPUStringView label) WGPU_FUNCTION_ATTRIBUTE;
+DAWN_WIRE_EXPORT void wgpuDawnWireClientTexelBufferViewAddRef(WGPUTexelBufferView texelBufferView) WGPU_FUNCTION_ATTRIBUTE;
+DAWN_WIRE_EXPORT void wgpuDawnWireClientTexelBufferViewRelease(WGPUTexelBufferView texelBufferView) WGPU_FUNCTION_ATTRIBUTE;
+
 // Methods of Texture
 DAWN_WIRE_EXPORT WGPUTextureView wgpuDawnWireClientTextureCreateErrorView(WGPUTexture texture, WGPU_NULLABLE WGPUTextureViewDescriptor const * descriptor) WGPU_FUNCTION_ATTRIBUTE;
 DAWN_WIRE_EXPORT WGPUTextureView wgpuDawnWireClientTextureCreateView(WGPUTexture texture, WGPU_NULLABLE WGPUTextureViewDescriptor const * descriptor) WGPU_FUNCTION_ATTRIBUTE;

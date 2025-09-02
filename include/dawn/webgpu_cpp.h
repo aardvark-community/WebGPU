@@ -240,6 +240,13 @@ enum class DeviceLostReason : uint32_t {
 static_assert(sizeof(DeviceLostReason) == sizeof(WGPUDeviceLostReason), "sizeof mismatch for DeviceLostReason");
 static_assert(alignof(DeviceLostReason) == alignof(WGPUDeviceLostReason), "alignof mismatch for DeviceLostReason");
 
+enum class DynamicBindingKind : uint32_t {
+    Undefined = WGPUDynamicBindingKind_Undefined,
+    SampledTexture = WGPUDynamicBindingKind_SampledTexture,
+};
+static_assert(sizeof(DynamicBindingKind) == sizeof(WGPUDynamicBindingKind), "sizeof mismatch for DynamicBindingKind");
+static_assert(alignof(DynamicBindingKind) == alignof(WGPUDynamicBindingKind), "alignof mismatch for DynamicBindingKind");
+
 enum class ErrorFilter : uint32_t {
     Validation = WGPUErrorFilter_Validation,
     OutOfMemory = WGPUErrorFilter_OutOfMemory,
@@ -296,6 +303,7 @@ enum class FeatureName : uint32_t {
     Subgroups = WGPUFeatureName_Subgroups,
     TextureFormatsTier1 = WGPUFeatureName_TextureFormatsTier1,
     TextureFormatsTier2 = WGPUFeatureName_TextureFormatsTier2,
+    PrimitiveIndex = WGPUFeatureName_PrimitiveIndex,
     DawnInternalUsages = WGPUFeatureName_DawnInternalUsages,
     DawnMultiPlanarFormats = WGPUFeatureName_DawnMultiPlanarFormats,
     DawnNative = WGPUFeatureName_DawnNative,
@@ -354,6 +362,7 @@ enum class FeatureName : uint32_t {
     SharedFenceEGLSync = WGPUFeatureName_SharedFenceEGLSync,
     DawnDeviceAllocatorControl = WGPUFeatureName_DawnDeviceAllocatorControl,
     TextureComponentSwizzle = WGPUFeatureName_TextureComponentSwizzle,
+    ChromiumExperimentalBindless = WGPUFeatureName_ChromiumExperimentalBindless,
 };
 static_assert(sizeof(FeatureName) == sizeof(WGPUFeatureName), "sizeof mismatch for FeatureName");
 static_assert(alignof(FeatureName) == alignof(WGPUFeatureName), "alignof mismatch for FeatureName");
@@ -649,6 +658,9 @@ enum class SType : uint32_t {
     TextureComponentSwizzleDescriptor = WGPUSType_TextureComponentSwizzleDescriptor,
     SharedTextureMemoryD3D11BeginState = WGPUSType_SharedTextureMemoryD3D11BeginState,
     DawnConsumeAdapterDescriptor = WGPUSType_DawnConsumeAdapterDescriptor,
+    BindGroupLayoutDynamicBindingArray = WGPUSType_BindGroupLayoutDynamicBindingArray,
+    DynamicBindingArrayLimits = WGPUSType_DynamicBindingArrayLimits,
+    BindGroupDynamicBindingArray = WGPUSType_BindGroupDynamicBindingArray,
 };
 static_assert(sizeof(SType) == sizeof(WGPUSType), "sizeof mismatch for SType");
 static_assert(alignof(SType) == alignof(WGPUSType), "alignof mismatch for SType");
@@ -911,6 +923,7 @@ enum class WGSLLanguageFeatureName : uint32_t {
     PointerCompositeAccess = WGPUWGSLLanguageFeatureName_PointerCompositeAccess,
     SizedBindingArray = WGPUWGSLLanguageFeatureName_SizedBindingArray,
     TexelBuffers = WGPUWGSLLanguageFeatureName_TexelBuffers,
+    ChromiumPrint = WGPUWGSLLanguageFeatureName_ChromiumPrint,
     ChromiumTestingUnimplemented = WGPUWGSLLanguageFeatureName_ChromiumTestingUnimplemented,
     ChromiumTestingUnsafeExperimental = WGPUWGSLLanguageFeatureName_ChromiumTestingUnsafeExperimental,
     ChromiumTestingExperimental = WGPUWGSLLanguageFeatureName_ChromiumTestingExperimental,
@@ -933,6 +946,7 @@ enum class BufferUsage : uint64_t {
     Storage = WGPUBufferUsage_Storage,
     Indirect = WGPUBufferUsage_Indirect,
     QueryResolve = WGPUBufferUsage_QueryResolve,
+    TexelBuffer = WGPUBufferUsage_TexelBuffer,
 };
 static_assert(sizeof(BufferUsage) == sizeof(WGPUBufferUsage), "sizeof mismatch for BufferUsage");
 static_assert(alignof(BufferUsage) == alignof(WGPUBufferUsage), "alignof mismatch for BufferUsage");
@@ -1189,12 +1203,14 @@ class SharedBufferMemory;
 class SharedFence;
 class SharedTextureMemory;
 class Surface;
+class TexelBufferView;
 class Texture;
 class TextureView;
 
 struct StringView;
 struct AdapterPropertiesD3D;
 struct AdapterPropertiesVk;
+struct BindGroupDynamicBindingArray;
 struct BlendComponent;
 struct BufferBindingLayout;
 struct BufferHostMappedPointer;
@@ -1223,6 +1239,8 @@ struct DawnTextureInternalUsageDescriptor;
 struct DawnTogglesDescriptor;
 struct DawnWGSLBlocklist;
 struct DawnWireWGSLControl;
+struct DynamicBindingArrayLayout;
+struct DynamicBindingArrayLimits;
 struct EmscriptenSurfaceSourceCanvasHTMLSelector;
 struct Extent2D;
 struct Extent3D;
@@ -1300,6 +1318,7 @@ struct SurfaceSourceWindowsHWND;
 struct SurfaceSourceXCBWindow;
 struct SurfaceSourceXlibWindow;
 struct SurfaceTexture;
+struct TexelBufferViewDescriptor;
 struct TexelCopyBufferLayout;
 struct TextureBindingLayout;
 struct TextureBindingViewDimensionDescriptor;
@@ -1310,6 +1329,7 @@ struct AdapterPropertiesMemoryHeaps;
 struct AdapterPropertiesSubgroupMatrixConfigs;
 struct AHardwareBufferProperties;
 struct BindGroupEntry;
+struct BindGroupLayoutDynamicBindingArray;
 struct BindGroupLayoutEntry;
 struct BlendState;
 struct BufferDescriptor;
@@ -2092,6 +2112,20 @@ class Surface : public ObjectBase<Surface, WGPUSurface> {
     static inline void WGPURelease(WGPUSurface handle);
 };
 
+class TexelBufferView : public ObjectBase<TexelBufferView, WGPUTexelBufferView> {
+  public:
+    using ObjectBase::ObjectBase;
+    using ObjectBase::operator=;
+
+    inline void SetLabel(StringView label) const;
+
+
+  private:
+    friend ObjectBase<TexelBufferView, WGPUTexelBufferView>;
+    static inline void WGPUAddRef(WGPUTexelBufferView handle);
+    static inline void WGPURelease(WGPUTexelBufferView handle);
+};
+
 class Texture : public ObjectBase<Texture, WGPUTexture> {
   public:
     using ObjectBase::ObjectBase;
@@ -2165,6 +2199,18 @@ struct AdapterPropertiesVk : ChainedStructOut {
 
     static constexpr size_t kFirstMemberAlignment = detail::ConstexprMax(alignof(ChainedStruct), alignof(uint32_t));
     alignas(kFirstMemberAlignment) uint32_t driverVersion;
+};
+
+// Can be chained in BindGroupDescriptor
+struct BindGroupDynamicBindingArray : ChainedStruct {
+    inline BindGroupDynamicBindingArray();
+
+    struct Init;
+    inline BindGroupDynamicBindingArray(Init&& init);
+    inline operator const WGPUBindGroupDynamicBindingArray&() const noexcept;
+
+    static constexpr size_t kFirstMemberAlignment = detail::ConstexprMax(alignof(ChainedStruct), alignof(uint32_t));
+    alignas(kFirstMemberAlignment) uint32_t dynamicArraySize = 0;
 };
 
 struct BlendComponent {
@@ -2496,6 +2542,26 @@ struct DawnWireWGSLControl : ChainedStruct {
     alignas(kFirstMemberAlignment) Bool enableExperimental = false;
     Bool enableUnsafe = false;
     Bool enableTesting = false;
+};
+
+struct DynamicBindingArrayLayout {
+    inline operator const WGPUDynamicBindingArrayLayout&() const noexcept;
+
+    ChainedStruct const * nextInChain = nullptr;
+    uint32_t start = 0;
+    DynamicBindingKind kind = DynamicBindingKind::Undefined;
+};
+
+// Can be chained in Limits
+struct DynamicBindingArrayLimits : ChainedStructOut {
+    inline DynamicBindingArrayLimits();
+
+    struct Init;
+    inline DynamicBindingArrayLimits(Init&& init);
+    inline operator const WGPUDynamicBindingArrayLimits&() const noexcept;
+
+    static constexpr size_t kFirstMemberAlignment = detail::ConstexprMax(alignof(ChainedStruct), alignof(uint32_t));
+    alignas(kFirstMemberAlignment) uint32_t maxDynamicBindingArraySize = kLimitU32Undefined;
 };
 
 // Can be chained in SurfaceDescriptor
@@ -3388,6 +3454,16 @@ struct SurfaceTexture {
     SurfaceGetCurrentTextureStatus status = {};
 };
 
+struct TexelBufferViewDescriptor {
+    inline operator const WGPUTexelBufferViewDescriptor&() const noexcept;
+
+    ChainedStruct const * nextInChain = nullptr;
+    StringView label = {};
+    TextureFormat format = TextureFormat::Undefined;
+    uint64_t offset = 0;
+    uint64_t size = kWholeSize;
+};
+
 struct TexelCopyBufferLayout {
     inline operator const WGPUTexelCopyBufferLayout&() const noexcept;
 
@@ -3519,6 +3595,18 @@ struct BindGroupEntry {
     uint64_t size = kWholeSize;
     Sampler sampler = nullptr;
     TextureView textureView = nullptr;
+};
+
+// Can be chained in BindGroupLayoutDescriptor
+struct BindGroupLayoutDynamicBindingArray : ChainedStruct {
+    inline BindGroupLayoutDynamicBindingArray();
+
+    struct Init;
+    inline BindGroupLayoutDynamicBindingArray(Init&& init);
+    inline operator const WGPUBindGroupLayoutDynamicBindingArray&() const noexcept;
+
+    static constexpr size_t kFirstMemberAlignment = detail::ConstexprMax(alignof(ChainedStruct), alignof(DynamicBindingArrayLayout));
+    alignas(kFirstMemberAlignment) DynamicBindingArrayLayout dynamicArray = {};
 };
 
 struct BindGroupLayoutEntry {
@@ -3945,7 +4033,7 @@ struct BindGroupDescriptor {
     ChainedStruct const * nextInChain = nullptr;
     StringView label = {};
     BindGroupLayout layout = nullptr;
-    size_t entryCount;
+    size_t entryCount = 0;
     BindGroupEntry const * entries = nullptr;
 };
 
@@ -3954,7 +4042,7 @@ struct BindGroupLayoutDescriptor {
 
     ChainedStruct const * nextInChain = nullptr;
     StringView label = {};
-    size_t entryCount;
+    size_t entryCount = 0;
     BindGroupLayoutEntry const * entries = nullptr;
 };
 
@@ -4185,6 +4273,26 @@ static_assert(sizeof(AdapterPropertiesVk) == sizeof(WGPUAdapterPropertiesVk), "s
 static_assert(alignof(AdapterPropertiesVk) == alignof(WGPUAdapterPropertiesVk), "alignof mismatch for AdapterPropertiesVk");
 static_assert(offsetof(AdapterPropertiesVk, driverVersion) == offsetof(WGPUAdapterPropertiesVk, driverVersion),
         "offsetof mismatch for AdapterPropertiesVk::driverVersion");
+
+// BindGroupDynamicBindingArray implementation
+BindGroupDynamicBindingArray::BindGroupDynamicBindingArray()
+  : ChainedStruct { nullptr, SType::BindGroupDynamicBindingArray } {}
+struct BindGroupDynamicBindingArray::Init {
+    ChainedStruct * const nextInChain;
+    uint32_t dynamicArraySize = 0;
+};
+BindGroupDynamicBindingArray::BindGroupDynamicBindingArray(BindGroupDynamicBindingArray::Init&& init)
+  : ChainedStruct { init.nextInChain, SType::BindGroupDynamicBindingArray }, 
+    dynamicArraySize(std::move(init.dynamicArraySize)){}
+
+BindGroupDynamicBindingArray::operator const WGPUBindGroupDynamicBindingArray&() const noexcept {
+    return *reinterpret_cast<const WGPUBindGroupDynamicBindingArray*>(this);
+}
+
+static_assert(sizeof(BindGroupDynamicBindingArray) == sizeof(WGPUBindGroupDynamicBindingArray), "sizeof mismatch for BindGroupDynamicBindingArray");
+static_assert(alignof(BindGroupDynamicBindingArray) == alignof(WGPUBindGroupDynamicBindingArray), "alignof mismatch for BindGroupDynamicBindingArray");
+static_assert(offsetof(BindGroupDynamicBindingArray, dynamicArraySize) == offsetof(WGPUBindGroupDynamicBindingArray, dynamicArraySize),
+        "offsetof mismatch for BindGroupDynamicBindingArray::dynamicArraySize");
 
 // BlendComponent implementation
 
@@ -4790,6 +4898,41 @@ static_assert(offsetof(DawnWireWGSLControl, enableUnsafe) == offsetof(WGPUDawnWi
         "offsetof mismatch for DawnWireWGSLControl::enableUnsafe");
 static_assert(offsetof(DawnWireWGSLControl, enableTesting) == offsetof(WGPUDawnWireWGSLControl, enableTesting),
         "offsetof mismatch for DawnWireWGSLControl::enableTesting");
+
+// DynamicBindingArrayLayout implementation
+
+DynamicBindingArrayLayout::operator const WGPUDynamicBindingArrayLayout&() const noexcept {
+    return *reinterpret_cast<const WGPUDynamicBindingArrayLayout*>(this);
+}
+
+static_assert(sizeof(DynamicBindingArrayLayout) == sizeof(WGPUDynamicBindingArrayLayout), "sizeof mismatch for DynamicBindingArrayLayout");
+static_assert(alignof(DynamicBindingArrayLayout) == alignof(WGPUDynamicBindingArrayLayout), "alignof mismatch for DynamicBindingArrayLayout");
+static_assert(offsetof(DynamicBindingArrayLayout, nextInChain) == offsetof(WGPUDynamicBindingArrayLayout, nextInChain),
+        "offsetof mismatch for DynamicBindingArrayLayout::nextInChain");
+static_assert(offsetof(DynamicBindingArrayLayout, start) == offsetof(WGPUDynamicBindingArrayLayout, start),
+        "offsetof mismatch for DynamicBindingArrayLayout::start");
+static_assert(offsetof(DynamicBindingArrayLayout, kind) == offsetof(WGPUDynamicBindingArrayLayout, kind),
+        "offsetof mismatch for DynamicBindingArrayLayout::kind");
+
+// DynamicBindingArrayLimits implementation
+DynamicBindingArrayLimits::DynamicBindingArrayLimits()
+  : ChainedStructOut { nullptr, SType::DynamicBindingArrayLimits } {}
+struct DynamicBindingArrayLimits::Init {
+    ChainedStructOut *  nextInChain;
+    uint32_t maxDynamicBindingArraySize = kLimitU32Undefined;
+};
+DynamicBindingArrayLimits::DynamicBindingArrayLimits(DynamicBindingArrayLimits::Init&& init)
+  : ChainedStructOut { init.nextInChain, SType::DynamicBindingArrayLimits }, 
+    maxDynamicBindingArraySize(std::move(init.maxDynamicBindingArraySize)){}
+
+DynamicBindingArrayLimits::operator const WGPUDynamicBindingArrayLimits&() const noexcept {
+    return *reinterpret_cast<const WGPUDynamicBindingArrayLimits*>(this);
+}
+
+static_assert(sizeof(DynamicBindingArrayLimits) == sizeof(WGPUDynamicBindingArrayLimits), "sizeof mismatch for DynamicBindingArrayLimits");
+static_assert(alignof(DynamicBindingArrayLimits) == alignof(WGPUDynamicBindingArrayLimits), "alignof mismatch for DynamicBindingArrayLimits");
+static_assert(offsetof(DynamicBindingArrayLimits, maxDynamicBindingArraySize) == offsetof(WGPUDynamicBindingArrayLimits, maxDynamicBindingArraySize),
+        "offsetof mismatch for DynamicBindingArrayLimits::maxDynamicBindingArraySize");
 
 // EmscriptenSurfaceSourceCanvasHTMLSelector implementation
 EmscriptenSurfaceSourceCanvasHTMLSelector::EmscriptenSurfaceSourceCanvasHTMLSelector()
@@ -6505,6 +6648,25 @@ static_assert(offsetof(SurfaceTexture, texture) == offsetof(WGPUSurfaceTexture, 
 static_assert(offsetof(SurfaceTexture, status) == offsetof(WGPUSurfaceTexture, status),
         "offsetof mismatch for SurfaceTexture::status");
 
+// TexelBufferViewDescriptor implementation
+
+TexelBufferViewDescriptor::operator const WGPUTexelBufferViewDescriptor&() const noexcept {
+    return *reinterpret_cast<const WGPUTexelBufferViewDescriptor*>(this);
+}
+
+static_assert(sizeof(TexelBufferViewDescriptor) == sizeof(WGPUTexelBufferViewDescriptor), "sizeof mismatch for TexelBufferViewDescriptor");
+static_assert(alignof(TexelBufferViewDescriptor) == alignof(WGPUTexelBufferViewDescriptor), "alignof mismatch for TexelBufferViewDescriptor");
+static_assert(offsetof(TexelBufferViewDescriptor, nextInChain) == offsetof(WGPUTexelBufferViewDescriptor, nextInChain),
+        "offsetof mismatch for TexelBufferViewDescriptor::nextInChain");
+static_assert(offsetof(TexelBufferViewDescriptor, label) == offsetof(WGPUTexelBufferViewDescriptor, label),
+        "offsetof mismatch for TexelBufferViewDescriptor::label");
+static_assert(offsetof(TexelBufferViewDescriptor, format) == offsetof(WGPUTexelBufferViewDescriptor, format),
+        "offsetof mismatch for TexelBufferViewDescriptor::format");
+static_assert(offsetof(TexelBufferViewDescriptor, offset) == offsetof(WGPUTexelBufferViewDescriptor, offset),
+        "offsetof mismatch for TexelBufferViewDescriptor::offset");
+static_assert(offsetof(TexelBufferViewDescriptor, size) == offsetof(WGPUTexelBufferViewDescriptor, size),
+        "offsetof mismatch for TexelBufferViewDescriptor::size");
+
 // TexelCopyBufferLayout implementation
 
 TexelCopyBufferLayout::operator const WGPUTexelCopyBufferLayout&() const noexcept {
@@ -6804,6 +6966,26 @@ static_assert(offsetof(BindGroupEntry, sampler) == offsetof(WGPUBindGroupEntry, 
         "offsetof mismatch for BindGroupEntry::sampler");
 static_assert(offsetof(BindGroupEntry, textureView) == offsetof(WGPUBindGroupEntry, textureView),
         "offsetof mismatch for BindGroupEntry::textureView");
+
+// BindGroupLayoutDynamicBindingArray implementation
+BindGroupLayoutDynamicBindingArray::BindGroupLayoutDynamicBindingArray()
+  : ChainedStruct { nullptr, SType::BindGroupLayoutDynamicBindingArray } {}
+struct BindGroupLayoutDynamicBindingArray::Init {
+    ChainedStruct * const nextInChain;
+    DynamicBindingArrayLayout dynamicArray = {};
+};
+BindGroupLayoutDynamicBindingArray::BindGroupLayoutDynamicBindingArray(BindGroupLayoutDynamicBindingArray::Init&& init)
+  : ChainedStruct { init.nextInChain, SType::BindGroupLayoutDynamicBindingArray }, 
+    dynamicArray(std::move(init.dynamicArray)){}
+
+BindGroupLayoutDynamicBindingArray::operator const WGPUBindGroupLayoutDynamicBindingArray&() const noexcept {
+    return *reinterpret_cast<const WGPUBindGroupLayoutDynamicBindingArray*>(this);
+}
+
+static_assert(sizeof(BindGroupLayoutDynamicBindingArray) == sizeof(WGPUBindGroupLayoutDynamicBindingArray), "sizeof mismatch for BindGroupLayoutDynamicBindingArray");
+static_assert(alignof(BindGroupLayoutDynamicBindingArray) == alignof(WGPUBindGroupLayoutDynamicBindingArray), "alignof mismatch for BindGroupLayoutDynamicBindingArray");
+static_assert(offsetof(BindGroupLayoutDynamicBindingArray, dynamicArray) == offsetof(WGPUBindGroupLayoutDynamicBindingArray, dynamicArray),
+        "offsetof mismatch for BindGroupLayoutDynamicBindingArray::dynamicArray");
 
 // BindGroupLayoutEntry implementation
 
@@ -9626,6 +9808,26 @@ void Surface::WGPURelease(WGPUSurface handle) {
 }
 static_assert(sizeof(Surface) == sizeof(WGPUSurface), "sizeof mismatch for Surface");
 static_assert(alignof(Surface) == alignof(WGPUSurface), "alignof mismatch for Surface");
+
+// TexelBufferView implementation
+
+void TexelBufferView::SetLabel(StringView label) const {
+    wgpuTexelBufferViewSetLabel(Get(), *reinterpret_cast<WGPUStringView const*>(&label));
+}
+
+
+void TexelBufferView::WGPUAddRef(WGPUTexelBufferView handle) {
+    if (handle != nullptr) {
+        wgpuTexelBufferViewAddRef(handle);
+    }
+}
+void TexelBufferView::WGPURelease(WGPUTexelBufferView handle) {
+    if (handle != nullptr) {
+        wgpuTexelBufferViewRelease(handle);
+    }
+}
+static_assert(sizeof(TexelBufferView) == sizeof(WGPUTexelBufferView), "sizeof mismatch for TexelBufferView");
+static_assert(alignof(TexelBufferView) == alignof(WGPUTexelBufferView), "alignof mismatch for TexelBufferView");
 
 // Texture implementation
 

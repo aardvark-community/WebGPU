@@ -125,7 +125,7 @@ module Obj =
         loadMesh bunnyStream
 
     let beetle() =
-        use s = System.IO.File.OpenRead "/Users/schorsch/Desktop/stanford-bunny.obj"
+        use s = System.IO.File.OpenRead @"C:\Users\georg\Desktop\stanford-bunny.obj"
         loadMesh s
     let ofIndexedGeometry (ig : IndexedGeometry) =
         let pos =
@@ -228,7 +228,7 @@ let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d
             depth <-
                 device.CreateBuffer{
                     Next = null
-                    Label = null
+                    Label = nolabel()
                     Usage = BufferUsage.Storage
                     Size = int64 size.X * int64 size.Y * 4L
                     MappedAtCreation = false
@@ -526,7 +526,7 @@ type DeviceScanExtensions private() =
 
 let scanTest() =
     Aardvark.Init()
-    WebGPUShaderExtensions.ShaderCaching <- true
+    WebGPUConfig.shaderCaching <- true
      
     let rasterizer = DefaultRasterizer.compile
      
@@ -563,9 +563,10 @@ let scanTest() =
 
 let run() =
     Aardvark.Init()
-    WebGPUShaderExtensions.ShaderCaching <- true
-     
-    let rasterizer = DefaultRasterizer.compile
+    WebGPUConfig.shaderCaching <- true
+    WebGPUConfig.captureStackTraces <- true
+    
+    let rasterizer = BinRasterizer.compile
      
     let app = WebGPUApplication.Create(true).Result
     let win = app.CreateGameWindow(vsync = true)

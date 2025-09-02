@@ -453,6 +453,20 @@ namespace wgpu {
       return o;
   }
   template <typename CharT, typename Traits>
+  std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, DynamicBindingKind value) {
+      switch (value) {
+      case DynamicBindingKind::Undefined:
+        o << "DynamicBindingKind::Undefined";
+        break;
+      case DynamicBindingKind::SampledTexture:
+        o << "DynamicBindingKind::SampledTexture";
+        break;
+          default:
+            o << "DynamicBindingKind::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<DynamicBindingKind>::type>(value);
+      }
+      return o;
+  }
+  template <typename CharT, typename Traits>
   std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, ErrorFilter value) {
       switch (value) {
       case ErrorFilter::Validation:
@@ -591,6 +605,9 @@ namespace wgpu {
         break;
       case FeatureName::TextureFormatsTier2:
         o << "FeatureName::TextureFormatsTier2";
+        break;
+      case FeatureName::PrimitiveIndex:
+        o << "FeatureName::PrimitiveIndex";
         break;
       case FeatureName::DawnInternalUsages:
         o << "FeatureName::DawnInternalUsages";
@@ -765,6 +782,9 @@ namespace wgpu {
         break;
       case FeatureName::TextureComponentSwizzle:
         o << "FeatureName::TextureComponentSwizzle";
+        break;
+      case FeatureName::ChromiumExperimentalBindless:
+        o << "FeatureName::ChromiumExperimentalBindless";
         break;
           default:
             o << "FeatureName::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<FeatureName>::type>(value);
@@ -1480,6 +1500,15 @@ namespace wgpu {
       case SType::DawnConsumeAdapterDescriptor:
         o << "SType::DawnConsumeAdapterDescriptor";
         break;
+      case SType::BindGroupLayoutDynamicBindingArray:
+        o << "SType::BindGroupLayoutDynamicBindingArray";
+        break;
+      case SType::DynamicBindingArrayLimits:
+        o << "SType::DynamicBindingArrayLimits";
+        break;
+      case SType::BindGroupDynamicBindingArray:
+        o << "SType::BindGroupDynamicBindingArray";
+        break;
           default:
             o << "SType::" << std::showbase << std::hex << std::setfill('0') << std::setw(4) << static_cast<typename std::underlying_type<SType>::type>(value);
       }
@@ -2182,6 +2211,9 @@ namespace wgpu {
       case WGSLLanguageFeatureName::TexelBuffers:
         o << "WGSLLanguageFeatureName::TexelBuffers";
         break;
+      case WGSLLanguageFeatureName::ChromiumPrint:
+        o << "WGSLLanguageFeatureName::ChromiumPrint";
+        break;
       case WGSLLanguageFeatureName::ChromiumTestingUnimplemented:
         o << "WGSLLanguageFeatureName::ChromiumTestingUnimplemented";
         break;
@@ -2297,6 +2329,14 @@ namespace wgpu {
     first = false;
     o << "QueryResolve";
     value &= ~BufferUsage::QueryResolve;
+  }
+  if (value & BufferUsage::TexelBuffer) {
+    if (!first) {
+      o << "|";
+    }
+    first = false;
+    o << "TexelBuffer";
+    value &= ~BufferUsage::TexelBuffer;
   }
 
     if (static_cast<bool>(value)) {
@@ -2627,6 +2667,10 @@ namespace wgpu {
     }
     return o;
   }
+
+}  // namespace wgpu
+
+namespace wgpu {
 
   template <typename CharT, typename Traits>
   std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>& o, StringView value) {

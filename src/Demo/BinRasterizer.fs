@@ -578,7 +578,7 @@ let createTempBuffers (vertexCount : int) (device : Device) =
     let vps =
         device.CreateBuffer {
             Next = null
-            Label = null
+            Label = nolabel()
             Usage = BufferUsage.Storage
             Size = int64 sizeof<V4f> * int64 vertexCount
             MappedAtCreation = false
@@ -587,7 +587,7 @@ let createTempBuffers (vertexCount : int) (device : Device) =
     let pps =
         device.CreateBuffer {
             Next = null
-            Label = null
+            Label = nolabel()
             Usage = BufferUsage.Storage
             Size = int64 sizeof<V4f> * int64 vertexCount
             MappedAtCreation = false
@@ -596,7 +596,7 @@ let createTempBuffers (vertexCount : int) (device : Device) =
     let ns =
         device.CreateBuffer {
             Next = null
-            Label = null
+            Label = nolabel()
             Usage = BufferUsage.Storage
             Size = int64 sizeof<V4f> * int64 vertexCount
             MappedAtCreation = false

@@ -59,7 +59,6 @@
 #include "src/tint/lang/wgsl/ast/diagnostic_control.h"
 #include "src/tint/lang/wgsl/ast/diagnostic_directive.h"
 #include "src/tint/lang/wgsl/ast/diagnostic_rule_name.h"
-#include "src/tint/lang/wgsl/ast/disable_validation_attribute.h"
 #include "src/tint/lang/wgsl/ast/discard_statement.h"
 #include "src/tint/lang/wgsl/ast/enable.h"
 #include "src/tint/lang/wgsl/ast/float_literal_expression.h"
@@ -83,9 +82,7 @@
 #include "src/tint/lang/wgsl/ast/phony_expression.h"
 #include "src/tint/lang/wgsl/ast/requires.h"
 #include "src/tint/lang/wgsl/ast/return_statement.h"
-#include "src/tint/lang/wgsl/ast/row_major_attribute.h"
 #include "src/tint/lang/wgsl/ast/stage_attribute.h"
-#include "src/tint/lang/wgsl/ast/stride_attribute.h"
 #include "src/tint/lang/wgsl/ast/struct.h"
 #include "src/tint/lang/wgsl/ast/struct_member_align_attribute.h"
 #include "src/tint/lang/wgsl/ast/struct_member_offset_attribute.h"
@@ -2417,13 +2414,6 @@ class Builder {
         return create<ast::StructMemberAlignAttribute>(source_, Expr(std::forward<EXPR>(val)));
     }
 
-    /// Creates a ast::StrideAttribute
-    /// @param stride the array stride
-    /// @returns the ast::StrideAttribute attribute
-    const ast::StrideAttribute* Stride(uint32_t stride) {
-        return create<ast::StrideAttribute>(source_, stride);
-    }
-
     /// Creates the ast::GroupAttribute
     /// @param value group attribute index expresion
     /// @returns the group attribute pointer
@@ -3373,25 +3363,6 @@ class Builder {
         return create<ast::WorkgroupAttribute>(source_, Expr(std::forward<EXPR_X>(x)),
                                                Expr(std::forward<EXPR_Y>(y)),
                                                Expr(std::forward<EXPR_Z>(z)));
-    }
-
-    /// Creates an ast::RowMajorAttribute
-    /// @param source the source information
-    /// @returns the row-major attribute pointer
-    const ast::RowMajorAttribute* RowMajor(const Source& source) {
-        return create<ast::RowMajorAttribute>(source);
-    }
-
-    /// Creates an ast::RowMajorAttribute
-    /// @returns the row-major attribute pointer
-    const ast::RowMajorAttribute* RowMajor() { return create<ast::RowMajorAttribute>(source_); }
-
-    /// Creates an ast::DisableValidationAttribute
-    /// @param validation the validation to disable
-    /// @returns the disable validation attribute pointer
-    const ast::DisableValidationAttribute* Disable(ast::DisabledValidation validation) {
-        return ASTNodes().Create<ast::DisableValidationAttribute>(ID(), AllocateNodeID(),
-                                                                  validation);
     }
 
     /// Passthrough overload

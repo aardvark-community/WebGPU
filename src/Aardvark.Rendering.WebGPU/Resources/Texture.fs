@@ -73,7 +73,7 @@ type TextureExtensions private() =
         use tmp =
             device.CreateBuffer {
                 Next = null
-                Label = null
+                Label = nolabel()
                 Usage = BufferUsage.CopySrc ||| BufferUsage.MapWrite
                 Size = totalBufferSize
                 MappedAtCreation = true
@@ -118,7 +118,7 @@ type TextureExtensions private() =
         
     [<Extension>]
     static member CreateTexture(device : Device, tex : ITexture) =
-        use cmd = device.CreateCommandEncoder { Label = null; Next = null }
+        use cmd = device.CreateCommandEncoder { Label = nolabel(); Next = null }
         let texture = 
             match tex with
             | :? FileTexture as t ->
@@ -134,7 +134,7 @@ type TextureExtensions private() =
                 let tex =
                     device.CreateTexture {
                         Next = null
-                        Label = null
+                        Label = nolabel()
                         Usage = TextureUsage.StorageBinding ||| TextureUsage.TextureBinding ||| TextureUsage.CopyDst ||| TextureUsage.CopySrc
                         Dimension = TextureDimension.D2D
                         Size = { Width = img.Size.X; Height = img.Size.Y; DepthOrArrayLayers = 1 }
@@ -190,7 +190,7 @@ type TextureExtensions private() =
                 let tex =
                     device.CreateTexture {
                         Next = null
-                        Label = null
+                        Label = nolabel()
                         Usage = TextureUsage.StorageBinding ||| TextureUsage.TextureBinding ||| TextureUsage.CopyDst ||| TextureUsage.CopySrc
                         Dimension = dim
                         Size = { Width = texSize.X; Height = texSize.Y; DepthOrArrayLayers = texSize.Z }
@@ -226,7 +226,7 @@ type TextureExtensions private() =
                 let tex =
                     device.CreateTexture {
                         Next = null
-                        Label = null
+                        Label = nolabel()
                         Usage = TextureUsage.StorageBinding ||| TextureUsage.TextureBinding ||| TextureUsage.CopyDst ||| TextureUsage.CopySrc
                         Dimension = TextureDimension.D2D
                         Size = { Width = level0.Size.X; Height = level0.Size.Y; DepthOrArrayLayers = 1 }
@@ -260,7 +260,7 @@ type TextureExtensions private() =
                 let tex =
                     device.CreateTexture {
                         Next = null
-                        Label = null
+                        Label = nolabel()
                         Usage = TextureUsage.StorageBinding ||| TextureUsage.TextureBinding ||| TextureUsage.CopyDst ||| TextureUsage.CopySrc
                         Dimension = TextureDimension.D3D
                         Size = { Width = level0.Size.X; Height = level0.Size.Y; DepthOrArrayLayers = level0.Size.Z }
@@ -295,7 +295,7 @@ type TextureExtensions private() =
                 let tex =
                     device.CreateTexture {
                         Next = null
-                        Label = null
+                        Label = nolabel()
                         Usage = TextureUsage.StorageBinding ||| TextureUsage.TextureBinding ||| TextureUsage.CopyDst ||| TextureUsage.CopySrc
                         Dimension = TextureDimension.D2D
                         Size = { Width = anyFace.BaseSize.X; Height = anyFace.BaseSize.Y; DepthOrArrayLayers = 6 }
@@ -329,7 +329,7 @@ type TextureExtensions private() =
             | _ ->
                 failwith ""
 
-        use cmd = cmd.Finish { Label = null }
+        use cmd = cmd.Finish { Label = nolabel() }
         task {
             do! device.Queue.Submit [| cmd |]
             return texture
@@ -353,7 +353,7 @@ type TextureExtensions private() =
         let fmt = Translations.TextureFormat.ofAardvark format
         device.CreateTexture {
             Next = null
-            Label = null
+            Label = nolabel()
             Usage = TextureUsage.RenderAttachment ||| TextureUsage.StorageBinding ||| TextureUsage.TextureBinding ||| TextureUsage.CopyDst ||| TextureUsage.CopySrc
             Dimension = TextureDimension.D2D
             Size = { Width = size.X; Height = size.Y; DepthOrArrayLayers = layers}
@@ -396,7 +396,7 @@ type TextureExtensions private() =
             use tmp =
                 this.CreateBuffer {
                     Next = null
-                    Label = null
+                    Label = nolabel()
                     Usage = BufferUsage.CopyDst ||| BufferUsage.MapRead
                     Size = sizeInBytes
                     MappedAtCreation = false
@@ -418,9 +418,9 @@ type TextureExtensions private() =
                 }
             
             
-            use enc = this.CreateCommandEncoder { Label = null; Next = null }
+            use enc = this.CreateCommandEncoder { Label = nolabel(); Next = null }
             enc.CopyTextureToBuffer(src, dst, { Width = size.X; Height = size.Y; DepthOrArrayLayers = size.Z })
-            use cmd = enc.Finish { Label = null }
+            use cmd = enc.Finish { Label = nolabel() }
             do! this.Queue.Submit [| cmd |]
             return!
                 tmp.Mapped (MapMode.Read, fun ptr ->
@@ -452,7 +452,7 @@ type TextureExtensions private() =
 
     [<Extension>]
     static member ClearColor(tex : Texture, value : Color) =
-        use enc = tex.Device.CreateCommandEncoder { Label = null; Next = null }
+        use enc = tex.Device.CreateCommandEncoder { Label = nolabel(); Next = null }
         use view = tex.CreateView TextureUsage.RenderAttachment
         let cc : RenderPassColorAttachment =
             {
@@ -468,19 +468,19 @@ type TextureExtensions private() =
         use render =
             enc.BeginRenderPass {
                 Next = null
-                Label = null
+                Label = nolabel()
                 ColorAttachments = [| cc |]
                 DepthStencilAttachment = undefined
                 OcclusionQuerySet = undefined
                 TimestampWrites = undefined
             }
         render.End()
-        use cmd = enc.Finish { Label = null }
+        use cmd = enc.Finish { Label = nolabel() }
         tex.Device.Queue.Submit [| cmd |]
          
     [<Extension>]
     static member ClearDepthStencil(tex : Texture, ?depth : float32, ?stencil : int) =
-        use enc = tex.Device.CreateCommandEncoder { Label = null; Next = null }
+        use enc = tex.Device.CreateCommandEncoder { Label = nolabel(); Next = null }
         use view = tex.CreateView TextureUsage.RenderAttachment
         
         let depthLoadOp =
@@ -519,14 +519,14 @@ type TextureExtensions private() =
         use render =
             enc.BeginRenderPass {
                 Next = null
-                Label = null
+                Label = nolabel()
                 ColorAttachments = [| |]
                 DepthStencilAttachment = dd
                 OcclusionQuerySet = undefined
                 TimestampWrites = undefined
             }
         render.End()
-        use cmd = enc.Finish { Label = null }
+        use cmd = enc.Finish { Label = nolabel() }
         tex.Device.Queue.Submit [| cmd |]
             
     [<Extension>]
@@ -607,6 +607,7 @@ type Blitter(device : Device, format : TextureFormat) =
     
     let groupLayout =
         device.CreateBindGroupLayout {
+            Next = null
             Label = "BlitterGroupLayout"
             Entries =
                 [|
@@ -657,7 +658,7 @@ type Blitter(device : Device, format : TextureFormat) =
     let sampler =
         device.CreateSampler {
             Next = null
-            Label = null
+            Label = nolabel()
             AddressModeU = AddressMode.ClampToEdge
             AddressModeV = AddressMode.ClampToEdge
             AddressModeW = AddressMode.ClampToEdge
@@ -685,14 +686,15 @@ type Blitter(device : Device, format : TextureFormat) =
         use output = output.CreateView(TextureUsage.StorageBinding, outputLevel)
         use input = input.CreateView(TextureUsage.TextureBinding, inputLevel)
         
-        use enc = device.CreateCommandEncoder { Label = null; Next = null }
+        use enc = device.CreateCommandEncoder { Label = nolabel(); Next = null }
         
-        use cenc = enc.BeginComputePass { Label = null; TimestampWrites = undefined }
+        use cenc = enc.BeginComputePass { Label = nolabel(); TimestampWrites = undefined }
     
         
         use group =
             device.CreateBindGroup {
-                Label = null
+                Next = null
+                Label = nolabel()
                 Layout = groupLayout
                 Entries =
                     [|
@@ -707,7 +709,7 @@ type Blitter(device : Device, format : TextureFormat) =
         cenc.DispatchWorkgroups(ceilDiv outputSize.X localSizeX, ceilDiv outputSize.Y localSizeY, 1)
         cenc.End()
         
-        use buf = enc.Finish { Label = null }
+        use buf = enc.Finish { Label = nolabel() }
         device.Queue.Submit [| buf |]
 
         
@@ -721,14 +723,15 @@ type Blitter(device : Device, format : TextureFormat) =
         use output = output.CreateView(TextureUsage.StorageBinding, outputLevel)
         use input = input.CreateView(TextureUsage.TextureBinding, inputLevel)
         
-        //use enc = device.CreateCommandEncoder { Label = null; Next = null }
+        //use enc = device.CreateCommandEncoder { Label = nolabel(); Next = null }
         
-        use cenc = enc.BeginComputePass { Label = null; TimestampWrites = undefined }
+        use cenc = enc.BeginComputePass { Label = nolabel(); TimestampWrites = undefined }
     
         
         use group =
             device.CreateBindGroup {
-                Label = null
+                Next = null
+                Label = nolabel()
                 Layout = groupLayout
                 Entries =
                     [|

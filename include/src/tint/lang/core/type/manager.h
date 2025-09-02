@@ -40,6 +40,7 @@
 #include "src/tint/lang/core/type/input_attachment.h"
 #include "src/tint/lang/core/type/multisampled_texture.h"
 #include "src/tint/lang/core/type/sampler.h"
+#include "src/tint/lang/core/type/string.h"
 #include "src/tint/lang/core/type/struct.h"
 #include "src/tint/lang/core/type/subgroup_matrix.h"
 #include "src/tint/lang/core/type/texel_buffer.h"
@@ -564,6 +565,10 @@ class Manager final {
     /// @returns the array type
     const core::type::BindingArray* binding_array(const core::type::Type* elem_ty, uint32_t count);
 
+    /// @param elem_ty the array element type
+    /// @returns the array type
+    const core::type::BindingArray* runtime_binding_array(const core::type::Type* elem_ty);
+
     /// @param address_space the address space
     /// @param subtype the pointer subtype
     /// @param access the access settings
@@ -630,6 +635,9 @@ class Manager final {
     const core::type::InputAttachment* input_attachment(const core::type::Type* inner) {
         return Get<core::type::InputAttachment>(inner);
     }
+
+    /// @returns a string type
+    const core::type::String* String() { return Get<core::type::String>(); }
 
     /// A structure member descriptor.
     struct StructMemberDesc {

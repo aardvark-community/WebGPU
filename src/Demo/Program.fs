@@ -16,8 +16,8 @@ module Shader =
     
 let writeRGBA() =
     Aardvark.Init()
-    WebGPUShaderExtensions.ShaderCaching <- false
-    WebGPUShaderExtensions.PrintShaders <- true
+    WebGPUConfig.shaderCaching <- false
+    WebGPUConfig.printShaders <- true
     let app = WebGPUApplication.Create(true).Result
     
     let sh = app.Device.CompileCompute Shader.bla
@@ -138,8 +138,8 @@ module AtomicQueue =
     let run() =
         Aardvark.Init()
         let app = WebGPUApplication.Create(true).Result
-        WebGPUShaderExtensions.ShaderCaching <- false
-        WebGPUShaderExtensions.PrintShaders <- true
+        WebGPUConfig.shaderCaching <- false
+        WebGPUConfig.printShaders <- true
         let device = app.Device
         let computer = device.CompileCompute test
         

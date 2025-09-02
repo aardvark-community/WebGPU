@@ -343,13 +343,22 @@
             {"name": "texture view", "type": "texture view", "optional": true}
         ]
     },
+    "bind group dynamic binding array": {
+        "category": "structure",
+        "tags": ["dawn"],
+        "chained": "in",
+        "chain roots": ["bind group descriptor"],
+        "members": [
+            {"name": "dynamic array size", "type": "uint32_t", "default": 0}
+        ]
+    },
     "bind group descriptor": {
         "category": "structure",
         "extensible": "in",
         "members": [
             {"name": "label", "type": "string view", "optional": true},
             {"name": "layout", "type": "bind group layout"},
-            {"name": "entry count", "type": "size_t"},
+            {"name": "entry count", "type": "size_t", "default": 0},
             {"name": "entries", "type": "bind group entry", "annotation": "const*", "length": "entry count"}
         ]
     },
@@ -512,12 +521,39 @@
             {"name": "storage texture", "type": "storage texture binding layout", "default": "zero"}
         ]
     },
+
+    "dynamic binding kind": {
+        "category": "enum",
+        "tags": ["dawn"],
+        "values": [
+            {"value": 0, "name": "undefined", "jsrepr": "undefined", "valid": false},
+            {"value": 1, "name": "sampled texture"}
+        ]
+    },
+    "dynamic binding array layout": {
+        "category": "structure",
+        "tags": ["dawn"],
+        "extensible": "in",
+        "members": [
+            {"name": "start", "type": "uint32_t", "default": 0},
+            {"name": "kind", "type": "dynamic binding kind"}
+        ]
+    },
+    "bind group layout dynamic binding array": {
+        "category": "structure",
+        "tags": ["dawn"],
+        "chained": "in",
+        "chain roots": ["bind group layout descriptor"],
+        "members": [
+            {"name": "dynamic array", "type": "dynamic binding array layout"}
+        ]
+    },
     "bind group layout descriptor": {
         "category": "structure",
         "extensible": "in",
         "members": [
             {"name": "label", "type": "string view", "optional": true},
-            {"name": "entry count", "type": "size_t"},
+            {"name": "entry count", "type": "size_t", "default": 0},
             {"name": "entries", "type": "bind group layout entry", "annotation": "const*", "length": "entry count"}
         ]
     },
@@ -736,7 +772,8 @@
             {"value": 64, "name": "uniform"},
             {"value": 128, "name": "storage"},
             {"value": 256, "name": "indirect"},
-            {"value": 512, "name": "query resolve"}
+            {"value": 512, "name": "query resolve"},
+            {"value": 1024, "name": "texel buffer", "tags": ["dawn"]}
         ]
     },
     "char": {
@@ -1618,6 +1655,15 @@
             {"name": "host mapped pointer alignment", "type": "uint32_t", "default": "limit u32 undefined"}
         ]
     },
+    "dynamic binding array limits": {
+        "category": "structure",
+        "chained": "out",
+        "chain roots": ["limits"],
+        "tags": ["dawn"],
+        "members": [
+            {"name": "max dynamic binding array size", "type": "uint32_t", "default": "limit u32 undefined"}
+        ]
+    },
     "supported features": {
         "category": "structure",
         "out": true,
@@ -2262,6 +2308,7 @@
     },
     "feature name": {
         "category": "enum",
+        "emscripten_string_to_int": true,
         "values": [
             {"value": 1, "name": "core features and limits"},
             {"value": 2, "name": "depth clip control"},
@@ -2283,6 +2330,7 @@
             {"value": 18, "name": "subgroups"},
             {"value": 19, "name": "texture formats tier1"},
             {"value": 20, "name": "texture formats tier2"},
+            {"value": 21, "name": "primitive index"},
 
             {"value": 0, "name": "dawn internal usages", "tags": ["dawn"]},
             {"value": 1, "name": "dawn multi planar formats", "tags": ["dawn"]},
@@ -2343,7 +2391,8 @@
             {"value": 55, "name": "chromium experimental subgroup matrix", "tags": ["dawn"]},
             {"value": 56, "name": "shared fence EGL sync", "tags": ["dawn", "native"]},
             {"value": 57, "name": "dawn device allocator control", "tags": ["dawn"]},
-            {"value": 58, "name": "texture component swizzle", "tags": ["dawn"]}
+            {"value": 58, "name": "texture component swizzle", "tags": ["dawn"]},
+            {"value": 60, "name": "chromium experimental bindless", "tags": ["dawn"]}
         ]
     },
     "filter mode": {
@@ -3899,7 +3948,10 @@
             {"value": 70, "name": "dawn fake device initialize error for testing", "tags": ["dawn"]},
             {"value": 71, "name": "texture component swizzle descriptor", "tags": ["dawn"]},
             {"value": 72, "name": "shared texture memory D3D11 begin state", "tags": ["dawn", "native"]},
-            {"value": 73, "name": "dawn consume adapter descriptor", "tags": ["dawn"]}
+            {"value": 73, "name": "dawn consume adapter descriptor", "tags": ["dawn"]},
+            {"value": 74, "name": "bind group layout dynamic binding array", "tags": ["dawn"]},
+            {"value": 75, "name": "dynamic binding array limits", "tags": ["dawn"]},
+            {"value": 76, "name": "bind group dynamic binding array", "tags": ["dawn"]}
         ]
     },
     "texture": {
@@ -4177,6 +4229,17 @@
             {"name": "usage", "type": "texture usage"}
         ]
     },
+    "texel buffer view descriptor": {
+        "category": "structure",
+        "tags": ["dawn"],
+        "extensible": "in",
+        "members": [
+            {"name": "label", "type": "string view", "optional": true},
+            {"name": "format", "type": "texture format"},
+            {"name": "offset", "type": "uint64_t", "default": "0"},
+            {"name": "size", "type": "uint64_t", "default": "whole size"}
+        ]
+    },
     "texture component swizzle descriptor": {
         "category": "structure",
         "tags": ["dawn"],
@@ -4188,6 +4251,18 @@
     },
     "texture view": {
         "category": "object",
+        "methods": [
+            {
+                "name": "set label",
+                "args": [
+                    {"name": "label", "type": "string view"}
+                ]
+            }
+        ]
+    },
+    "texel buffer view": {
+        "category": "object",
+        "tags": ["dawn"],
         "methods": [
             {
                 "name": "set label",
@@ -4308,6 +4383,7 @@
             {"value": 4, "name": "pointer composite access", "jsrepr": "'pointer_composite_access'"},
             {"value": 5, "name": "sized binding array", "jsrepr": "'sized_binding_array'", "tags": ["dawn"]},
             {"value": 6, "name": "texel buffers", "jsrepr": "'texel_buffers'", "tags": ["dawn"]},
+            {"value": 7, "name": "chromium print", "jsrepr": "'chromium_print'", "tags": ["dawn"]},
 
             {"value": 0, "name": "chromium testing unimplemented", "jsrepr": "'chromium_testing_unimplemented'", "tags": ["dawn"]},
             {"value": 1, "name": "chromium testing unsafe experimental", "jsrepr": "'chromium_testing_unsafe_experimental'", "tags": ["dawn"]},

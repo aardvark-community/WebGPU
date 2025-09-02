@@ -147,9 +147,6 @@ type ShaderProgram(shaderModules : Map<FShade.ShaderStage, ShaderModule>, code :
 [<AbstractClass; Sealed>]
 type WebGPUShaderExtensions private() =
     
-    static let mutable shaderCaching = true
-    static let mutable printShaders = true
-    
     static let glslBackend =
         FShade.GLSL.Backend.Create {
             FShade.GLSL.version                     = GLSLVersion(4,5,0)
@@ -191,13 +188,6 @@ type WebGPUShaderExtensions private() =
     
     static member FShadeBackend = glslBackend
     
-    static member ShaderCaching
-        with get() = shaderCaching
-        and set v = shaderCaching <- v
-    
-    static member PrintShaders
-        with get() = printShaders
-        and set v = printShaders <- v
     [<Extension>]
     static member GetWGSLCode(this : FShade.Effect, signature : IFramebufferSignature) =
         wgslCache.GetOrCreate((signature, this), fun (signature, effect) ->
@@ -207,14 +197,14 @@ type WebGPUShaderExtensions private() =
                     effect.Link(signature)
                     |> ModuleCompiler.compileGLSL glslBackend
                     
-                if printShaders then
+                if WebGPUConfig.printShaders then
                     Log.start "effect %A" effect.Id
                     for line in lineRx.Split(glsl.code) do
                         Log.line "%s" line
                     
                 WGSLShader.ofGLSL glsl
             
-            if shaderCaching then
+            if WebGPUConfig.shaderCaching then
                 let fileName =
                     ShaderCacheKey.computeHash {
                         EffectId = effect.Id
@@ -255,14 +245,14 @@ type WebGPUShaderExtensions private() =
                     |> FShade.ComputeShader.toModule
                     |> ModuleCompiler.compileGLSL glslBackend
                     
-                if printShaders then
+                if WebGPUConfig.printShaders then
                     Log.start "compute shader %A" computeShader.csId
                     for line in lineRx.Split(glsl.code) do
                         Log.line "%s" line
                     
                 WGSLShader.ofGLSL glsl
                 
-            if shaderCaching then
+            if WebGPUConfig.shaderCaching then
                 let fileName =
                     ShaderCacheKey.computeHash {
                         EffectId = this.csId
@@ -276,7 +266,7 @@ type WebGPUShaderExtensions private() =
                     File.WriteAllBytes(cacheFile, data)
                     shader
                 
-                if shaderCaching && File.Exists cacheFile then
+                if WebGPUConfig.shaderCaching && File.Exists cacheFile then
                     try
                         let data = File.ReadAllBytes cacheFile
                         WGSLShader.unpickle data
@@ -321,7 +311,7 @@ type WebGPUShaderExtensions private() =
                     | None ->
                         [||]
                 device.CreatePipelineLayout {
-                    Label = null
+                    Label = nolabel()
                     Next = null
                     BindGroupLayouts = entries
                     ImmediateSize = 0

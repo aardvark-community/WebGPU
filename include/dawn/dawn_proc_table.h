@@ -280,6 +280,10 @@ typedef struct DawnProcTable {
 
     WGPUProcSurfaceCapabilitiesFreeMembers surfaceCapabilitiesFreeMembers;
 
+    WGPUProcTexelBufferViewSetLabel texelBufferViewSetLabel;
+    WGPUProcTexelBufferViewAddRef texelBufferViewAddRef;
+    WGPUProcTexelBufferViewRelease texelBufferViewRelease;
+
     WGPUProcTextureCreateErrorView textureCreateErrorView;
     WGPUProcTextureCreateView textureCreateView;
     WGPUProcTextureDestroy textureDestroy;
