@@ -204,7 +204,7 @@ module Obj =
 
         let aspectRatio = (float32 size.X / float32 size.Y)
 
-        let binSizePx = 32
+        let binSizePx = BinRasterizer.Shader.binSize
         let binCountX = ceilDiv size.X binSizePx
         let binCountY = ceilDiv size.Y binSizePx
 
@@ -692,7 +692,7 @@ let run() =
     WebGPUConfig.shaderCaching <- false
     WebGPUConfig.captureStackTraces <- true
 
-    let rasterizer = BinRasterizer.compile "all"
+    let rasterizer = BinRasterizer.BinRasterizer.compileAndRun "all"
     //let rasterizer = DefaultRasterizer.compile
      
     let app = WebGPUApplication.Create(true).Result

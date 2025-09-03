@@ -112,7 +112,7 @@ module Obj =
 
         let aspectRatio = (float32 size.X / float32 size.Y)
 
-        let binSizePx = 32
+        let binSizePx = BinRasterizer.Shader.binSize
         let binCountX = size.X / binSizePx
         let binCountY = size.Y / binSizePx
 
@@ -280,11 +280,12 @@ module Obj =
 module Test = 
 
     let init (app: WebGPUApplication) (rasterizerType : string) (triangleCountPerBin : int) (actBlock : string)=
+        let vertex, binning, compact, raster = BinRasterizer.BinRasterizer.compile app.Device
 
-        let mutable rasterizer: Device -> Rasterizer = 
+        let mutable rasterizer: Device -> string -> Rasterizer = 
             match rasterizerType with
-            | "bin" -> BinRasterizer.compile actBlock
-            | "default" -> DefaultRasterizer.compile
+            | "bin" -> BinRasterizer.BinRasterizer.run vertex binning compact raster
+            | "default" -> fun d _ -> DefaultRasterizer.compile d
             | _ -> failwith $"Benchmark parameter \"rasterizerType\" has an invalid value {rasterizerType}"
 
         let mv =
@@ -337,15 +338,24 @@ module Test =
                 }
             texSize <- size
             transact (fun () -> csize.Value <- size; ctex.Value <- color)
-        rasterize, {
-            Positions          = vertexBuffer
-            Normals            = normalsBuffer
-            Colors             = colorBuffer
-            ColorTexture       = color
-            DepthBuffer        = depth
-            ModelViewTrafo     = mv
-            ProjTrafo          = proj
-        }
+
+
+        let input =
+            {
+                Positions          = vertexBuffer
+                Normals            = normalsBuffer
+                Colors             = colorBuffer
+                ColorTexture       = color
+                DepthBuffer        = depth
+                ModelViewTrafo     = mv
+                ProjTrafo          = proj
+            }
+
+        for i in 1 .. 4 do
+            (rasterize "all" input).Wait()
+
+
+        rasterize actBlock, input
         
         
     let run (rasterize : RasterizerInput -> Tasks.Task<unit>) (args : RasterizerInput)=
@@ -353,6 +363,7 @@ module Test =
         task.Wait()
 
 [<MemoryDiagnoser>]
+//[<InvocationCount(10)>]
 type RasterizerBenchmark() =
 
     static let app = WebGPUApplication.Create(true).Result
@@ -382,7 +393,8 @@ type RasterizerBenchmark() =
     //[<DefaultValue; Params(1, 10, 100, 1000)>]
     val mutable triangleCountPerBin : int
 
-    [<DefaultValue; Params("all", "binning", "scan", "compact", "raster")>]
+    //[<DefaultValue; Params("all", "binning", "scan", "compact", "raster")>]
+    [<DefaultValue; Params("all")>]
     val mutable actBlock : string
 
     [<GlobalSetup>]
