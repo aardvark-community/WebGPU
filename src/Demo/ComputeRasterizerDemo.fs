@@ -133,7 +133,7 @@ module Obj =
         //use s = System.IO.File.OpenRead "C:/Users/Simon/Desktop/stanford-bunny.obj"
         //let tmp = "c:/Dev/VRVis/WebGPU/src/Demo/resources/exterior.obj"
         //let tmp = "c:/Dev/VRVis/WebGPU/src/Demo/resources/sponza.obj"
-        let tmp = "c:/Dev/VRVis/WebGPU/src/Demo/resources/sibenik.obj"
+        let tmp = @"C:\Users\haaser\Desktop\mesh\sibenik.obj"
         //let tmp = "C:/Users/Simon/Desktop/stanford-bunny.obj"
         let mesh = Aardvark.Data.Wavefront.ObjParser.Load tmp
         //System.IO.File.Delete tmp

@@ -221,10 +221,10 @@ module Program =
         //let (app, win, cam, frustum, rasterizer) = BinRasterizerTest.Test.init()
         //BinRasterizerTest.Test.run app win cam frustum rasterizer
     
-        //ComputeRasterizerDemo.run()
+        ComputeRasterizerDemo.run()
         //ComputeRasterizerDemo.scanTest()
         //RenderDemo.run()
-        BinRasterizerTest.Benchmarks.runBenchmark(_argv) |> ignore
+        //BinRasterizerTest.Benchmarks.runBenchmark(_argv) |> ignore
 
 
 

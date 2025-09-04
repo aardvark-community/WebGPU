@@ -194,7 +194,7 @@ type private Scanner(device : Device) =
     let scanInPlace = device.CompileCompute ScanKernels.scanKernelInPlace
     let fixup = device.CompileCompute ScanKernels.fixupKernelInPlace
     
-    member x.Run(rows : int, columns : int, src : Buffer, dst : Buffer) =
+    member x.Run(rows : int, columns : int, src : BufferRange, dst : BufferRange) =
         let rowLength = columns
         let rec run (src : Buffer) (srcOffset : int) (srcStride : int) (srcCount : int) (dst : Buffer) (dstOffset : int) (dstStride : int) (dstCount : int) =
             if srcCount > 1 then
@@ -242,7 +242,7 @@ type private Scanner(device : Device) =
                             "groupSize", ScanKernels.scanSize :> obj
                         ]).Wait()
 
-        run src 0 1 columns dst 0 1 columns
+        run src.Buffer (int (src.Offset / int64 sizeof<int>)) 1 columns dst.Buffer (int (dst.Offset / int64 sizeof<int>)) 1 columns
 
     member x.Dispose() =
         scan.Dispose()
@@ -257,14 +257,23 @@ type DeviceScanExtensions private() =
     static let cache = Dict<Device, Scanner>()
     
     [<Extension>]
-    static member ScanRows(device : Device, rows : int, columns : int, src : Buffer, dst : Buffer) =
+    static member ScanRows(device : Device, rows : int, columns : int, src : BufferRange, dst : BufferRange) =
         let scan = lock cache (fun () -> cache.GetOrCreate(device, fun d -> new Scanner(d)))
         scan.Run(rows, columns, src, dst)
     
     [<Extension>]
-    static member Scan(device : Device, src : Buffer, dst : Buffer) =
+    static member ScanRows(device : Device, rows : int, columns : int, src : Buffer, dst : Buffer) =
+        let scan = lock cache (fun () -> cache.GetOrCreate(device, fun d -> new Scanner(d)))
+        scan.Run(rows, columns, src.Sub(0L), dst.Sub(0L))
+    
+    [<Extension>]
+    static member Scan(device : Device, src : BufferRange, dst : BufferRange) =
         let scan = lock cache (fun () -> cache.GetOrCreate(device, fun d -> new Scanner(d)))
         scan.Run(1, int (src.Size / int64 sizeof<int>), src, dst)
+    
+    [<Extension>]
+    static member Scan(device : Device, src : Buffer, dst : Buffer) =
+        DeviceScanExtensions.Scan(device, src.Sub(0L), dst.Sub(0L))
     
     
     

@@ -67,7 +67,7 @@ module Shader =
     open FShade
     
     [<Literal>]
-    let binSize = 64
+    let binSize = 128
     
     //[<Literal>]
     //let binLength = 4096
@@ -83,11 +83,14 @@ module Shader =
         member x.ViewportSize : V2i = uniform?ViewportSize
         member x.TriangleCount : int = uniform?TriangleCount
         member x.TriangleChunkSize : int = uniform?TriangleChunkSize
-        member x.LoopOffset : int = uniform?LoopOffset
+        member x.TriangleOffset : int = uniform?TriangleOffset
         member x.ModelViewTrafo : M44f = uniform?ModelViewTrafo
         member x.ProjTrafo : M44f = uniform?ProjTrafo
         member x.VertexCount : int = uniform?VertexCount
-    
+        member x.TotalBinCount : int = uniform?TotalBinCount
+        member x.BinIdOffset : int = uniform?BinIdOffset
+        member x.BinSize : int = uniform?BinSize
+        
     let plane (i : int) (bMin : V3f) (bMax : V3f) =
         match i with
         | 0 -> V4f(1.0f, 0.0f, 0.0f, -bMax.X)
@@ -818,7 +821,7 @@ module Shader =
         compute {
             let id = getGlobalId().X
             if id < uniform.TriangleChunkSize then
-                let tid = 3 * (id + uniform.LoopOffset * uniform.TriangleChunkSize)
+                let tid = 3 * (id + uniform.TriangleOffset)
                 let p0 = vertices.[tid]
                 let p1 = vertices.[tid + 1]
                 let p2 = vertices.[tid + 2]
@@ -831,8 +834,115 @@ module Shader =
     let atomicAdd (r : ref<int>) (e : int) : int = onlyInShaderCode ""
     
 
+    // type Job =
+    //     {
+    //         Min : V2f
+    //         Max : V2f
+    //         Offset : int
+    //         Count : int
+    //     }
+    //
+    
     [<LocalSize(X = 64, Y = 1)>]
-    let binTriangles (counter : int[]) (positions : V4f[]) (triangleMask : int[]) =
+    let bin (counter : int[]) (jobBounds : V4f[]) (jobBoundsOffset : int) (jobOffsets : int[]) (jobOffsetOffset : int) (scannedJobCounts : int[]) (jobCount : int) (indices : int[]) (positions : V4f[]) (outputMask : int[]) (outputTriangleIds : int[]) =
+        compute {
+            let totalCount = scannedJobCounts.[jobCount - 1]
+            
+            let mutable id = atomicAdd &&counter.[0] 1
+            while id < totalCount do
+                let mutable l = 0
+                let mutable r = jobCount - 1
+                while l <= r do
+                    let m = (l + r) / 2
+                    let v = scannedJobCounts.[m]
+                    if id >= v then
+                        l <- m + 1
+                    else
+                        r <- m - 1
+                
+                let jobId = l
+                let triangleId =
+                    if jobId = 0 then id
+                    else id - scannedJobCounts.[jobId - 1]
+                
+                
+                let indexOffset = jobOffsets.[jobId + jobOffsetOffset]
+                
+                let globalTriangleIndex =
+                    if indexOffset < 0 then triangleId
+                    else indices.[indexOffset + triangleId]
+                let vi0 = 3*globalTriangleIndex
+                let p0 = positions.[vi0]
+                let p1 = positions.[vi0+1]
+                let p2 = positions.[vi0+2]
+                
+                let bMin = jobBounds.[jobId + jobBoundsOffset].XY
+                let bMax = jobBounds.[jobId + jobBoundsOffset].ZW
+                
+                let res = if boxTriangle3 (V3f(bMin, -1.0f)) (V3f(bMax, 1.0f)) p0 p1 p2 then 1 else 0
+                
+                
+                let outIndex = jobId * uniform.TriangleChunkSize + triangleId
+                outputMask.[outIndex] <- res
+                outputTriangleIds.[outIndex] <- globalTriangleIndex
+                id <- atomicAdd &&counter.[0] 1
+        }
+    
+    
+    [<LocalSize(X = 64, Y = 1)>]
+    let compact (positions : V4f[]) (scannedMaskBuffer : int[]) (globalTriangleIds : int[]) (dstIndices : int[]) (dstIndexOffset : int) (dstCounts : int[]) (dstCountOffset : int) =
+        compute {
+            let triangleId = getGlobalId().X
+            let jobId = getGlobalId().Y
+            
+            let index = jobId * uniform.TriangleChunkSize + triangleId
+            
+            let scanValue = scannedMaskBuffer.[index]
+            if (triangleId = 0 && scanValue > 0) || (scanValue > scannedMaskBuffer.[index - 1]) then
+                let denseIndex = scanValue - 1
+                let triIndex = globalTriangleIds.[index]
+                
+                // let vi0 = 3*triIndex
+                // let p0 = positions.[vi0]
+                // let p1 = positions.[vi0+1]
+                // let p2 = positions.[vi0+2]
+                //
+                
+                let dstIndex = jobId * uniform.TriangleChunkSize + denseIndex
+                dstIndices.[dstIndexOffset + dstIndex] <- triIndex
+                //dstBounds.[dstBoundsOffset + dstIndex] <- bb p0 p1 p2
+                
+            if triangleId = 0 then
+                let index = jobId * uniform.TriangleChunkSize + uniform.TriangleChunkSize - 1
+                dstCounts.[dstCountOffset + jobId] <- scannedMaskBuffer.[index]
+            
+        }
+    
+    
+    [<LocalSize(X = 8, Y = 8)>]
+    let createJobs (jobBounds : V4f[]) (jobOffsets : int[]) (jobCounts : int[]) =
+        compute {
+            let id = getGlobalId().XY
+            if id.X < uniform.BinCount.X && id.Y < uniform.BinCount.Y then
+                
+                let pxMin = uniform.BinSize * id
+                let pxMaxEx = pxMin + V2i(uniform.BinSize, uniform.BinSize)
+                
+                let tcMin = (V2f pxMin + V2f.Half) / V2f uniform.ViewportSize
+                let tcMax = (V2f pxMaxEx - V2f.Half) / V2f uniform.ViewportSize
+                
+                let ndcMin  = 2.0f * tcMin - V2f.II
+                let ndcMax  = 2.0f * tcMax - V2f.II
+                
+                let index = id.Y * uniform.BinCount.X + id.X
+                jobBounds.[index] <- V4f(ndcMin, ndcMax)
+                jobOffsets.[index] <- -1
+                jobCounts.[index] <- uniform.TriangleCount
+        }
+    
+    
+    [<LocalSize(X = 64, Y = 1)>]
+    let binTriangles (counter : int[]) (positions : V4f[]) (triangleMask : int[]) (binBounds : V4f[]) =
         compute {
             //let gId = getGlobalId()
 
@@ -840,43 +950,60 @@ module Shader =
             //let triangleIndex = gId.X 
 
             let mutable id = atomicAdd &&counter.[0] 1
-            let totalBins = uniform.BinCount.X * uniform.BinCount.Y
+            let totalBins = uniform.TotalBinCount
             let totalThreads = totalBins * uniform.TriangleChunkSize
             while id < totalThreads do
                 let binIndex = id % totalBins
                 let triangleIndex = id / totalBins 
-    
-                let binId = V2i(binIndex % uniform.BinCount.X, binIndex / uniform.BinCount.X)
-    
-                let offset = binId * binSize
-                let minTc = (V2f offset + V2f.Half) / V2f uniform.ViewportSize
-                let maxTc = (V2f (offset + V2i(binSize, binSize)) - V2f.Half) / V2f uniform.ViewportSize
-                let minNdc = 2.0f * minTc - V2f.II
-                let maxNdc = 2.0f * maxTc - V2f.II
-                let bMin = V3f(minNdc, -1.0f)
-                let bMax = V3f(maxNdc, 1.0f)
                 
-                let tid = 3 * (triangleIndex + uniform.LoopOffset * uniform.TriangleChunkSize)
-                let p0 = positions.[tid]
-                let p1 = positions.[tid + 1]
-                let p2 = positions.[tid + 2]
-    
-                triangleMask.[triangleIndex + binIndex * uniform.TriangleChunkSize] <- if boxTriangle3 bMin bMax p0 p1 p2 then 1 else 0
-                
+                let mutable res = 0
+                if triangleIndex < uniform.TriangleCount then
+                    let binId = V2i(binIndex % uniform.BinCount.X, binIndex / uniform.BinCount.X)
+        
+                    let offset = binId * binSize
+                    let minTc = (V2f offset + V2f.Half) / V2f uniform.ViewportSize
+                    let maxTc = (V2f (offset + V2i(binSize, binSize)) - V2f.Half) / V2f uniform.ViewportSize
+                    let minNdc = 2.0f * minTc - V2f.II
+                    let maxNdc = 2.0f * maxTc - V2f.II
+                    let bMin = V3f(minNdc, -1.0f)
+                    let bMax = V3f(maxNdc, 1.0f)
+                    if triangleIndex = 0 then binBounds.[binIndex] <- V4f(minNdc, maxNdc)
+                    
+                    let tid = 3 * (triangleIndex + uniform.TriangleOffset)
+                    let p0 = positions.[tid]
+                    let p1 = positions.[tid + 1]
+                    let p2 = positions.[tid + 2]
+        
+                    res <- if boxTriangle3 bMin bMax p0 p1 p2 then 1 else 0
+                    
+                triangleMask.[triangleIndex + binIndex * uniform.TriangleChunkSize] <- res
                 id <- atomicAdd &&counter.[0] 1
         }
 
     
     [<LocalSize(X = 64, Y = 1)>]
-    let compactPrefixSum (triangleMask : int[]) (prefixSum : int[])  (compactedTriangleMask : int[]) =
+    let compactPrefixSum (overflow : int[]) (prefixSum : int[]) (compactedTriangleMask : int[]) =
         compute {
             let gId = getGlobalId()
-            let binId = gId.Y
+            let localBinId = gId.Y
+            let globalBinId = localBinId + uniform.BinIdOffset
             let tid = gId.X
             
-            if triangleMask.[gId.X + binId * uniform.TriangleChunkSize] = 1 then
-                compactedTriangleMask.[prefixSum.[gId.X + binId * uniform.TriangleChunkSize] + binId * uniform.TriangleChunkSize - 1] <- tid
+            let index = gId.X + localBinId * uniform.TriangleChunkSize
+            let prefix = prefixSum.[index]
+            
+            if (index = 0 && prefix > 0) || prefix > prefixSum.[index - 1]  then
+                compactedTriangleMask.[prefix - 1 + globalBinId * uniform.TriangleChunkSize] <- tid
+        
+            if gId.X = uniform.TriangleChunkSize - 1 then
+                let mutable cnt = 0
+                if prefix > 500 then
+                    cnt <- prefix
+                
+                overflow.[localBinId] <- cnt
+                overflow.[localBinId + uniform.TotalBinCount] <- globalBinId
         }
+
 
 
     //[<LocalSize(X = binLength, Y = 1)>]
@@ -1123,12 +1250,12 @@ module Shader =
     
 
     [<LocalSize(X = 64)>]
-    let rasterize2 (counter : int[]) (color : UIntImage2d<Formats.r32ui>) (depth : int[]) (positions : V4f[]) (viewPositions : V4f[]) (viewNormals : V4f[]) (prefixSum : int[]) (tids : int[]) (triangleMask : int[]) (boundingBoxes : V4f[])=
+    let rasterize2 (counter : int[]) (color : UIntImage2d<Formats.r32ui>) (depth : int[]) (positions : V4f[]) (viewPositions : V4f[]) (viewNormals : V4f[]) (jobCounts : int[]) (tids : int[]) (triangleMask : int[]) =
         compute {
             let totalBins = uniform.BinCount.X * uniform.BinCount.Y
             let pixelCount = uniform.ViewportSize.X * uniform.ViewportSize.Y
             let mutable di = atomicAdd &&counter.[0] 1
-            let triangleOffset = uniform.LoopOffset * uniform.TriangleChunkSize
+            let triangleOffset = uniform.TriangleOffset
             //while di < total do
             while di < pixelCount do
                 let px = V2i(di % uniform.ViewportSize.X, di / uniform.ViewportSize.X) //getGlobalId().XY
@@ -1137,7 +1264,7 @@ module Shader =
                 let binId = px.X / binSize + (px.Y / binSize) * uniform.BinCount.X //(uniform.ViewportSize.X / binSize)
                 let binOffset = uniform.TriangleChunkSize * binId
 
-                let triangleCount = prefixSum.[uniform.TriangleChunkSize + uniform.TriangleChunkSize * binId - 1]
+                let triangleCount = jobCounts.[binId]
             
                 let tc = (V2f px + V2f.Half) / V2f uniform.ViewportSize
                 let ndc = 2.0f * tc - V2f.II
@@ -1153,66 +1280,64 @@ module Shader =
                
                 for i in 0 .. triangleCount-1 do
                     let tidInGroup = tids.[i + binOffset]
-                    let bb = boundingBoxes.[tidInGroup]
-                    if ndc.X >= bb.X && ndc.Y >= bb.Y && ndc.X <= bb.Z && ndc.Y <= bb.W then
-                        let tid = tidInGroup + triangleOffset
+                    let tid = tidInGroup + triangleOffset
 
-                        let vi0 = 3*tid
-                        let vi1 = vi0 + 1
-                        let vi2 = vi1 + 1
-                        let p0 = positions.[vi0]
-                        let p1 = positions.[vi1]
-                        let p2 = positions.[vi2]
-                
-                        let f0 = p0.XY - ndc*p0.W
-                        let f1 = p1.XY - ndc*p1.W
-                        let f2 = ndc*p2.W - p2.XY
+                    let vi0 = 3*tid
+                    let vi1 = vi0 + 1
+                    let vi2 = vi1 + 1
+                    let p0 = positions.[vi0]
+                    let p1 = positions.[vi1]
+                    let p2 = positions.[vi2]
+            
+                    let f0 = p0.XY - ndc*p0.W
+                    let f1 = p1.XY - ndc*p1.W
+                    let f2 = ndc*p2.W - p2.XY
+                    
+                    //let mutable r0 = V2f(f0.X + f2.X, f1.X + f2.X)
+                    //let mutable r1 = V2f(f0.Y + f2.Y, f1.Y + f2.Y)
+                    //let mutable rhs = f2
+                    //if abs r1.X > abs r0.X then
+                    //    let t = r0
+                    //    r0 <- r1
+                    //    r1 <- t
+                    //    rhs <- rhs.YX
+
+                    //let f = (r1.X / r0.X)
+                    //let r1y = r1.Y - f*r0.Y
+                    //rhs.Y <- rhs.Y - f*rhs.X
+                    //let b = rhs.Y / r1y 
+                    //let a = (rhs.X - r0.Y * b) / r0.X
+                    //let c = (1.0f - a - b)
+
+                    let c0 = f0 + f2
+                    let c1 = f1 + f2
+                    let det = 1.0f / (c0.X*c1.Y - c0.Y*c1.X)
+                    let r0 = V2f(c1.Y * det, -c1.X * det)
+                    let r1 = V2f(-c0.Y * det, c0.X * det)
+                    
+                    let a = Vec.dot r0 f2
+                    let b = Vec.dot r1 f2
+                    let c = (1.0f - a - b)
+                    
+                    if a >= 0.0f && b >= 0.0f && c >= 0.0f then
+                        let pos = a*p0 + b*p1 + c*p2
+                        if pos.Z >= -pos.W && pos.Z <= pos.W then
+                            let projected = pos.XYZ / pos.W
+                            let newDepth = projected.Z 
+
+                            if newDepth <= finalDepth then
+                                let vp = a*viewPositions.[vi0] + b*viewPositions.[vi1] + c*viewPositions.[vi2]
+                                let vn = (a*viewNormals.[vi0] + b*viewNormals.[vi1] + c*viewNormals.[vi2]).XYZ |> Vec.normalize
+                         
+                                let light = V3f.Zero
+                                let lightDir = Vec.normalize (light - vp.XYZ)
+                                let diffuse = Vec.dot lightDir vn |> abs
+                 
+                                let light = 0.2f + 0.8f*diffuse
+                         
+                                finalDepth <- newDepth
+                                finalColor <- V4f(V3f.III * light, 1.0f)
                         
-                        //let mutable r0 = V2f(f0.X + f2.X, f1.X + f2.X)
-                        //let mutable r1 = V2f(f0.Y + f2.Y, f1.Y + f2.Y)
-                        //let mutable rhs = f2
-                        //if abs r1.X > abs r0.X then
-                        //    let t = r0
-                        //    r0 <- r1
-                        //    r1 <- t
-                        //    rhs <- rhs.YX
-
-                        //let f = (r1.X / r0.X)
-                        //let r1y = r1.Y - f*r0.Y
-                        //rhs.Y <- rhs.Y - f*rhs.X
-                        //let b = rhs.Y / r1y 
-                        //let a = (rhs.X - r0.Y * b) / r0.X
-                        //let c = (1.0f - a - b)
-
-                        let c0 = f0 + f2
-                        let c1 = f1 + f2
-                        let det = 1.0f / (c0.X*c1.Y - c0.Y*c1.X)
-                        let r0 = V2f(c1.Y * det, -c1.X * det)
-                        let r1 = V2f(-c0.Y * det, c0.X * det)
-                        
-                        let a = Vec.dot r0 f2
-                        let b = Vec.dot r1 f2
-                        let c = (1.0f - a - b)
-                        
-                        if a >= 0.0f && b >= 0.0f && c >= 0.0f then
-                            let pos = a*p0 + b*p1 + c*p2
-                            if pos.Z >= -pos.W && pos.Z <= pos.W then
-                                let projected = pos.XYZ / pos.W
-                                let newDepth = projected.Z 
-
-                                if newDepth <= finalDepth then
-                                    let vp = a*viewPositions.[vi0] + b*viewPositions.[vi1] + c*viewPositions.[vi2]
-                                    let vn = (a*viewNormals.[vi0] + b*viewNormals.[vi1] + c*viewNormals.[vi2]).XYZ |> Vec.normalize
-                             
-                                    let light = V3f.Zero
-                                    let lightDir = Vec.normalize (light - vp.XYZ)
-                                    let diffuse = Vec.dot lightDir vn |> abs
-                     
-                                    let light = 0.2f + 0.8f*diffuse
-                             
-                                    finalDepth <- newDepth
-                                    finalColor <- V4f(V3f.III * light, 1.0f)
-                            
                 depth.[di] <- finalDepth * 16777215.0f |> int
                 color.[px] <- V4ui (packUnorm4x8(finalColor))
 
@@ -1222,6 +1347,107 @@ module Shader =
     
 
 module BinRasterizer = 
+    
+    type TriangleBinner(device : Device, triangleChunkSize : int, maxJobCount : int) =
+        
+        let bin = device.CompileCompute(Shader.bin)
+        let compact = device.CompileCompute(Shader.compact)
+        let createJobs = device.CompileCompute(Shader.createJobs)
+        let counter = device.CreateBuffer(BufferUsage.Storage ||| BufferUsage.CopyDst, Array.zeroCreate<int> 32)
+        
+        let scannedJobCounts =
+            device.CreateBuffer {
+                Next = null
+                Label = nolabel()
+                Usage = BufferUsage.Storage ||| BufferUsage.CopySrc
+                Size = int64 sizeof<int> * int64 maxJobCount
+                MappedAtCreation = false
+            }
+            
+        
+        let maskBuffer =
+            device.CreateBuffer {
+                Next = null
+                Label = nolabel()
+                Usage = BufferUsage.Storage ||| BufferUsage.CopySrc ||| BufferUsage.CopyDst
+                Size = int64 sizeof<int> * int64 triangleChunkSize * int64 maxJobCount
+                MappedAtCreation = false
+            }
+        
+        
+        let triangleBuffer =
+            device.CreateBuffer {
+                Next = null
+                Label = nolabel()
+                Usage = BufferUsage.Storage ||| BufferUsage.CopySrc
+                Size = int64 sizeof<int> * int64 triangleChunkSize * int64 maxJobCount
+                MappedAtCreation = false
+            }
+        
+        member x.Run(jobBounds4f : BufferRange, jobOffsets1i : BufferRange, jobCounts1i : BufferRange, indices1i : Buffer, positions4f : Buffer, dstIndices1i : BufferRange, dstCounts1i : BufferRange) =
+            task {
+                let! counter = counter
+                do! counter.Fill(0)
+                //  let bin (counter : int[]) (jobBounds : V4f[]) (jobBoundsOffset : int) (jobOffsets : int[]) (jobOffsetOffset : int) (scannedJobCounts : int[]) (jobCount : int) (indices : int[]) (positions : V4f[]) (outputMask : int[]) =
+        
+                let jobCount = int (jobCounts1i.Size / int64 sizeof<int>)
+                let maskSize = jobCount * triangleChunkSize
+                
+                use enc = device.CreateCommandEncoder { Label = nolabel(); Next = null }
+                enc.ClearBuffer(maskBuffer, 0L, int64 maskSize * int64 sizeof<int>)
+                use cmd = enc.Finish { Label = nolabel() }
+                do! device.Queue.Submit [| cmd |]
+                
+                device.Scan(jobCounts1i, scannedJobCounts.[..jobCounts1i.Size-1L])
+                do! bin.Run(ceilDiv 8192 bin.LocalSize.X, [
+                    "counter", counter :> obj
+                    "jobBounds", jobBounds4f.Buffer
+                    "jobBoundsOffset", int (jobBounds4f.Offset / int64 sizeof<V4f>)
+                    "jobOffsets", jobOffsets1i.Buffer
+                    "jobOffsetOffset", int (jobOffsets1i.Offset / int64 sizeof<int>)
+                    "jobCount", jobCount
+                    "indices", indices1i
+                    "positions", positions4f
+                    "outputMask", maskBuffer
+                    "outputTriangleIds", triangleBuffer
+                    "scannedJobCounts", scannedJobCounts
+                    "TriangleChunkSize", triangleChunkSize
+                ])
+                
+                device.ScanRows(jobCount, triangleChunkSize, maskBuffer, maskBuffer)
+                
+                do! compact.Run(V2i(ceilDiv triangleChunkSize compact.LocalSize.X, jobCount), [
+                    "scannedMaskBuffer", maskBuffer :> obj
+                    "globalTriangleIds", triangleBuffer
+                    "dstIndices", dstIndices1i.Buffer
+                    "dstIndexOffset", int (dstIndices1i.Offset / int64 sizeof<int>)
+                    "TriangleChunkSize", triangleChunkSize
+                    "dstCounts", dstCounts1i.Buffer
+                    "dstCountOffset", int (dstCounts1i.Offset / int64 sizeof<int>)
+                ])
+                
+            }
+            
+            
+        member x.CreateJobs(viewportSize : V2i, binSize : int, triangleCount : int, jobBounds4f : Buffer, jobOffsets1i : Buffer, jobCounts1i : Buffer) =
+            task {
+                let bins = V2i(ceilDiv viewportSize.X binSize, ceilDiv viewportSize.Y binSize)
+                do! createJobs.Run(V2i(ceilDiv bins.X createJobs.LocalSize.X, ceilDiv bins.Y createJobs.LocalSize.Y), [
+                    "ViewportSize", viewportSize :> obj
+                    "jobBounds", jobBounds4f
+                    "jobOffsets", jobOffsets1i
+                    "jobCounts", jobCounts1i
+                    "BinCount", bins
+                    "BinSize", binSize
+                    "TriangleCount", triangleCount
+                ])
+            }
+            
+            
+        
+        
+        
+    
     
     type Shaders =
         {
@@ -1247,7 +1473,7 @@ module BinRasterizer =
 
     
     let mutable windowSize = V2i(1024, 768)
-    let mutable triangleChunkSize = 65536
+    let triangleChunkSize = 65536
     
   
     let createTempBuffers (vertexCount : int) (device : Device) =
@@ -1314,7 +1540,7 @@ module BinRasterizer =
         let tmpBinCount = ceilDiv windowSize.X Shader.binSize * ceilDiv windowSize.Y Shader.binSize
 
         let mutable vps, pps, ns = createTempBuffers 11 device
-        let mutable tm, prefixSum, ctm = createBinningBuffers triangleChunkSize tmpBinCount device
+        let mutable tm, _prefixSum, ctm = createBinningBuffers triangleChunkSize tmpBinCount device
         
         let bbb = device.CreateBuffer {
                 Next = null
@@ -1326,6 +1552,55 @@ module BinRasterizer =
 
         let counter = device.CreateBuffer(BufferUsage.CopyDst ||| BufferUsage.Storage, [|0|]).Result
 
+        let maxBinCount = 4096
+        let overflowBuffer =
+            device.CreateBuffer {
+                Next = null
+                Label = null
+                Usage = BufferUsage.Storage ||| BufferUsage.CopySrc
+                Size = int64 sizeof<int> * int64 maxBinCount
+                MappedAtCreation = false
+            }
+            
+        let binBounds =
+            device.CreateBuffer {
+                Next = null
+                Label = null
+                Usage = BufferUsage.Storage ||| BufferUsage.CopySrc
+                Size = int64 sizeof<V4f> * int64 maxBinCount
+                MappedAtCreation = false
+            }
+            
+        let binOffsets = 
+            device.CreateBuffer {
+                Next = null
+                Label = null
+                Usage = BufferUsage.Storage ||| BufferUsage.CopySrc
+                Size = int64 sizeof<int> * int64 maxBinCount
+                MappedAtCreation = false
+            }
+            
+        let binCounts = 
+            device.CreateBuffer {
+                Next = null
+                Label = null
+                Usage = BufferUsage.Storage ||| BufferUsage.CopySrc
+                Size = int64 sizeof<int> * int64 maxBinCount
+                MappedAtCreation = false
+            }
+            
+        let jobOutputCounts = 
+            device.CreateBuffer {
+                Next = null
+                Label = null
+                Usage = BufferUsage.Storage ||| BufferUsage.CopySrc
+                Size = int64 sizeof<int> * int64 maxBinCount
+                MappedAtCreation = false
+            }
+            
+        let binner = TriangleBinner(device, triangleChunkSize, maxBinCount)
+        
+        
         fun (actBlock : string) (input : RasterizerInput) ->
             task {
                 let size = V2i(input.ColorTexture.Width, input.ColorTexture.Height)
@@ -1335,18 +1610,20 @@ module BinRasterizer =
                 let vertexCount = input.Positions.Size / int64 sizeof<V4f> |> int
                 let triangleCount = vertexCount / 3
                 
+                
                 use colorView = color.CreateView(TextureUsage.StorageBinding ||| TextureUsage.TextureBinding)
                 
                 let binCount = V2i(ceilDiv size.X Shader.binSize, ceilDiv size.Y Shader.binSize)
+                let totalBins = binCount.X * binCount.Y
                 
                 if windowSize <> size then
                     windowSize <- size
                     tm.Dispose()
-                    prefixSum.Dispose()
+                    _prefixSum.Dispose()
                     ctm.Dispose()
                     let (a,b,c) = createBinningBuffers triangleChunkSize (binCount.X * binCount.Y) device
                     tm <- a
-                    prefixSum <- b
+                    _prefixSum <- b
                     ctm <- c
 
 
@@ -1375,44 +1652,60 @@ module BinRasterizer =
                 do! depth.Fill(16777215)
                 let mutable remainingTriangles = triangleCount
                 for i in 0 .. triangleCount / triangleChunkSize do
-                    let mutable workGroupsX = triangleChunkSize
-                    if remainingTriangles < triangleChunkSize then
-                        workGroupsX <- remainingTriangles
+                    //let workGroupsX = triangleChunkSize
                     
-
-
-                    //if i = 0 && (actBlock = "binning" || actBlock = "all") then
-                    if actBlock = "binning" || actBlock = "all" then
-                        do! counter.Fill(0)
-                        //do! binning.Run(V3i(ceilDiv workGroupsX binning.LocalSize.X, binCount.X * binCount.Y, 1), [
-                        do! shaders.computeBoundingBoxes.Run(ceilDiv triangleChunkSize shaders.computeBoundingBoxes.LocalSize.X, [
-                            "TriangleChunkSize", triangleChunkSize :> obj
-                            "LoopOffset", i
-                            "vertices", pps
-                            "boundingBoxes", bbb
-                        ])
-                        do! shaders.binning.Run(ceilDiv 8192 shaders.binning.LocalSize.X, [
-                            "TriangleCount", triangleCount :> obj
-                            "TriangleChunkSize", triangleChunkSize
-                            "LoopOffset", i
-                            "ViewportSize", size
-                            "BinCount", binCount
-                            "positions", pps
-                            "triangleMask", tm
-                            "counter", counter
-                        ])
-                
-                    if actBlock = "scan" || actBlock = "all" then
-                        device.ScanRows(binCount.X * binCount.Y, triangleChunkSize, tm, prefixSum)
+                    let triangleOffset = i * triangleChunkSize
+                    let binTriangleCount = min triangleChunkSize (triangleCount - triangleOffset)
                     
-                    if actBlock = "compact" || actBlock = "all" then
-                        do! shaders.compact.Run(V3i(ceilDiv workGroupsX shaders.compact.LocalSize.X, binCount.X * binCount.Y, 1), [
-                            "TriangleChunkSize", triangleChunkSize :> obj
-                            "LoopOffset", i
-                            "triangleMask", tm
-                            "prefixSum", prefixSum
-                            "compactedTriangleMask", ctm
-                        ])
+                    do! binner.CreateJobs(size, Shader.binSize, binTriangleCount, binBounds, binOffsets, binCounts)
+                    do! binner.Run(binBounds.Sub 0L, binOffsets.Sub 0L, binCounts.Sub 0L, ctm, pps, ctm.Sub 0L, jobOutputCounts.Sub 0L)
+                    
+                    // //if i = 0 && (actBlock = "binning" || actBlock = "all") then
+                    // if actBlock = "binning" || actBlock = "all" then
+                    //     do! counter.Fill(0)
+                    //     do! shaders.computeBoundingBoxes.Run(ceilDiv triangleChunkSize shaders.computeBoundingBoxes.LocalSize.X, [
+                    //         "TriangleChunkSize", triangleChunkSize :> obj
+                    //         "TriangleOffset", triangleOffset
+                    //         "vertices", pps
+                    //         "boundingBoxes", bbb
+                    //     ])
+                    //     do! shaders.binning.Run(ceilDiv 8192 shaders.binning.LocalSize.X, [
+                    //         "TriangleCount", binTriangleCount :> obj
+                    //         "TriangleChunkSize", triangleChunkSize
+                    //         "TriangleOffset", triangleOffset
+                    //         "ViewportSize", size
+                    //         "BinCount", binCount
+                    //         "TotalBinCount", totalBins
+                    //         "positions", pps
+                    //         "triangleMask", tm
+                    //         "counter", counter
+                    //         "binBounds", binBounds
+                    //     ])
+                    //
+                    // if actBlock = "scan" || actBlock = "all" then
+                    //     device.ScanRows(binCount.X * binCount.Y, triangleChunkSize, tm, prefixSum)
+                    //
+                    // if actBlock = "compact" || actBlock = "all" then
+                    //     do! shaders.compact.Run(V3i(ceilDiv triangleChunkSize shaders.compact.LocalSize.X, binCount.X * binCount.Y, 1), [
+                    //         "TriangleChunkSize", triangleChunkSize :> obj
+                    //         "TriangleOffset", triangleOffset
+                    //         "triangleMask", tm
+                    //         "prefixSum", prefixSum
+                    //         "compactedTriangleMask", ctm
+                    //         "overflow", overflowBuffer
+                    //         "TotalBinCount", totalBins
+                    //         "BinIdOffset", 0
+                    //     ])
+                    //     
+                    //     let o = totalBins*4
+                    //     let overflowCounts = overflowBuffer.[0..o-1]
+                    //     let overflowBinIds = overflowBuffer.[o..2*o-1]
+                    //     device.Scan(overflowCounts, overflowCounts)
+                    //     
+                    //     
+                    //     let! overflowCounts = device.Download<int>(overflowCounts)
+                    //     let! overflowBinIds = device.Download<int>(overflowBinIds)
+                    //     printfn "%A %A" overflowCounts overflowBinIds
     
                     if actBlock = "raster" || actBlock = "all" then
                         do! counter.Fill(0)
@@ -1423,13 +1716,13 @@ module BinRasterizer =
                             "viewPositions", vps
                             "viewNormals", ns
                             "TriangleChunkSize", triangleChunkSize
-                            "prefixSum", prefixSum
+                            "jobCounts", jobOutputCounts
                             "tids", ctm
                             "BinCount", binCount
                             "ViewportSize", size
                             "counter", counter
-                            "boundingBoxes", bbb
-                            "LoopOffset", i
+                            //"boundingBoxes", bbb
+                            "TriangleOffset", triangleOffset
                             "triangleMask", tm
                         ])
                 

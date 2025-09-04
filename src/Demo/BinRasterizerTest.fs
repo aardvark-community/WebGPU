@@ -226,7 +226,7 @@ module Obj =
             ps.ToArray(), ns.ToArray(), cs.ToArray()
     
     let sibenik() =
-        loadMesh "c:/Dev/VRVis/WebGPU/src/Demo/resources/sibenik.obj"
+        loadMesh @"C:\Users\haaser\Desktop\mesh\sibenik.obj"
    
     let ofIndexedGeometry (ig : IndexedGeometry) =
         let pos =
