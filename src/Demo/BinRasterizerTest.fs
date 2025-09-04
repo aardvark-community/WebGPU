@@ -21,15 +21,8 @@ type Marker = Marker
 module Obj = 
     open Aardvark.Data.Wavefront
     
-    let loadMesh (file : System.IO.Stream) : V3f[] * V3f[] * C4b[] =
-        
-        let tmp = System.IO.Path.GetTempFileName() + ".obj"
-        do
-            use s = System.IO.File.OpenWrite tmp
-            file.CopyTo(s)
-            
-        let mesh = Aardvark.Data.Wavefront.ObjParser.Load tmp
-        //System.IO.File.Delete tmp
+    let loadMesh (file : string) : V3f[] * V3f[] * C4b[] =
+        let mesh = Aardvark.Data.Wavefront.ObjParser.Load file
         
         let positions = 
             match mesh.Vertices with
@@ -96,14 +89,14 @@ module Obj =
             typeof<Marker>.Assembly.GetManifestResourceStream(objName)
         | None ->
             failwith $"Could not find {fileName} in resources"
-    let bunny() =
-        use objStream = readObjFromResources("stanford-bunny.obj")
-        loadMesh objStream
+    //let bunny() =
+    //    use objStream = readObjFromResources("stanford-bunny.obj")
+    //    loadMesh objStream
 
 
     let beetle() =
-        use s = System.IO.File.OpenRead "C:/Users/Simon/Desktop/stanford-bunny.obj"
-        loadMesh s
+        //use s = System.IO.File.OpenRead "C:/Users/Simon/Desktop/stanford-bunny.obj"
+        loadMesh "C:/Users/Simon/Desktop/stanford-bunny.obj"
 
     let triangles(size : V2i) (xAmount : int32) =
         let cameraXDistance = -1 |> float32
@@ -231,10 +224,10 @@ module Obj =
                         ns.Add normals.[iNormals.[fi + 2]]
             
             ps.ToArray(), ns.ToArray(), cs.ToArray()
-
-
-
     
+    let sibenik() =
+        loadMesh "c:/Dev/VRVis/WebGPU/src/Demo/resources/sibenik.obj"
+   
     let ofIndexedGeometry (ig : IndexedGeometry) =
         let pos =
             match ig.IndexedAttributes.[DefaultSemantic.Positions] with
@@ -279,20 +272,19 @@ module Obj =
 
 module Test = 
 
-    let init (app: WebGPUApplication) (rasterizerType : string) (triangleCountPerBin : int) (actBlock : string)=
-        let vertex, binning, compact, raster = BinRasterizer.BinRasterizer.compile app.Device
+    let init (app: WebGPUApplication) (rasterizerType : string) (triangleCountPerBin : int) (actBlock : string) (mv : Trafo3d)=
+        let shaders = BinRasterizer.BinRasterizer.compile app.Device
 
         let mutable rasterizer: Device -> string -> Rasterizer = 
             match rasterizerType with
-            | "bin" -> BinRasterizer.BinRasterizer.run vertex binning compact raster
+            | "bin" -> BinRasterizer.BinRasterizer.run shaders
             | "default" -> fun d _ -> DefaultRasterizer.compile d
             | _ -> failwith $"Benchmark parameter \"rasterizerType\" has an invalid value {rasterizerType}"
 
-        let mv =
-            CameraView.lookAt (V3d(4,3,2)) V3d.Zero V3d.OOI
-            |> CameraView.viewTrafo
+        //let mv =
+        //    CameraView.lookAt (V3d(4,3,2)) V3d.Zero V3d.OOI
+        //    |> CameraView.viewTrafo
         
-
         //let size = V2i(1920, 1280)
         let size = V2i(1024, 768)
         //let size = V2i(640, 480)
@@ -303,7 +295,8 @@ module Test =
         //let vertices, normals, colors = Obj.beetle()
         //let vertices, normals, colors = Obj.buddha()
         //let vertices, normals, colors = Obj.powerplant()
-        let vertices, normals, colors = Obj.amazon_lumberyard_bistro()
+        //let vertices, normals, colors = Obj.amazon_lumberyard_bistro()
+        let vertices, normals, colors = Obj.sibenik()
         //let vertices, normals, colors = Obj.triangles size triangleCountPerBin
         
         let vertices = vertices |> Array.map (fun v -> V4f(v, 1.0f))
@@ -354,6 +347,17 @@ module Test =
         for i in 1 .. 4 do
             (rasterize "all" input).Wait()
 
+        (rasterize "raster" input).Wait()
+        let img = app.Device.DownloadPixImage(color).Result :?> PixImage<uint32>
+        let rgbaImg = PixImage<byte>(Col.Format.RGBA, img.Size)
+
+        rgbaImg.GetMatrix<C4b>().SetMap(img.GetChannel 0L, fun v ->
+            C4b(byte v, byte (v >>> 8), byte (v >>> 16), byte (v >>> 24))
+        ) |> ignore
+
+        Directory.CreateDirectory("testResults") |> ignore
+        Aardvark.Data.PixImageSharp.SaveImageSharp(rgbaImg, $"testResults/{rasterizerType}Rasterizer_ViewXXX.jpg")
+    
 
         rasterize actBlock, input
         
@@ -393,19 +397,12 @@ type RasterizerBenchmark() =
     //[<DefaultValue; Params(1, 10, 100, 1000)>]
     val mutable triangleCountPerBin : int
 
-    //[<DefaultValue; Params("all", "binning", "scan", "compact", "raster")>]
-    [<DefaultValue; Params("all")>]
+    [<DefaultValue; Params("all", "binning", "scan", "compact", "raster")>]
+    //[<DefaultValue; Params("all")>]
     val mutable actBlock : string
 
     [<GlobalSetup>]
     member x.Init() =
-        let (rasterize, args) = Test.init app x.rasterizerType x.triangleCountPerBin x.actBlock
-
-        old <- (x.rasterize, x.args) :: old
-
-        x.rasterize <- rasterize
-        x.args <- args
-
         if (x.sceneView = 0) then
             // Some bins
             x.mv <- Trafo3d.RotationX(-Constant.PiHalf) * (CameraView.lookAt (V3d(3,2,-1)) V3d.Zero V3d.OOI |> CameraView.viewTrafo)
@@ -420,6 +417,14 @@ type RasterizerBenchmark() =
             x.mv <- Trafo3d.RotationX(Constant.Pi) * (CameraView.lookAt (V3d(-1.0f, 0.0f, 0.0f)) (V3d(0.5, 0, 0)) V3d.OOI |> CameraView.viewTrafo)
         else
             raise (System.Exception "Unhandeled value for the sceneView benchmark parameter")
+
+        let (rasterize, args) = Test.init app x.rasterizerType x.triangleCountPerBin x.actBlock x.mv
+
+        old <- (x.rasterize, x.args) :: old
+
+        x.rasterize <- rasterize
+        x.args <- args
+
 
     [<Benchmark(Description = "Rasterize")>]
     member x.Rasterize() =

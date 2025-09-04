@@ -1222,10 +1222,34 @@ module Shader =
     
 
 module BinRasterizer = 
+    
+    type Shaders =
+        {
+            vertex  : ComputeShader
+            computeBoundingBoxes  : ComputeShader
+            binning  : ComputeShader
+            compact  : ComputeShader
+            raster  : ComputeShader
+        }
 
+    let compile (device : Device) =
+        //let shader = device.CompileCompute Shader.rasterize
+
+        let shaders = {
+                vertex = device.CompileCompute Shader.transform
+                computeBoundingBoxes = device.CompileCompute Shader.boundingBox
+                binning = device.CompileCompute Shader.binTriangles
+                compact = device.CompileCompute Shader.compactPrefixSum
+                raster = device.CompileCompute Shader.rasterize2
+        }
+        
+        shaders
+
+    
     let mutable windowSize = V2i(1024, 768)
     let mutable triangleChunkSize = 65536
-
+    
+  
     let createTempBuffers (vertexCount : int) (device : Device) =
         
         let vps =
@@ -1284,17 +1308,7 @@ module BinRasterizer =
             }
         tm, prefixSum, ctm
     
-    let compile (device : Device) =
-        //let shader = device.CompileCompute Shader.rasterize
-        let vertex = device.CompileCompute Shader.transform
-        let binning = device.CompileCompute Shader.binTriangles
-        let compact = device.CompileCompute Shader.compactPrefixSum
-        let raster = device.CompileCompute Shader.rasterize2
-
-        vertex, binning, compact, raster
-
-    let run (vertex : ComputeShader) (binning : ComputeShader) (compact : ComputeShader) (raster : ComputeShader) (device : Device) : string -> Rasterizer =
-        let computeBoundingBoxes = device.CompileCompute Shader.boundingBox
+    let run (shaders : Shaders) (device : Device) : string -> Rasterizer =
 
         
         let tmpBinCount = ceilDiv windowSize.X Shader.binSize * ceilDiv windowSize.Y Shader.binSize
@@ -1346,7 +1360,7 @@ module BinRasterizer =
                     ns <- c
     
                 if actBlock = "vertex" || actBlock = "all" then
-                    do! vertex.Run(ceilDiv vertexCount vertex.LocalSize.X, [
+                    do! shaders.vertex.Run(ceilDiv vertexCount shaders.vertex.LocalSize.X, [
                         "VertexCount", vertexCount :> obj
                         "vertices", input.Positions
                         "normals", input.Normals
@@ -1371,13 +1385,13 @@ module BinRasterizer =
                     if actBlock = "binning" || actBlock = "all" then
                         do! counter.Fill(0)
                         //do! binning.Run(V3i(ceilDiv workGroupsX binning.LocalSize.X, binCount.X * binCount.Y, 1), [
-                        do! computeBoundingBoxes.Run(ceilDiv triangleChunkSize computeBoundingBoxes.LocalSize.X, [
+                        do! shaders.computeBoundingBoxes.Run(ceilDiv triangleChunkSize shaders.computeBoundingBoxes.LocalSize.X, [
                             "TriangleChunkSize", triangleChunkSize :> obj
                             "LoopOffset", i
                             "vertices", pps
                             "boundingBoxes", bbb
                         ])
-                        do! binning.Run(ceilDiv 8192 binning.LocalSize.X, [
+                        do! shaders.binning.Run(ceilDiv 8192 shaders.binning.LocalSize.X, [
                             "TriangleCount", triangleCount :> obj
                             "TriangleChunkSize", triangleChunkSize
                             "LoopOffset", i
@@ -1392,7 +1406,7 @@ module BinRasterizer =
                         device.ScanRows(binCount.X * binCount.Y, triangleChunkSize, tm, prefixSum)
                     
                     if actBlock = "compact" || actBlock = "all" then
-                        do! compact.Run(V3i(ceilDiv workGroupsX binning.LocalSize.X, binCount.X * binCount.Y, 1), [
+                        do! shaders.compact.Run(V3i(ceilDiv workGroupsX shaders.compact.LocalSize.X, binCount.X * binCount.Y, 1), [
                             "TriangleChunkSize", triangleChunkSize :> obj
                             "LoopOffset", i
                             "triangleMask", tm
@@ -1402,7 +1416,7 @@ module BinRasterizer =
     
                     if actBlock = "raster" || actBlock = "all" then
                         do! counter.Fill(0)
-                        do! raster.Run(ceilDiv 8192 raster.LocalSize.X, [
+                        do! shaders.raster.Run(ceilDiv 8192 shaders.raster.LocalSize.X, [
                             "color", colorView :> obj
                             "depth", depth
                             "positions", pps
@@ -1423,5 +1437,5 @@ module BinRasterizer =
             }
 
     let compileAndRun (actBlock : string) (device : Device)  : Rasterizer = 
-        let vertex, binning, compact, raster = compile device
-        run vertex binning compact raster device actBlock 
+        let shaders = compile device
+        run shaders device actBlock 
