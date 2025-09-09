@@ -98,14 +98,14 @@ module Obj =
         //use s = System.IO.File.OpenRead "C:/Users/Simon/Desktop/stanford-bunny.obj"
         loadMesh "C:/Users/Simon/Desktop/stanford-bunny.obj"
 
-    let triangles(size : V2i) (xAmount : int32) =
+    let triangles (binSize : int) (size : V2i) (xAmount : int32) =
         let cameraXDistance = -1 |> float32
         let fov = 1.57079632679f
         let alpha = fov / 2.0f;
 
         let aspectRatio = (float32 size.X / float32 size.Y)
 
-        let binSizePx = BinRasterizer.Shader.binSize
+        let binSizePx = binSize
         let binCountX = size.X / binSizePx
         let binCountY = size.Y / binSizePx
 
@@ -226,7 +226,7 @@ module Obj =
             ps.ToArray(), ns.ToArray(), cs.ToArray()
     
     let sibenik() =
-        loadMesh @"C:\Users\haaser\Desktop\mesh\sibenik.obj"
+        loadMesh "c:/Dev/VRVis/WebGPU/src/Demo/resources/sibenik.obj"
    
     let ofIndexedGeometry (ig : IndexedGeometry) =
         let pos =
@@ -292,11 +292,11 @@ module Test =
             Frustum.perspective 90.0 0.1 100.0 (float size.X / float size.Y) |> Frustum.projTrafo
 
             
-        //let vertices, normals, colors = Obj.beetle()
+        let vertices, normals, colors = Obj.beetle()
         //let vertices, normals, colors = Obj.buddha()
         //let vertices, normals, colors = Obj.powerplant()
         //let vertices, normals, colors = Obj.amazon_lumberyard_bistro()
-        let vertices, normals, colors = Obj.sibenik()
+        //let vertices, normals, colors = Obj.sibenik()
         //let vertices, normals, colors = Obj.triangles size triangleCountPerBin
         
         let vertices = vertices |> Array.map (fun v -> V4f(v, 1.0f))
@@ -342,6 +342,8 @@ module Test =
                 DepthBuffer        = depth
                 ModelViewTrafo     = mv
                 ProjTrafo          = proj
+                BinSize            = 64
+                MaxSplits          = 0
             }
 
         for i in 1 .. 4 do
@@ -384,12 +386,12 @@ type RasterizerBenchmark() =
     val mutable mv :Trafo3d
     
     //[<DefaultValue; Params(3)>]
-    //[<DefaultValue; Params(0, 1, 2)>]
-    [<DefaultValue; Params(1)>]
+    [<DefaultValue; Params(0, 1)>]
+    //[<DefaultValue; Params(1)>]
     val mutable sceneView : int
 
-    //[<DefaultValue; Params("bin", "default")>]
-    [<DefaultValue; Params("bin")>]
+    [<DefaultValue; Params("bin", "default")>]
+    //[<DefaultValue; Params("bin")>]
     //[<DefaultValue; Params("default")>]
     val mutable rasterizerType : string
 
@@ -397,8 +399,8 @@ type RasterizerBenchmark() =
     //[<DefaultValue; Params(1, 10, 100, 1000)>]
     val mutable triangleCountPerBin : int
 
-    [<DefaultValue; Params("all", "binning", "scan", "compact", "raster")>]
-    //[<DefaultValue; Params("all")>]
+    //[<DefaultValue; Params("all", "binning", "scan", "compact", "raster")>]
+    [<DefaultValue; Params("all")>]
     val mutable actBlock : string
 
     [<GlobalSetup>]

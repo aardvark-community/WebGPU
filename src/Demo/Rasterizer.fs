@@ -17,6 +17,9 @@ type RasterizerInput =
         
         ModelViewTrafo      : Trafo3d
         ProjTrafo           : Trafo3d
+        
+        BinSize             : int
+        MaxSplits           : int
     }
 
 

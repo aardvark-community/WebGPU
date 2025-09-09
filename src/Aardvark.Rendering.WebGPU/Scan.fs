@@ -8,10 +8,10 @@ module ScanKernels =
     open FShade 
     
     [<Literal>]
-    let scanSize = 128
+    let scanSize = 256
 
     [<Literal>]
-    let halfScanSize = 64
+    let halfScanSize = 128
 
     [<LocalSize(X = halfScanSize, Y = 1)>]
     let scanKernel (inputData : int[]) (outputData : int[]) =

@@ -139,9 +139,10 @@ module AtomicQueue =
 
     let run() =
         Aardvark.Init()
-        let app = WebGPUApplication.Create(true).Result
-        WebGPUConfig.shaderCaching <- false
-        WebGPUConfig.printShaders <- true
+        let app = WebGPUApplication.Create(false).Result
+        WebGPUConfig.captureStackTraces <- false
+        WebGPUConfig.shaderCaching <- true
+        WebGPUConfig.printShaders <- false
         let device = app.Device
         let computer = device.CompileCompute test
         

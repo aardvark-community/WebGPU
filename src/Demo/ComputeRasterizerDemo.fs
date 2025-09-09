@@ -133,7 +133,7 @@ module Obj =
         //use s = System.IO.File.OpenRead "C:/Users/Simon/Desktop/stanford-bunny.obj"
         //let tmp = "c:/Dev/VRVis/WebGPU/src/Demo/resources/exterior.obj"
         //let tmp = "c:/Dev/VRVis/WebGPU/src/Demo/resources/sponza.obj"
-        let tmp = @"C:\Users\haaser\Desktop\mesh\sibenik.obj"
+        let tmp = "c:/Dev/VRVis/WebGPU/src/Demo/resources/buddha.obj"
         //let tmp = "C:/Users/Simon/Desktop/stanford-bunny.obj"
         let mesh = Aardvark.Data.Wavefront.ObjParser.Load tmp
         //System.IO.File.Delete tmp
@@ -196,7 +196,7 @@ module Obj =
 
             ps.ToArray(), ns.ToArray(), cs.ToArray()
 
-    let triangles(size : V2i) (xAmount : int32) =
+    let triangles (binSize : int) (size : V2i) (xAmount : int32) =
         //printf $"{size.X} {size.Y}\n"
 
         let cameraXDistance = -1 |> float32
@@ -205,7 +205,7 @@ module Obj =
 
         let aspectRatio = (float32 size.X / float32 size.Y)
 
-        let binSizePx = BinRasterizer.Shader.binSize
+        let binSizePx = binSize
         let binCountX = ceilDiv size.X binSizePx
         let binCountY = ceilDiv size.Y binSizePx
 
@@ -293,7 +293,7 @@ module Obj =
         pos, ns, cs
         
 
-let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d>) (proj : aval<Trafo3d>) (device : Device) (compile : Device -> Rasterizer) (windowSize : V2i) =
+let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d>) (proj : aval<Trafo3d>) (binSize : aval<int>) (maxSplits : aval<int>) (device : Device) (compile : Device -> Rasterizer) (windowSize : V2i) =
     
     let vertices, normals, colors = Obj.beetle()
     //let vertices, normals, colors = Obj.triangles windowSize 1
@@ -343,7 +343,8 @@ let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d
         let size = o.viewport.Size
         let mv = mv.GetValue t
         let proj = proj.GetValue t
-        
+        let binSize = binSize.GetValue t
+        let maxSplits = maxSplits.GetValue t
         if size <> texSize then
             if not (isNull (color :> obj)) then
                 color.Dispose()
@@ -374,6 +375,8 @@ let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d
                 ProjTrafo = proj
                 ColorTexture = color
                 DepthBuffer = depth
+                BinSize = binSize
+                MaxSplits = maxSplits
             }
         task.Wait()
         
@@ -691,12 +694,12 @@ let scanTest() =
 let run() =
     Aardvark.Init()
     WebGPUConfig.shaderCaching <- false
-    WebGPUConfig.captureStackTraces <- true
+    WebGPUConfig.captureStackTraces <- false
 
     let rasterizer = BinRasterizer.BinRasterizer.compileAndRun "all"
     //let rasterizer = DefaultRasterizer.compile
      
-    let app = WebGPUApplication.Create(true).Result
+    let app = WebGPUApplication.Create(false).Result
     let win = app.CreateGameWindow(vsync = true)
 
     let cam =
@@ -710,8 +713,23 @@ let run() =
         win.Sizes |> AVal.map (fun s ->
             Frustum.perspective 90.0 0.1 100.0 (float s.X / float s.Y) |> Frustum.projTrafo
         )
+        
+    let binSize = cval 64
+    let maxSplits = cval 0
+    win.Keyboard.DownWithRepeats.Values.Add (fun k ->
+        match k with
+        | Keys.O -> transact (fun () -> binSize.Value <- max 16 (binSize.Value / 2)); printfn "%d" binSize.Value 
+        | Keys.P -> transact (fun () -> binSize.Value <- min 512 (binSize.Value * 2)); printfn "%d" binSize.Value
+        
+        
+        | Keys.U -> transact (fun () -> maxSplits.Value <- max 0 (maxSplits.Value - 1)); printfn "%d" maxSplits.Value 
+        | Keys.I -> transact (fun () -> maxSplits.Value <- min 8 (maxSplits.Value + 1)); printfn "%d" maxSplits.Value 
+        
+        | _ -> ()
+    )
+        
     
-    let task = computeRasterizerTask win.FramebufferSignature cam frustum app.Device rasterizer win.WindowSize
+    let task = computeRasterizerTask win.FramebufferSignature cam frustum binSize maxSplits app.Device rasterizer win.WindowSize
 
     win.RenderTask <- task
     win.RenderAsFastAsPossible <- true
