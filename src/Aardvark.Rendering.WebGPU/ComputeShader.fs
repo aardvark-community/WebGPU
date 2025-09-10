@@ -83,7 +83,7 @@ type ComputeShader private (device : Device, pipeline : ComputePipeline, groupLa
     member x.WGSL = wgsl
     member x.Pipeline = pipeline
     
-    member x.Run(workGroups : V3i, inputs : MapExt<string, obj>) =
+    member x.Run(workGroups : V3i, inputs : MapExt<string, obj>, ?timestamps : PassTimestampWrites) =
         let groups = 
             groupLayout.Entries |> MapExt.map (fun gi entries ->
                 let cnt = 1 + MapExt.max entries
@@ -158,8 +158,9 @@ type ComputeShader private (device : Device, pipeline : ComputePipeline, groupLa
         
         task {
             try
+                let ts = defaultArg timestamps undefined
                 use enc = device.CreateCommandEncoder { Label = nolabel(); Next = null }
-                use pass = enc.BeginComputePass { Label = nolabel(); TimestampWrites = undefined }
+                use pass = enc.BeginComputePass { Label = nolabel(); TimestampWrites = ts }
                 
                 pass.SetPipeline pipeline
                 for KeyValue(gi, group) in groups do
@@ -176,12 +177,12 @@ type ComputeShader private (device : Device, pipeline : ComputePipeline, groupLa
                     group.Dispose()
         }
 
-    member x.Run(workGroups : V3i, inputs : list<string * obj>) = x.Run (workGroups, MapExt.ofList inputs)
+    member x.Run(workGroups : V3i, inputs : list<string * obj>, ?timestamps : PassTimestampWrites) = x.Run (workGroups, MapExt.ofList inputs, ?timestamps = timestamps)
     
-    member x.Run(workGroups : V2i, inputs : MapExt<string, obj>) = x.Run(workGroups.XYI, inputs)
-    member x.Run(workGroups : V2i, inputs : list<string * obj>) = x.Run(workGroups.XYI, inputs)
-    member x.Run(workGroups : int,  inputs : MapExt<string, obj>) = x.Run(V3i(workGroups, 1, 1), inputs)
-    member x.Run(workGroups : int,  inputs : list<string * obj>) = x.Run(V3i(workGroups, 1, 1), inputs)
+    member x.Run(workGroups : V2i, inputs : MapExt<string, obj>, ?timestamps : PassTimestampWrites) = x.Run(workGroups.XYI, inputs, ?timestamps = timestamps)
+    member x.Run(workGroups : V2i, inputs : list<string * obj>, ?timestamps : PassTimestampWrites) = x.Run(workGroups.XYI, inputs, ?timestamps = timestamps)
+    member x.Run(workGroups : int,  inputs : MapExt<string, obj>, ?timestamps : PassTimestampWrites) = x.Run(V3i(workGroups, 1, 1), inputs, ?timestamps = timestamps)
+    member x.Run(workGroups : int,  inputs : list<string * obj>, ?timestamps : PassTimestampWrites) = x.Run(V3i(workGroups, 1, 1), inputs, ?timestamps = timestamps)
     
     static member Compile(device : Device, shader : FShade.ComputeShader) =
             

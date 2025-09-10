@@ -50,17 +50,10 @@ module Resolve =
 
 module Obj = 
     open Aardvark.Data.Wavefront
-    
-    let loadMesh (file : System.IO.Stream) : V3f[] * V3f[] * C4b[] =
-        
-        let tmp = System.IO.Path.GetTempFileName() + ".obj"
-        do
-            use s = System.IO.File.OpenWrite tmp
-            file.CopyTo(s)
-            
-        let mesh = Aardvark.Data.Wavefront.ObjParser.Load tmp
-        //System.IO.File.Delete tmp
-        
+ 
+    let loadMesh (filePath : string) : V3f[] * V3f[] * C4b[] =
+        let mesh = Aardvark.Data.Wavefront.ObjParser.Load filePath
+
         let positions = 
             match mesh.Vertices with
             | :? System.Collections.Generic.IList<V3f> as v -> v.ToArray(v.Count)
@@ -118,7 +111,19 @@ module Obj =
                         ns.Add normals.[iNormals.[fi + 2]]
             
             ps.ToArray(), ns.ToArray(), cs.ToArray()
-
+    
+    let loadMeshFromStream (file : System.IO.Stream) : V3f[] * V3f[] * C4b[] =
+        let tmp = System.IO.Path.GetTempFileName() + ".obj"
+        do
+            use s = System.IO.File.OpenWrite tmp
+            file.CopyTo(s)
+   
+        let ps, ns, cs = loadMesh tmp
+        System.IO.File.Delete tmp
+        
+        ps, ns, cs
+        
+    
     let bunny() =
         use bunnyStream =
             let names = typeof<Marker>.Assembly.GetManifestResourceNames()
@@ -127,74 +132,16 @@ module Obj =
                 typeof<Marker>.Assembly.GetManifestResourceStream(bunnyName)
             | None ->
                 failwith "Could not find stanford-bunny.obj in resources"
-        loadMesh bunnyStream
+        loadMeshFromStream bunnyStream
 
     let beetle() =
-        //use s = System.IO.File.OpenRead "C:/Users/Simon/Desktop/stanford-bunny.obj"
         //let tmp = "c:/Dev/VRVis/WebGPU/src/Demo/resources/exterior.obj"
-        //let tmp = "c:/Dev/VRVis/WebGPU/src/Demo/resources/sponza.obj"
-        let tmp = "c:/Dev/VRVis/WebGPU/src/Demo/resources/buddha.obj"
+        let tmp = "c:/Dev/VRVis/WebGPU/src/Demo/resources/sponza.obj"
+        //let tmp = "c:/Dev/VRVis/WebGPU/src/Demo/resources/buddha.obj"
+        //let tmp = "c:/Dev/VRVis/WebGPU/src/Demo/resources/sibenik.obj"
         //let tmp = "C:/Users/Simon/Desktop/stanford-bunny.obj"
-        let mesh = Aardvark.Data.Wavefront.ObjParser.Load tmp
-        //System.IO.File.Delete tmp
-
-        let positions =
-            match mesh.Vertices with
-            | :? System.Collections.Generic.IList<V3f> as v -> v.ToArray(v.Count)
-            | :? System.Collections.Generic.IList<V3d> as v -> v.ToArray(v.Count) |> Array.map V3f
-            | :? System.Collections.Generic.IList<V4f> as v -> v.ToArray(v.Count) |> Array.map Vec.xyz
-            | :? System.Collections.Generic.IList<V4d> as v -> v.ToArray(v.Count) |> Array.map V3f
-            | _ -> failwith ""
-
-        let bounds = Box3f positions |> Box3d
-
-        let trafo =
-            Trafo3d.Translation(-bounds.Center) *
-            Trafo3d.Scale(2.0 / bounds.Size.NormMax)
-        match mesh.Normals with
-        | null ->
-            [||], [||], [||]
-
-        | normals ->
-            let positions = positions |> Array.map (fun p -> trafo.Forward.TransformPos (V3d p) |> V3f)
-            let normals = normals.ToArray(normals.Count) |> Array.map (fun n -> trafo.Backward.TransposedTransformDir (V3d n) |> Vec.normalize |> V3f)
-
-            let colors =
-                match mesh.VertexColors with
-                | null ->  Array.create positions.Length C4b.White
-                | cs -> cs.ToArray(cs.Count) |> Array.map (fun c -> c.ToC3b().ToC4b())
-
-
-            let ps = ResizeArray()
-            let ns = ResizeArray()
-            let cs = ResizeArray()
-
-            for set in mesh.FaceSets do
-
-                let iPos = set.VertexIndices
-                let iNormals =
-                    if isNull set.NormalIndices then iPos
-                    else set.NormalIndices
-                let iColors = set.VertexIndices
-
-                for ti in 0 .. set.ElementCount - 1 do
-                    let fi = set.FirstIndices.[ti]
-                    let cnt = set.FirstIndices.[ti+1] - fi
-
-                    if cnt = 3 then
-                        cs.Add colors.[iColors.[fi + 0]]
-                        cs.Add colors.[iColors.[fi + 1]]
-                        cs.Add colors.[iColors.[fi + 2]]
-
-                        ps.Add positions.[iPos.[fi + 0]]
-                        ps.Add positions.[iPos.[fi + 1]]
-                        ps.Add positions.[iPos.[fi + 2]]
-
-                        ns.Add normals.[iNormals.[fi + 0]]
-                        ns.Add normals.[iNormals.[fi + 1]]
-                        ns.Add normals.[iNormals.[fi + 2]]
-
-            ps.ToArray(), ns.ToArray(), cs.ToArray()
+        
+        loadMesh tmp
 
     let triangles (binSize : int) (size : V2i) (xAmount : int32) =
         //printf $"{size.X} {size.Y}\n"
@@ -385,7 +332,7 @@ let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d
         sum <- sum + dt
         cnt <- cnt + 1
         if cnt > 10 then
-            Log.line "render: %.3fms" (1000.0 * sum / float cnt)
+            //Log.line "render: %.3fms" (1000.0 * sum / float cnt)
             sum <- 0.0
             cnt <- 0
         

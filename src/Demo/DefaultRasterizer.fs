@@ -227,4 +227,5 @@ let compile (device : Device) : Rasterizer =
             use cmd = enc.Finish { Label = nolabel() }
             
             do! device.Queue.Submit [| cmd |]
+            do! device.Queue.Wait()
         }
