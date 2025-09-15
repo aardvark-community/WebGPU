@@ -370,7 +370,7 @@ module Test =
 //[<InvocationCount(10)>]
 type RasterizerBenchmark() =
 
-    static let app = WebGPUApplication.Create(true).Result
+    static let app = WebGPUApplication.Create(false).Result
 
     static let mutable old = []
 
@@ -389,16 +389,16 @@ type RasterizerBenchmark() =
     val mutable sceneView : int
 
     //[<DefaultValue; Params("bin", "default")>]
-    [<DefaultValue; Params("bin")>]
-    //[<DefaultValue; Params("default")>]
+    //[<DefaultValue; Params("bin")>]
+    [<DefaultValue; Params("default")>]
     val mutable rasterizerType : string
 
     [<DefaultValue; Params(1)>]
     //[<DefaultValue; Params(1, 10, 100, 1000)>]
     val mutable triangleCountPerBin : int
 
-    [<DefaultValue; Params("all", "binning", "scan", "compact", "raster")>]
-    //[<DefaultValue; Params("all")>]
+    //[<DefaultValue; Params("all", "binning", "scan", "compact", "raster")>]
+    [<DefaultValue; Params("all")>]
     val mutable actBlock : string
 
     [<GlobalSetup>]

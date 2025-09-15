@@ -196,9 +196,21 @@ module Program =
     open BenchmarkDotNet.Configs
     open BenchmarkDotNet.Jobs
     open BenchmarkDotNet.Toolchains
-
+    open WebGPU
+    open System.Runtime.InteropServices
+    open Microsoft.FSharp.NativeInterop
+    
+    type MyStuct =
+        struct
+            val mutable public A : int
+            val mutable public B : int64
+        end
+    
     [<EntryPoint>]
     let main _argv =
+        
+        
+       
         //
         // let rand = RandomSystem()
         //

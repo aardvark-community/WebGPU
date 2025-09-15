@@ -734,7 +734,62 @@ module Shader =
         else
             false
            
-            
+           
+    // vec4 cross4(vec4 a, vec4 b, vec4 c) {
+    //     float x = dot(a.yzw, cross(b.yzw, c.yzw));
+    //     float y = -dot(a.xzw, cross(b.xzw, c.xzw));
+    //     float z = dot(a.xyw, cross(b.xyw, c.xyw));
+    //     float w = -dot(a.xyz, cross(b.xyz, c.xyz));
+    //     return vec4(x, y, z, w);
+    // }
+
+    [<ReflectedDefinition>]
+    let cross4 (a : V4f) (b : V4f) (c : V4f) =
+        V4f(
+            Vec.dot a.YZW (Vec.cross b.YZW c.YZW),
+            -Vec.dot a.XZW (Vec.cross b.XZW c.XZW),
+            Vec.dot a.XYW (Vec.cross b.XYW c.XYW),
+            -Vec.dot a.XYZ (Vec.cross b.XYZ c.XYZ)
+        )
+    
+    [<ReflectedDefinition>]
+    let boxTriangle4 (bMin : V3f) (bMax : V3f) (p0 : V4f) (p1 : V4f) (p2 : V4f) =
+        let tri = cross4 p0 p1 p2
+        let n = Vec.normalize (tri.XYZ)
+        
+        let l : Arr<7 N, V4f> = Unchecked.defaultof<_>
+        l.[0] <- V4f(V3f.NOO, bMax.X)
+        l.[1] <- V4f(V3f.IOO, -bMin.X)
+        l.[2] <- V4f(V3f.ONO, bMax.Y)
+        l.[3] <- V4f(V3f.OIO, -bMin.Y)
+        l.[4] <- cross4 p0 p1 (p0 + n.XYZO)
+        l.[5] <- cross4 p1 p2 (p1 + n.XYZO)
+        l.[6] <- cross4 p2 p0 (p2 + n.XYZO)
+        
+        
+        let mutable i = 0
+        let mutable j = 0
+        let mutable res = false
+        while i < 7 do
+            j <- i + 1
+            while j < 7 do
+                let r = cross4 tri l.[i] l.[j]
+                let mutable sum = 0.0f
+                for k in 0 .. 6 do sum <- sum + sqrt (Vec.dot l.[k] r)
+                if not (System.Single.IsNaN sum) then
+                    res <- true
+                    i <- 7
+                    j <- 7
+                    
+                j <- j + 1
+            i <- i + 1
+        
+        res
+        
+        
+        
+        
+        
 
 
     [<LocalSize(X = 256, Y = 1)>]
@@ -879,7 +934,7 @@ module Shader =
                 let bMin = jobBounds.[jobId + jobBoundsOffset].XY
                 let bMax = jobBounds.[jobId + jobBoundsOffset].ZW
                 
-                let res = if boxTriangle3 (V3f(bMin, -1.0f)) (V3f(bMax, 1.0f)) p0 p1 p2 then 1 else 0
+                let res = if boxTriangle4 (V3f(bMin, -1.0f)) (V3f(bMax, 1.0f)) p0 p1 p2 then 1 else 0
                 
                 
                 let outIndex = jobId * uniform.TriangleChunkSize + triangleId
@@ -887,8 +942,7 @@ module Shader =
                 outputTriangleIds.[outIndex] <- globalTriangleIndex
                 id <- atomicAdd &&counter.[0] 1
         }
-    
-    
+
     [<LocalSize(X = 64, Y = 1)>]
     let compact (positions : V4f[]) (scannedMaskBuffer : int[]) (globalTriangleIds : int[]) (dstIndices : int[]) (dstIndexOffset : int) (dstCounts : int[]) (dstCountOffset : int) =
         compute {
@@ -1383,6 +1437,7 @@ module BinRasterizer =
                 Size = int64 sizeof<int> * int64 triangleChunkSize * int64 maxJobCount
                 MappedAtCreation = false
             }
+            
         
         member x.Run(jobBounds4f : BufferRange, jobOffsets1i : BufferRange, jobCounts1i : BufferRange, indices1i : Buffer, positions4f : Buffer, dstIndices1i : BufferRange, dstCounts1i : BufferRange) =
             task {
@@ -1461,13 +1516,14 @@ module BinRasterizer =
     let compile (device : Device) =
         //let shader = device.CompileCompute Shader.rasterize
 
-        let shaders = {
+        let shaders =
+            {
                 vertex = device.CompileCompute Shader.transform
                 computeBoundingBoxes = device.CompileCompute Shader.boundingBox
                 binning = device.CompileCompute Shader.binTriangles
                 compact = device.CompileCompute Shader.compactPrefixSum
                 raster = device.CompileCompute Shader.rasterize2
-        }
+            }
         
         shaders
 

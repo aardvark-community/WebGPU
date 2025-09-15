@@ -5,6 +5,272 @@ open System.Runtime.InteropServices
 open Microsoft.FSharp.NativeInterop
 open WebGPU
 #nowarn "9"
+#nowarn "51"
+#nowarn "26"
+[<AllowNullLiteral>]
+type IWebGPUStruct =
+    abstract member SizeInBytes : nativeint
+    abstract member CopyTo : nativeint * byref<nativeint> -> unit
+[<AutoOpen>]
+module private NativeUtilities =
+    let inline nsize<'a> = nativeint sizeof<'a>
+    let inline sum (n : int) (ptr : nativeptr<'x>) ([<InlineIfLambda>] action : 'x -> 'a) =
+        let mutable res = LanguagePrimitives.GenericZero<'a>
+        for i in 0 .. n - 1 do res <- res + action (NativePtr.get ptr i)
+        res
+    let inline step (aux : byref<nativeint>) (size : nativeint) =
+        let n = aux + size
+        if n &&& 7n = 0n then aux <- n
+        else aux <- (1n + (aux >>> 3)) <<< 3
+    let decodeStruct (ptr : nativeint) = 
+        if ptr = 0n then null
+        else
+            let sType = NativePtr.read (NativePtr.ofNativeInt<SType> (ptr + nsize<nativeint>))
+            match sType with
+            | SType.RequestAdapterWebXROptions ->
+                let p = NativePtr.ofNativeInt<RequestAdapterWebXROptions> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.RequestAdapterWebGPUBackendOptions ->
+                let p = NativePtr.ofNativeInt<RequestAdapterWebGPUBackendOptions> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnConsumeAdapterDescriptor ->
+                let p = NativePtr.ofNativeInt<DawnConsumeAdapterDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnTogglesDescriptor ->
+                let p = NativePtr.ofNativeInt<DawnTogglesDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnCacheDeviceDescriptor ->
+                let p = NativePtr.ofNativeInt<DawnCacheDeviceDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnDeviceAllocatorControl ->
+                let p = NativePtr.ofNativeInt<DawnDeviceAllocatorControl> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnWGSLBlocklist ->
+                let p = NativePtr.ofNativeInt<DawnWGSLBlocklist> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.BindGroupDynamicBindingArray ->
+                let p = NativePtr.ofNativeInt<BindGroupDynamicBindingArray> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.StaticSamplerBindingLayout ->
+                let p = NativePtr.ofNativeInt<StaticSamplerBindingLayout> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.ExternalTextureBindingEntry ->
+                let p = NativePtr.ofNativeInt<ExternalTextureBindingEntry> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.ExternalTextureBindingLayout ->
+                let p = NativePtr.ofNativeInt<ExternalTextureBindingLayout> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.BindGroupLayoutDynamicBindingArray ->
+                let p = NativePtr.ofNativeInt<BindGroupLayoutDynamicBindingArray> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.BufferHostMappedPointer ->
+                let p = NativePtr.ofNativeInt<BufferHostMappedPointer> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnCompilationMessageUtf16 ->
+                let p = NativePtr.ofNativeInt<DawnCompilationMessageUtf16> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.CompatibilityModeLimits ->
+                let p = NativePtr.ofNativeInt<CompatibilityModeLimits> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnTexelCopyBufferRowAlignmentLimits ->
+                let p = NativePtr.ofNativeInt<DawnTexelCopyBufferRowAlignmentLimits> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnHostMappedPointerLimits ->
+                let p = NativePtr.ofNativeInt<DawnHostMappedPointerLimits> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DynamicBindingArrayLimits ->
+                let p = NativePtr.ofNativeInt<DynamicBindingArrayLimits> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedTextureMemoryAHardwareBufferProperties ->
+                let p = NativePtr.ofNativeInt<SharedTextureMemoryAHardwareBufferProperties> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedTextureMemoryVkDedicatedAllocationDescriptor ->
+                let p = NativePtr.ofNativeInt<SharedTextureMemoryVkDedicatedAllocationDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedTextureMemoryAHardwareBufferDescriptor ->
+                let p = NativePtr.ofNativeInt<SharedTextureMemoryAHardwareBufferDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedTextureMemoryDmaBufDescriptor ->
+                let p = NativePtr.ofNativeInt<SharedTextureMemoryDmaBufDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedTextureMemoryOpaqueFDDescriptor ->
+                let p = NativePtr.ofNativeInt<SharedTextureMemoryOpaqueFDDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedTextureMemoryZirconHandleDescriptor ->
+                let p = NativePtr.ofNativeInt<SharedTextureMemoryZirconHandleDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedTextureMemoryDXGISharedHandleDescriptor ->
+                let p = NativePtr.ofNativeInt<SharedTextureMemoryDXGISharedHandleDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedTextureMemoryIOSurfaceDescriptor ->
+                let p = NativePtr.ofNativeInt<SharedTextureMemoryIOSurfaceDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedTextureMemoryEGLImageDescriptor ->
+                let p = NativePtr.ofNativeInt<SharedTextureMemoryEGLImageDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedTextureMemoryVkImageLayoutBeginState ->
+                let p = NativePtr.ofNativeInt<SharedTextureMemoryVkImageLayoutBeginState> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedTextureMemoryVkImageLayoutEndState ->
+                let p = NativePtr.ofNativeInt<SharedTextureMemoryVkImageLayoutEndState> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedTextureMemoryD3DSwapchainBeginState ->
+                let p = NativePtr.ofNativeInt<SharedTextureMemoryD3DSwapchainBeginState> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedTextureMemoryD3D11BeginState ->
+                let p = NativePtr.ofNativeInt<SharedTextureMemoryD3D11BeginState> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedFenceVkSemaphoreOpaqueFDDescriptor ->
+                let p = NativePtr.ofNativeInt<SharedFenceVkSemaphoreOpaqueFDDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedFenceSyncFDDescriptor ->
+                let p = NativePtr.ofNativeInt<SharedFenceSyncFDDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedFenceVkSemaphoreZirconHandleDescriptor ->
+                let p = NativePtr.ofNativeInt<SharedFenceVkSemaphoreZirconHandleDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedFenceDXGISharedHandleDescriptor ->
+                let p = NativePtr.ofNativeInt<SharedFenceDXGISharedHandleDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedFenceMTLSharedEventDescriptor ->
+                let p = NativePtr.ofNativeInt<SharedFenceMTLSharedEventDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedFenceEGLSyncDescriptor ->
+                let p = NativePtr.ofNativeInt<SharedFenceEGLSyncDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnFakeBufferOOMForTesting ->
+                let p = NativePtr.ofNativeInt<DawnFakeBufferOOMForTesting> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnFakeDeviceInitializeErrorForTesting ->
+                let p = NativePtr.ofNativeInt<DawnFakeDeviceInitializeErrorForTesting> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedFenceVkSemaphoreOpaqueFDExportInfo ->
+                let p = NativePtr.ofNativeInt<SharedFenceVkSemaphoreOpaqueFDExportInfo> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedFenceSyncFDExportInfo ->
+                let p = NativePtr.ofNativeInt<SharedFenceSyncFDExportInfo> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedFenceVkSemaphoreZirconHandleExportInfo ->
+                let p = NativePtr.ofNativeInt<SharedFenceVkSemaphoreZirconHandleExportInfo> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedFenceDXGISharedHandleExportInfo ->
+                let p = NativePtr.ofNativeInt<SharedFenceDXGISharedHandleExportInfo> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedFenceMTLSharedEventExportInfo ->
+                let p = NativePtr.ofNativeInt<SharedFenceMTLSharedEventExportInfo> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SharedFenceEGLSyncExportInfo ->
+                let p = NativePtr.ofNativeInt<SharedFenceEGLSyncExportInfo> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnDrmFormatCapabilities ->
+                let p = NativePtr.ofNativeInt<DawnDrmFormatCapabilities> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnWireWGSLControl ->
+                let p = NativePtr.ofNativeInt<DawnWireWGSLControl> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnInjectedInvalidSType ->
+                let p = NativePtr.ofNativeInt<DawnInjectedInvalidSType> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.PipelineLayoutPixelLocalStorage ->
+                let p = NativePtr.ofNativeInt<PipelineLayoutPixelLocalStorage> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnRenderPassColorAttachmentRenderToSingleSampled ->
+                let p = NativePtr.ofNativeInt<DawnRenderPassColorAttachmentRenderToSingleSampled> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.RenderPassMaxDrawCount ->
+                let p = NativePtr.ofNativeInt<RenderPassMaxDrawCount> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.RenderPassDescriptorExpandResolveRect ->
+                let p = NativePtr.ofNativeInt<RenderPassDescriptorExpandResolveRect> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.RenderPassDescriptorResolveRect ->
+                let p = NativePtr.ofNativeInt<RenderPassDescriptorResolveRect> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.RenderPassPixelLocalStorage ->
+                let p = NativePtr.ofNativeInt<RenderPassPixelLocalStorage> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.ColorTargetStateExpandResolveTextureDawn ->
+                let p = NativePtr.ofNativeInt<ColorTargetStateExpandResolveTextureDawn> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.ShaderSourceSPIRV ->
+                let p = NativePtr.ofNativeInt<ShaderSourceSPIRV> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.ShaderSourceWGSL ->
+                let p = NativePtr.ofNativeInt<ShaderSourceWGSL> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnShaderModuleSPIRVOptionsDescriptor ->
+                let p = NativePtr.ofNativeInt<DawnShaderModuleSPIRVOptionsDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.ShaderModuleCompilationOptions ->
+                let p = NativePtr.ofNativeInt<ShaderModuleCompilationOptions> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SurfaceSourceAndroidNativeWindow ->
+                let p = NativePtr.ofNativeInt<SurfaceSourceAndroidNativeWindow> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.EmscriptenSurfaceSourceCanvasHTMLSelector ->
+                let p = NativePtr.ofNativeInt<EmscriptenSurfaceSourceCanvasHTMLSelector> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SurfaceSourceMetalLayer ->
+                let p = NativePtr.ofNativeInt<SurfaceSourceMetalLayer> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SurfaceSourceWindowsHWND ->
+                let p = NativePtr.ofNativeInt<SurfaceSourceWindowsHWND> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SurfaceSourceXCBWindow ->
+                let p = NativePtr.ofNativeInt<SurfaceSourceXCBWindow> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SurfaceSourceXlibWindow ->
+                let p = NativePtr.ofNativeInt<SurfaceSourceXlibWindow> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SurfaceSourceWaylandSurface ->
+                let p = NativePtr.ofNativeInt<SurfaceSourceWaylandSurface> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SurfaceDescriptorFromWindowsCoreWindow ->
+                let p = NativePtr.ofNativeInt<SurfaceDescriptorFromWindowsCoreWindow> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SurfaceDescriptorFromWindowsUWPSwapChainPanel ->
+                let p = NativePtr.ofNativeInt<SurfaceDescriptorFromWindowsUWPSwapChainPanel> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SurfaceDescriptorFromWindowsWinUISwapChainPanel ->
+                let p = NativePtr.ofNativeInt<SurfaceDescriptorFromWindowsWinUISwapChainPanel> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.SurfaceColorManagement ->
+                let p = NativePtr.ofNativeInt<SurfaceColorManagement> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.TextureBindingViewDimensionDescriptor ->
+                let p = NativePtr.ofNativeInt<TextureBindingViewDimensionDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.TextureComponentSwizzleDescriptor ->
+                let p = NativePtr.ofNativeInt<TextureComponentSwizzleDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.YCbCrVkDescriptor ->
+                let p = NativePtr.ofNativeInt<YCbCrVkDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnTextureInternalUsageDescriptor ->
+                let p = NativePtr.ofNativeInt<DawnTextureInternalUsageDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnEncoderInternalUsageDescriptor ->
+                let p = NativePtr.ofNativeInt<DawnEncoderInternalUsageDescriptor> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnAdapterPropertiesPowerPreference ->
+                let p = NativePtr.ofNativeInt<DawnAdapterPropertiesPowerPreference> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.AdapterPropertiesMemoryHeaps ->
+                let p = NativePtr.ofNativeInt<AdapterPropertiesMemoryHeaps> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.AdapterPropertiesD3D ->
+                let p = NativePtr.ofNativeInt<AdapterPropertiesD3D> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.AdapterPropertiesVk ->
+                let p = NativePtr.ofNativeInt<AdapterPropertiesVk> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.DawnBufferDescriptorErrorInfoFromWireClient ->
+                let p = NativePtr.ofNativeInt<DawnBufferDescriptorErrorInfoFromWireClient> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | SType.AdapterPropertiesSubgroupMatrixConfigs ->
+                let p = NativePtr.ofNativeInt<AdapterPropertiesSubgroupMatrixConfigs> ptr
+                NativePtr.read p :> IWebGPUStruct
+            | _ -> failwithf "Unknown SType %A" sType
 type Proc = delegate of unit -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RequestAdapterOptions = 
@@ -17,6 +283,18 @@ type RequestAdapterOptions =
         val mutable public CompatibleSurface : nativeint
         new(nextInChain : nativeint, featureLevel : FeatureLevel, powerPreference : PowerPreference, forceFallbackAdapter : int, backendType : BackendType, compatibleSurface : nativeint) = { NextInChain = nextInChain; FeatureLevel = featureLevel; PowerPreference = powerPreference; ForceFallbackAdapter = forceFallbackAdapter; BackendType = backendType; CompatibleSurface = compatibleSurface }
         new(featureLevel : FeatureLevel, powerPreference : PowerPreference, forceFallbackAdapter : int, backendType : BackendType, compatibleSurface : nativeint) = RequestAdapterOptions(0n, featureLevel, powerPreference, forceFallbackAdapter, backendType, compatibleSurface)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<RequestAdapterOptions>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RequestAdapterWebXROptions = 
@@ -26,6 +304,18 @@ type RequestAdapterWebXROptions =
         val mutable public XrCompatible : int
         new(nextInChain : nativeint, sType : SType, xrCompatible : int) = { NextInChain = nextInChain; SType = sType; XrCompatible = xrCompatible }
         new(xrCompatible : int) = RequestAdapterWebXROptions(0n, Unchecked.defaultof<SType>, xrCompatible)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<RequestAdapterWebXROptions>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RequestAdapterWebGPUBackendOptions = 
@@ -33,6 +323,18 @@ type RequestAdapterWebGPUBackendOptions =
         val mutable public NextInChain : nativeint
         val mutable public SType : SType
         new(nextInChain : nativeint, sType : SType) = { NextInChain = nextInChain; SType = sType }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<RequestAdapterWebGPUBackendOptions>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type RequestAdapterCallback = delegate of status : RequestAdapterStatus * adapter : nativeint * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -45,6 +347,18 @@ type RequestAdapterCallbackInfo =
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
         new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = RequestAdapterCallbackInfo(0n, mode, callback, userdata1, userdata2)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<RequestAdapterCallbackInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type AdapterInfo = 
@@ -62,6 +376,26 @@ type AdapterInfo =
         val mutable public SubgroupMaxSize : uint32
         new(nextInChain : nativeint, vendor : StringView, architecture : StringView, device : StringView, description : StringView, backendType : BackendType, adapterType : AdapterType, vendorID : uint32, deviceID : uint32, subgroupMinSize : uint32, subgroupMaxSize : uint32) = { NextInChain = nextInChain; Vendor = vendor; Architecture = architecture; Device = device; Description = description; BackendType = backendType; AdapterType = adapterType; VendorID = vendorID; DeviceID = deviceID; SubgroupMinSize = subgroupMinSize; SubgroupMaxSize = subgroupMaxSize }
         new(vendor : StringView, architecture : StringView, device : StringView, description : StringView, backendType : BackendType, adapterType : AdapterType, vendorID : uint32, deviceID : uint32, subgroupMinSize : uint32, subgroupMaxSize : uint32) = AdapterInfo(0n, vendor, architecture, device, description, backendType, adapterType, vendorID, deviceID, subgroupMinSize, subgroupMaxSize)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Vendor - NativePtr.toNativeInt &&self
+            this.Vendor.CopyTo(dst + offset, &aux)
+            let offset = NativePtr.toNativeInt &&self.Architecture - NativePtr.toNativeInt &&self
+            this.Architecture.CopyTo(dst + offset, &aux)
+            let offset = NativePtr.toNativeInt &&self.Device - NativePtr.toNativeInt &&self
+            this.Device.CopyTo(dst + offset, &aux)
+            let offset = NativePtr.toNativeInt &&self.Description - NativePtr.toNativeInt &&self
+            this.Description.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<AdapterInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DeviceDescriptor = 
@@ -76,6 +410,34 @@ type DeviceDescriptor =
         val mutable public UncapturedErrorCallbackInfo : UncapturedErrorCallbackInfo
         new(nextInChain : nativeint, label : StringView, requiredFeatureCount : unativeint, requiredFeatures : nativeptr<FeatureName>, requiredLimits : nativeptr<Limits>, defaultQueue : QueueDescriptor, deviceLostCallbackInfo : DeviceLostCallbackInfo, uncapturedErrorCallbackInfo : UncapturedErrorCallbackInfo) = { NextInChain = nextInChain; Label = label; RequiredFeatureCount = requiredFeatureCount; RequiredFeatures = requiredFeatures; RequiredLimits = requiredLimits; DefaultQueue = defaultQueue; DeviceLostCallbackInfo = deviceLostCallbackInfo; UncapturedErrorCallbackInfo = uncapturedErrorCallbackInfo }
         new(label : StringView, requiredFeatureCount : unativeint, requiredFeatures : nativeptr<FeatureName>, requiredLimits : nativeptr<Limits>, defaultQueue : QueueDescriptor, deviceLostCallbackInfo : DeviceLostCallbackInfo, uncapturedErrorCallbackInfo : UncapturedErrorCallbackInfo) = DeviceDescriptor(0n, label, requiredFeatureCount, requiredFeatures, requiredLimits, defaultQueue, deviceLostCallbackInfo, uncapturedErrorCallbackInfo)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.RequiredFeatureCount
+            let dd = aux
+            step &aux (nsize<nativeptr<FeatureName>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.RequiredFeatures i)
+                off <- off + nsize<FeatureName>
+            self.RequiredFeatures <- NativePtr.ofNativeInt (dd - dst)
+            let dd = aux
+            step &aux nsize<nativeptr<Limits>>
+            (NativePtr.read this.RequiredLimits).CopyTo(dd, &aux)
+            self.RequiredLimits <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+            let offset = NativePtr.toNativeInt &&self.DefaultQueue - NativePtr.toNativeInt &&self
+            this.DefaultQueue.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DeviceDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnConsumeAdapterDescriptor = 
@@ -85,6 +447,18 @@ type DawnConsumeAdapterDescriptor =
         val mutable public ConsumeAdapter : int
         new(nextInChain : nativeint, sType : SType, consumeAdapter : int) = { NextInChain = nextInChain; SType = sType; ConsumeAdapter = consumeAdapter }
         new(consumeAdapter : int) = DawnConsumeAdapterDescriptor(0n, Unchecked.defaultof<SType>, consumeAdapter)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnConsumeAdapterDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnTogglesDescriptor = 
@@ -97,6 +471,34 @@ type DawnTogglesDescriptor =
         val mutable public DisabledToggles : nativeptr<nativeptr<byte>>
         new(nextInChain : nativeint, sType : SType, enabledToggleCount : unativeint, enabledToggles : nativeptr<nativeptr<byte>>, disabledToggleCount : unativeint, disabledToggles : nativeptr<nativeptr<byte>>) = { NextInChain = nextInChain; SType = sType; EnabledToggleCount = enabledToggleCount; EnabledToggles = enabledToggles; DisabledToggleCount = disabledToggleCount; DisabledToggles = disabledToggles }
         new(enabledToggleCount : unativeint, enabledToggles : nativeptr<nativeptr<byte>>, disabledToggleCount : unativeint, disabledToggles : nativeptr<nativeptr<byte>>) = DawnTogglesDescriptor(0n, Unchecked.defaultof<SType>, enabledToggleCount, enabledToggles, disabledToggleCount, disabledToggles)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.EnabledToggleCount
+            let dd = aux
+            step &aux (nsize<nativeptr<nativeptr<byte>>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.EnabledToggles i)
+                off <- off + nsize<byte>
+            self.EnabledToggles <- NativePtr.ofNativeInt (dd - dst)
+            let cnt = int this.DisabledToggleCount
+            let dd = aux
+            step &aux (nsize<nativeptr<nativeptr<byte>>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.DisabledToggles i)
+                off <- off + nsize<byte>
+            self.DisabledToggles <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnTogglesDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type DawnLoadCacheDataFunction = delegate of key : nativeint * keySize : unativeint * value : nativeint * valueSize : unativeint * userdata : nativeint -> unativeint
 type DawnStoreCacheDataFunction = delegate of key : nativeint * keySize : unativeint * value : nativeint * valueSize : unativeint * userdata : nativeint -> unit
@@ -111,6 +513,20 @@ type DawnCacheDeviceDescriptor =
         val mutable public FunctionUserdata : nativeint
         new(nextInChain : nativeint, sType : SType, isolationKey : StringView, loadDataFunction : nativeint, storeDataFunction : nativeint, functionUserdata : nativeint) = { NextInChain = nextInChain; SType = sType; IsolationKey = isolationKey; LoadDataFunction = loadDataFunction; StoreDataFunction = storeDataFunction; FunctionUserdata = functionUserdata }
         new(isolationKey : StringView, loadDataFunction : nativeint, storeDataFunction : nativeint, functionUserdata : nativeint) = DawnCacheDeviceDescriptor(0n, Unchecked.defaultof<SType>, isolationKey, loadDataFunction, storeDataFunction, functionUserdata)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.IsolationKey - NativePtr.toNativeInt &&self
+            this.IsolationKey.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnCacheDeviceDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnDeviceAllocatorControl = 
@@ -120,6 +536,18 @@ type DawnDeviceAllocatorControl =
         val mutable public AllocatorHeapBlockSize : unativeint
         new(nextInChain : nativeint, sType : SType, allocatorHeapBlockSize : unativeint) = { NextInChain = nextInChain; SType = sType; AllocatorHeapBlockSize = allocatorHeapBlockSize }
         new(allocatorHeapBlockSize : unativeint) = DawnDeviceAllocatorControl(0n, Unchecked.defaultof<SType>, allocatorHeapBlockSize)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnDeviceAllocatorControl>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnWGSLBlocklist = 
@@ -130,6 +558,26 @@ type DawnWGSLBlocklist =
         val mutable public BlocklistedFeatures : nativeptr<nativeptr<byte>>
         new(nextInChain : nativeint, sType : SType, blocklistedFeatureCount : unativeint, blocklistedFeatures : nativeptr<nativeptr<byte>>) = { NextInChain = nextInChain; SType = sType; BlocklistedFeatureCount = blocklistedFeatureCount; BlocklistedFeatures = blocklistedFeatures }
         new(blocklistedFeatureCount : unativeint, blocklistedFeatures : nativeptr<nativeptr<byte>>) = DawnWGSLBlocklist(0n, Unchecked.defaultof<SType>, blocklistedFeatureCount, blocklistedFeatures)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.BlocklistedFeatureCount
+            let dd = aux
+            step &aux (nsize<nativeptr<nativeptr<byte>>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.BlocklistedFeatures i)
+                off <- off + nsize<byte>
+            self.BlocklistedFeatures <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnWGSLBlocklist>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type BindGroupEntry = 
@@ -143,6 +591,18 @@ type BindGroupEntry =
         val mutable public TextureView : nativeint
         new(nextInChain : nativeint, binding : uint32, buffer : nativeint, offset : uint64, size : uint64, sampler : nativeint, textureView : nativeint) = { NextInChain = nextInChain; Binding = binding; Buffer = buffer; Offset = offset; Size = size; Sampler = sampler; TextureView = textureView }
         new(binding : uint32, buffer : nativeint, offset : uint64, size : uint64, sampler : nativeint, textureView : nativeint) = BindGroupEntry(0n, binding, buffer, offset, size, sampler, textureView)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<BindGroupEntry>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type BindGroupDynamicBindingArray = 
@@ -152,6 +612,18 @@ type BindGroupDynamicBindingArray =
         val mutable public DynamicArraySize : uint32
         new(nextInChain : nativeint, sType : SType, dynamicArraySize : uint32) = { NextInChain = nextInChain; SType = sType; DynamicArraySize = dynamicArraySize }
         new(dynamicArraySize : uint32) = BindGroupDynamicBindingArray(0n, Unchecked.defaultof<SType>, dynamicArraySize)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<BindGroupDynamicBindingArray>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type BindGroupDescriptor = 
@@ -163,6 +635,28 @@ type BindGroupDescriptor =
         val mutable public Entries : nativeptr<BindGroupEntry>
         new(nextInChain : nativeint, label : StringView, layout : nativeint, entryCount : unativeint, entries : nativeptr<BindGroupEntry>) = { NextInChain = nextInChain; Label = label; Layout = layout; EntryCount = entryCount; Entries = entries }
         new(label : StringView, layout : nativeint, entryCount : unativeint, entries : nativeptr<BindGroupEntry>) = BindGroupDescriptor(0n, label, layout, entryCount, entries)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.EntryCount
+            let dd = aux
+            step &aux (nsize<nativeptr<BindGroupEntry>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                (NativePtr.get this.Entries i).CopyTo(off, &aux)
+                off <- off + nsize<BindGroupEntry>
+            self.Entries <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<BindGroupDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type BufferBindingLayout = 
@@ -173,6 +667,18 @@ type BufferBindingLayout =
         val mutable public MinBindingSize : uint64
         new(nextInChain : nativeint, typ : BufferBindingType, hasDynamicOffset : int, minBindingSize : uint64) = { NextInChain = nextInChain; Type = typ; HasDynamicOffset = hasDynamicOffset; MinBindingSize = minBindingSize }
         new(typ : BufferBindingType, hasDynamicOffset : int, minBindingSize : uint64) = BufferBindingLayout(0n, typ, hasDynamicOffset, minBindingSize)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<BufferBindingLayout>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SamplerBindingLayout = 
@@ -181,6 +687,18 @@ type SamplerBindingLayout =
         val mutable public Type : SamplerBindingType
         new(nextInChain : nativeint, typ : SamplerBindingType) = { NextInChain = nextInChain; Type = typ }
         new(typ : SamplerBindingType) = SamplerBindingLayout(0n, typ)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SamplerBindingLayout>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type StaticSamplerBindingLayout = 
@@ -191,6 +709,18 @@ type StaticSamplerBindingLayout =
         val mutable public SampledTextureBinding : uint32
         new(nextInChain : nativeint, sType : SType, sampler : nativeint, sampledTextureBinding : uint32) = { NextInChain = nextInChain; SType = sType; Sampler = sampler; SampledTextureBinding = sampledTextureBinding }
         new(sampler : nativeint, sampledTextureBinding : uint32) = StaticSamplerBindingLayout(0n, Unchecked.defaultof<SType>, sampler, sampledTextureBinding)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<StaticSamplerBindingLayout>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type TextureBindingLayout = 
@@ -201,6 +731,18 @@ type TextureBindingLayout =
         val mutable public Multisampled : int
         new(nextInChain : nativeint, sampleType : TextureSampleType, viewDimension : TextureViewDimension, multisampled : int) = { NextInChain = nextInChain; SampleType = sampleType; ViewDimension = viewDimension; Multisampled = multisampled }
         new(sampleType : TextureSampleType, viewDimension : TextureViewDimension, multisampled : int) = TextureBindingLayout(0n, sampleType, viewDimension, multisampled)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<TextureBindingLayout>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SurfaceCapabilities = 
@@ -215,6 +757,42 @@ type SurfaceCapabilities =
         val mutable public AlphaModes : nativeptr<CompositeAlphaMode>
         new(nextInChain : nativeint, usages : TextureUsage, formatCount : unativeint, formats : nativeptr<TextureFormat>, presentModeCount : unativeint, presentModes : nativeptr<PresentMode>, alphaModeCount : unativeint, alphaModes : nativeptr<CompositeAlphaMode>) = { NextInChain = nextInChain; Usages = usages; FormatCount = formatCount; Formats = formats; PresentModeCount = presentModeCount; PresentModes = presentModes; AlphaModeCount = alphaModeCount; AlphaModes = alphaModes }
         new(usages : TextureUsage, formatCount : unativeint, formats : nativeptr<TextureFormat>, presentModeCount : unativeint, presentModes : nativeptr<PresentMode>, alphaModeCount : unativeint, alphaModes : nativeptr<CompositeAlphaMode>) = SurfaceCapabilities(0n, usages, formatCount, formats, presentModeCount, presentModes, alphaModeCount, alphaModes)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.FormatCount
+            let dd = aux
+            step &aux (nsize<nativeptr<TextureFormat>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.Formats i)
+                off <- off + nsize<TextureFormat>
+            self.Formats <- NativePtr.ofNativeInt (dd - dst)
+            let cnt = int this.PresentModeCount
+            let dd = aux
+            step &aux (nsize<nativeptr<PresentMode>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.PresentModes i)
+                off <- off + nsize<PresentMode>
+            self.PresentModes <- NativePtr.ofNativeInt (dd - dst)
+            let cnt = int this.AlphaModeCount
+            let dd = aux
+            step &aux (nsize<nativeptr<CompositeAlphaMode>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.AlphaModes i)
+                off <- off + nsize<CompositeAlphaMode>
+            self.AlphaModes <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SurfaceCapabilities>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SurfaceConfiguration = 
@@ -231,6 +809,26 @@ type SurfaceConfiguration =
         val mutable public PresentMode : PresentMode
         new(nextInChain : nativeint, device : nativeint, format : TextureFormat, usage : TextureUsage, width : uint32, height : uint32, viewFormatCount : unativeint, viewFormats : nativeptr<TextureFormat>, alphaMode : CompositeAlphaMode, presentMode : PresentMode) = { NextInChain = nextInChain; Device = device; Format = format; Usage = usage; Width = width; Height = height; ViewFormatCount = viewFormatCount; ViewFormats = viewFormats; AlphaMode = alphaMode; PresentMode = presentMode }
         new(device : nativeint, format : TextureFormat, usage : TextureUsage, width : uint32, height : uint32, viewFormatCount : unativeint, viewFormats : nativeptr<TextureFormat>, alphaMode : CompositeAlphaMode, presentMode : PresentMode) = SurfaceConfiguration(0n, device, format, usage, width, height, viewFormatCount, viewFormats, alphaMode, presentMode)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.ViewFormatCount
+            let dd = aux
+            step &aux (nsize<nativeptr<TextureFormat>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.ViewFormats i)
+                off <- off + nsize<TextureFormat>
+            self.ViewFormats <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SurfaceConfiguration>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type ExternalTextureBindingEntry = 
@@ -240,6 +838,18 @@ type ExternalTextureBindingEntry =
         val mutable public ExternalTexture : nativeint
         new(nextInChain : nativeint, sType : SType, externalTexture : nativeint) = { NextInChain = nextInChain; SType = sType; ExternalTexture = externalTexture }
         new(externalTexture : nativeint) = ExternalTextureBindingEntry(0n, Unchecked.defaultof<SType>, externalTexture)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<ExternalTextureBindingEntry>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type ExternalTextureBindingLayout = 
@@ -247,6 +857,18 @@ type ExternalTextureBindingLayout =
         val mutable public NextInChain : nativeint
         val mutable public SType : SType
         new(nextInChain : nativeint, sType : SType) = { NextInChain = nextInChain; SType = sType }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<ExternalTextureBindingLayout>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type StorageTextureBindingLayout = 
@@ -257,6 +879,18 @@ type StorageTextureBindingLayout =
         val mutable public ViewDimension : TextureViewDimension
         new(nextInChain : nativeint, access : StorageTextureAccess, format : TextureFormat, viewDimension : TextureViewDimension) = { NextInChain = nextInChain; Access = access; Format = format; ViewDimension = viewDimension }
         new(access : StorageTextureAccess, format : TextureFormat, viewDimension : TextureViewDimension) = StorageTextureBindingLayout(0n, access, format, viewDimension)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<StorageTextureBindingLayout>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type BindGroupLayoutEntry = 
@@ -271,6 +905,26 @@ type BindGroupLayoutEntry =
         val mutable public StorageTexture : StorageTextureBindingLayout
         new(nextInChain : nativeint, binding : uint32, visibility : ShaderStage, bindingArraySize : uint32, buffer : BufferBindingLayout, sampler : SamplerBindingLayout, texture : TextureBindingLayout, storageTexture : StorageTextureBindingLayout) = { NextInChain = nextInChain; Binding = binding; Visibility = visibility; BindingArraySize = bindingArraySize; Buffer = buffer; Sampler = sampler; Texture = texture; StorageTexture = storageTexture }
         new(binding : uint32, visibility : ShaderStage, bindingArraySize : uint32, buffer : BufferBindingLayout, sampler : SamplerBindingLayout, texture : TextureBindingLayout, storageTexture : StorageTextureBindingLayout) = BindGroupLayoutEntry(0n, binding, visibility, bindingArraySize, buffer, sampler, texture, storageTexture)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Buffer - NativePtr.toNativeInt &&self
+            this.Buffer.CopyTo(dst + offset, &aux)
+            let offset = NativePtr.toNativeInt &&self.Sampler - NativePtr.toNativeInt &&self
+            this.Sampler.CopyTo(dst + offset, &aux)
+            let offset = NativePtr.toNativeInt &&self.Texture - NativePtr.toNativeInt &&self
+            this.Texture.CopyTo(dst + offset, &aux)
+            let offset = NativePtr.toNativeInt &&self.StorageTexture - NativePtr.toNativeInt &&self
+            this.StorageTexture.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<BindGroupLayoutEntry>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DynamicBindingArrayLayout = 
@@ -280,6 +934,18 @@ type DynamicBindingArrayLayout =
         val mutable public Kind : DynamicBindingKind
         new(nextInChain : nativeint, start : uint32, kind : DynamicBindingKind) = { NextInChain = nextInChain; Start = start; Kind = kind }
         new(start : uint32, kind : DynamicBindingKind) = DynamicBindingArrayLayout(0n, start, kind)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DynamicBindingArrayLayout>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type BindGroupLayoutDynamicBindingArray = 
@@ -289,6 +955,20 @@ type BindGroupLayoutDynamicBindingArray =
         val mutable public DynamicArray : DynamicBindingArrayLayout
         new(nextInChain : nativeint, sType : SType, dynamicArray : DynamicBindingArrayLayout) = { NextInChain = nextInChain; SType = sType; DynamicArray = dynamicArray }
         new(dynamicArray : DynamicBindingArrayLayout) = BindGroupLayoutDynamicBindingArray(0n, Unchecked.defaultof<SType>, dynamicArray)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.DynamicArray - NativePtr.toNativeInt &&self
+            this.DynamicArray.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<BindGroupLayoutDynamicBindingArray>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type BindGroupLayoutDescriptor = 
@@ -299,6 +979,28 @@ type BindGroupLayoutDescriptor =
         val mutable public Entries : nativeptr<BindGroupLayoutEntry>
         new(nextInChain : nativeint, label : StringView, entryCount : unativeint, entries : nativeptr<BindGroupLayoutEntry>) = { NextInChain = nextInChain; Label = label; EntryCount = entryCount; Entries = entries }
         new(label : StringView, entryCount : unativeint, entries : nativeptr<BindGroupLayoutEntry>) = BindGroupLayoutDescriptor(0n, label, entryCount, entries)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.EntryCount
+            let dd = aux
+            step &aux (nsize<nativeptr<BindGroupLayoutEntry>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                (NativePtr.get this.Entries i).CopyTo(off, &aux)
+                off <- off + nsize<BindGroupLayoutEntry>
+            self.Entries <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<BindGroupLayoutDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type BlendComponent = 
@@ -307,6 +1009,12 @@ type BlendComponent =
         val mutable public SrcFactor : BlendFactor
         val mutable public DstFactor : BlendFactor
         new(operation : BlendOperation, srcFactor : BlendFactor, dstFactor : BlendFactor) = { Operation = operation; SrcFactor = srcFactor; DstFactor = dstFactor }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<BlendComponent>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type StringView = 
@@ -314,6 +1022,19 @@ type StringView =
         val mutable public Data : nativeptr<byte>
         val mutable public Length : unativeint
         new(data : nativeptr<byte>, length : unativeint) = { Data = data; Length = length }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let len = int this.Length
+            let ptr = aux
+            step &aux (nativeint len)
+            let srcSpan = System.Span<byte>(NativePtr.toVoidPtr this.Data, len)
+            let dstSpan = System.Span<byte>(NativePtr.toVoidPtr (NativePtr.ofNativeInt<byte> ptr), len)
+            srcSpan.CopyTo(dstSpan)
+            self.Data <- NativePtr.ofNativeInt (ptr - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<StringView>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type BufferDescriptor = 
@@ -325,6 +1046,20 @@ type BufferDescriptor =
         val mutable public MappedAtCreation : int
         new(nextInChain : nativeint, label : StringView, usage : BufferUsage, size : uint64, mappedAtCreation : int) = { NextInChain = nextInChain; Label = label; Usage = usage; Size = size; MappedAtCreation = mappedAtCreation }
         new(label : StringView, usage : BufferUsage, size : uint64, mappedAtCreation : int) = BufferDescriptor(0n, label, usage, size, mappedAtCreation)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<BufferDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type BufferHostMappedPointer = 
@@ -336,6 +1071,18 @@ type BufferHostMappedPointer =
         val mutable public Userdata : nativeint
         new(nextInChain : nativeint, sType : SType, pointer : nativeint, disposeCallback : nativeint, userdata : nativeint) = { NextInChain = nextInChain; SType = sType; Pointer = pointer; DisposeCallback = disposeCallback; Userdata = userdata }
         new(pointer : nativeint, disposeCallback : nativeint, userdata : nativeint) = BufferHostMappedPointer(0n, Unchecked.defaultof<SType>, pointer, disposeCallback, userdata)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<BufferHostMappedPointer>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type Callback = delegate of userdata : nativeint -> unit
 type BufferMapCallback = delegate of status : MapAsyncStatus * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
@@ -349,6 +1096,18 @@ type BufferMapCallbackInfo =
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
         new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = BufferMapCallbackInfo(0n, mode, callback, userdata1, userdata2)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<BufferMapCallbackInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type Color = 
@@ -358,6 +1117,12 @@ type Color =
         val mutable public B : double
         val mutable public A : double
         new(r : double, g : double, b : double, a : double) = { R = r; G = g; B = b; A = a }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<Color>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type ConstantEntry = 
@@ -367,6 +1132,20 @@ type ConstantEntry =
         val mutable public Value : double
         new(nextInChain : nativeint, key : StringView, value : double) = { NextInChain = nextInChain; Key = key; Value = value }
         new(key : StringView, value : double) = ConstantEntry(0n, key, value)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Key - NativePtr.toNativeInt &&self
+            this.Key.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<ConstantEntry>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type CommandBufferDescriptor = 
@@ -375,6 +1154,20 @@ type CommandBufferDescriptor =
         val mutable public Label : StringView
         new(nextInChain : nativeint, label : StringView) = { NextInChain = nextInChain; Label = label }
         new(label : StringView) = CommandBufferDescriptor(0n, label)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<CommandBufferDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type CommandEncoderDescriptor = 
@@ -383,6 +1176,20 @@ type CommandEncoderDescriptor =
         val mutable public Label : StringView
         new(nextInChain : nativeint, label : StringView) = { NextInChain = nextInChain; Label = label }
         new(label : StringView) = CommandEncoderDescriptor(0n, label)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<CommandEncoderDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type CompilationInfo = 
@@ -392,6 +1199,26 @@ type CompilationInfo =
         val mutable public Messages : nativeptr<CompilationMessage>
         new(nextInChain : nativeint, messageCount : unativeint, messages : nativeptr<CompilationMessage>) = { NextInChain = nextInChain; MessageCount = messageCount; Messages = messages }
         new(messageCount : unativeint, messages : nativeptr<CompilationMessage>) = CompilationInfo(0n, messageCount, messages)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.MessageCount
+            let dd = aux
+            step &aux (nsize<nativeptr<CompilationMessage>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                (NativePtr.get this.Messages i).CopyTo(off, &aux)
+                off <- off + nsize<CompilationMessage>
+            self.Messages <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<CompilationInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type CompilationInfoCallback = delegate of status : CompilationInfoRequestStatus * compilationInfo : nativeptr<CompilationInfo> * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -404,6 +1231,18 @@ type CompilationInfoCallbackInfo =
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
         new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = CompilationInfoCallbackInfo(0n, mode, callback, userdata1, userdata2)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<CompilationInfoCallbackInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type CompilationMessage = 
@@ -417,6 +1256,20 @@ type CompilationMessage =
         val mutable public Length : uint64
         new(nextInChain : nativeint, message : StringView, typ : CompilationMessageType, lineNum : uint64, linePos : uint64, offset : uint64, length : uint64) = { NextInChain = nextInChain; Message = message; Type = typ; LineNum = lineNum; LinePos = linePos; Offset = offset; Length = length }
         new(message : StringView, typ : CompilationMessageType, lineNum : uint64, linePos : uint64, offset : uint64, length : uint64) = CompilationMessage(0n, message, typ, lineNum, linePos, offset, length)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Message - NativePtr.toNativeInt &&self
+            this.Message.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<CompilationMessage>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnCompilationMessageUtf16 = 
@@ -428,6 +1281,18 @@ type DawnCompilationMessageUtf16 =
         val mutable public Length : uint64
         new(nextInChain : nativeint, sType : SType, linePos : uint64, offset : uint64, length : uint64) = { NextInChain = nextInChain; SType = sType; LinePos = linePos; Offset = offset; Length = length }
         new(linePos : uint64, offset : uint64, length : uint64) = DawnCompilationMessageUtf16(0n, Unchecked.defaultof<SType>, linePos, offset, length)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnCompilationMessageUtf16>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type ComputePassDescriptor = 
@@ -437,6 +1302,24 @@ type ComputePassDescriptor =
         val mutable public TimestampWrites : nativeptr<PassTimestampWrites>
         new(nextInChain : nativeint, label : StringView, timestampWrites : nativeptr<PassTimestampWrites>) = { NextInChain = nextInChain; Label = label; TimestampWrites = timestampWrites }
         new(label : StringView, timestampWrites : nativeptr<PassTimestampWrites>) = ComputePassDescriptor(0n, label, timestampWrites)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let dd = aux
+            step &aux nsize<nativeptr<PassTimestampWrites>>
+            (NativePtr.read this.TimestampWrites).CopyTo(dd, &aux)
+            self.TimestampWrites <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<ComputePassDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type ComputePipelineDescriptor = 
@@ -447,6 +1330,22 @@ type ComputePipelineDescriptor =
         val mutable public Compute : ComputeState
         new(nextInChain : nativeint, label : StringView, layout : nativeint, compute : ComputeState) = { NextInChain = nextInChain; Label = label; Layout = layout; Compute = compute }
         new(label : StringView, layout : nativeint, compute : ComputeState) = ComputePipelineDescriptor(0n, label, layout, compute)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+            let offset = NativePtr.toNativeInt &&self.Compute - NativePtr.toNativeInt &&self
+            this.Compute.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<ComputePipelineDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type CopyTextureForBrowserOptions = 
@@ -462,6 +1361,30 @@ type CopyTextureForBrowserOptions =
         val mutable public InternalUsage : int
         new(nextInChain : nativeint, flipY : int, needsColorSpaceConversion : int, srcAlphaMode : AlphaMode, srcTransferFunctionParameters : nativeptr<float32>, conversionMatrix : nativeptr<float32>, dstTransferFunctionParameters : nativeptr<float32>, dstAlphaMode : AlphaMode, internalUsage : int) = { NextInChain = nextInChain; FlipY = flipY; NeedsColorSpaceConversion = needsColorSpaceConversion; SrcAlphaMode = srcAlphaMode; SrcTransferFunctionParameters = srcTransferFunctionParameters; ConversionMatrix = conversionMatrix; DstTransferFunctionParameters = dstTransferFunctionParameters; DstAlphaMode = dstAlphaMode; InternalUsage = internalUsage }
         new(flipY : int, needsColorSpaceConversion : int, srcAlphaMode : AlphaMode, srcTransferFunctionParameters : nativeptr<float32>, conversionMatrix : nativeptr<float32>, dstTransferFunctionParameters : nativeptr<float32>, dstAlphaMode : AlphaMode, internalUsage : int) = CopyTextureForBrowserOptions(0n, flipY, needsColorSpaceConversion, srcAlphaMode, srcTransferFunctionParameters, conversionMatrix, dstTransferFunctionParameters, dstAlphaMode, internalUsage)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let dd = aux
+            NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.SrcTransferFunctionParameters)
+            step &aux nsize<nativeptr<float32>>
+            self.SrcTransferFunctionParameters <- NativePtr.ofNativeInt (dd - dst)
+            let dd = aux
+            NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.ConversionMatrix)
+            step &aux nsize<nativeptr<float32>>
+            self.ConversionMatrix <- NativePtr.ofNativeInt (dd - dst)
+            let dd = aux
+            NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.DstTransferFunctionParameters)
+            step &aux nsize<nativeptr<float32>>
+            self.DstTransferFunctionParameters <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<CopyTextureForBrowserOptions>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type CreateComputePipelineAsyncCallback = delegate of status : CreatePipelineAsyncStatus * pipeline : nativeint * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -474,6 +1397,18 @@ type CreateComputePipelineAsyncCallbackInfo =
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
         new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = CreateComputePipelineAsyncCallbackInfo(0n, mode, callback, userdata1, userdata2)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<CreateComputePipelineAsyncCallbackInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type CreateRenderPipelineAsyncCallback = delegate of status : CreatePipelineAsyncStatus * pipeline : nativeint * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -486,12 +1421,32 @@ type CreateRenderPipelineAsyncCallbackInfo =
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
         new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = CreateRenderPipelineAsyncCallbackInfo(0n, mode, callback, userdata1, userdata2)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<CreateRenderPipelineAsyncCallbackInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type AHardwareBufferProperties = 
     struct
         val mutable public YCbCrInfo : YCbCrVkDescriptor
         new(yCbCrInfo : YCbCrVkDescriptor) = { YCbCrInfo = yCbCrInfo }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.YCbCrInfo - NativePtr.toNativeInt &&self
+            this.YCbCrInfo.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<AHardwareBufferProperties>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type DeviceLostCallback = delegate of device : nativeptr<nativeint> * reason : DeviceLostReason * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -504,6 +1459,18 @@ type DeviceLostCallbackInfo =
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
         new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = DeviceLostCallbackInfo(0n, mode, callback, userdata1, userdata2)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DeviceLostCallbackInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type UncapturedErrorCallback = delegate of device : nativeptr<nativeint> * typ : ErrorType * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -515,6 +1482,18 @@ type UncapturedErrorCallbackInfo =
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
         new(callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = UncapturedErrorCallbackInfo(0n, callback, userdata1, userdata2)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<UncapturedErrorCallbackInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type PopErrorScopeCallback = delegate of status : PopErrorScopeStatus * typ : ErrorType * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -527,6 +1506,18 @@ type PopErrorScopeCallbackInfo =
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
         new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = PopErrorScopeCallbackInfo(0n, mode, callback, userdata1, userdata2)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<PopErrorScopeCallbackInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type Limits = 
@@ -566,6 +1557,18 @@ type Limits =
         val mutable public MaxImmediateSize : uint32
         new(nextInChain : nativeint, maxTextureDimension1D : uint32, maxTextureDimension2D : uint32, maxTextureDimension3D : uint32, maxTextureArrayLayers : uint32, maxBindGroups : uint32, maxBindGroupsPlusVertexBuffers : uint32, maxBindingsPerBindGroup : uint32, maxDynamicUniformBuffersPerPipelineLayout : uint32, maxDynamicStorageBuffersPerPipelineLayout : uint32, maxSampledTexturesPerShaderStage : uint32, maxSamplersPerShaderStage : uint32, maxStorageBuffersPerShaderStage : uint32, maxStorageTexturesPerShaderStage : uint32, maxUniformBuffersPerShaderStage : uint32, maxUniformBufferBindingSize : uint64, maxStorageBufferBindingSize : uint64, minUniformBufferOffsetAlignment : uint32, minStorageBufferOffsetAlignment : uint32, maxVertexBuffers : uint32, maxBufferSize : uint64, maxVertexAttributes : uint32, maxVertexBufferArrayStride : uint32, maxInterStageShaderVariables : uint32, maxColorAttachments : uint32, maxColorAttachmentBytesPerSample : uint32, maxComputeWorkgroupStorageSize : uint32, maxComputeInvocationsPerWorkgroup : uint32, maxComputeWorkgroupSizeX : uint32, maxComputeWorkgroupSizeY : uint32, maxComputeWorkgroupSizeZ : uint32, maxComputeWorkgroupsPerDimension : uint32, maxImmediateSize : uint32) = { NextInChain = nextInChain; MaxTextureDimension1D = maxTextureDimension1D; MaxTextureDimension2D = maxTextureDimension2D; MaxTextureDimension3D = maxTextureDimension3D; MaxTextureArrayLayers = maxTextureArrayLayers; MaxBindGroups = maxBindGroups; MaxBindGroupsPlusVertexBuffers = maxBindGroupsPlusVertexBuffers; MaxBindingsPerBindGroup = maxBindingsPerBindGroup; MaxDynamicUniformBuffersPerPipelineLayout = maxDynamicUniformBuffersPerPipelineLayout; MaxDynamicStorageBuffersPerPipelineLayout = maxDynamicStorageBuffersPerPipelineLayout; MaxSampledTexturesPerShaderStage = maxSampledTexturesPerShaderStage; MaxSamplersPerShaderStage = maxSamplersPerShaderStage; MaxStorageBuffersPerShaderStage = maxStorageBuffersPerShaderStage; MaxStorageTexturesPerShaderStage = maxStorageTexturesPerShaderStage; MaxUniformBuffersPerShaderStage = maxUniformBuffersPerShaderStage; MaxUniformBufferBindingSize = maxUniformBufferBindingSize; MaxStorageBufferBindingSize = maxStorageBufferBindingSize; MinUniformBufferOffsetAlignment = minUniformBufferOffsetAlignment; MinStorageBufferOffsetAlignment = minStorageBufferOffsetAlignment; MaxVertexBuffers = maxVertexBuffers; MaxBufferSize = maxBufferSize; MaxVertexAttributes = maxVertexAttributes; MaxVertexBufferArrayStride = maxVertexBufferArrayStride; MaxInterStageShaderVariables = maxInterStageShaderVariables; MaxColorAttachments = maxColorAttachments; MaxColorAttachmentBytesPerSample = maxColorAttachmentBytesPerSample; MaxComputeWorkgroupStorageSize = maxComputeWorkgroupStorageSize; MaxComputeInvocationsPerWorkgroup = maxComputeInvocationsPerWorkgroup; MaxComputeWorkgroupSizeX = maxComputeWorkgroupSizeX; MaxComputeWorkgroupSizeY = maxComputeWorkgroupSizeY; MaxComputeWorkgroupSizeZ = maxComputeWorkgroupSizeZ; MaxComputeWorkgroupsPerDimension = maxComputeWorkgroupsPerDimension; MaxImmediateSize = maxImmediateSize }
         new(maxTextureDimension1D : uint32, maxTextureDimension2D : uint32, maxTextureDimension3D : uint32, maxTextureArrayLayers : uint32, maxBindGroups : uint32, maxBindGroupsPlusVertexBuffers : uint32, maxBindingsPerBindGroup : uint32, maxDynamicUniformBuffersPerPipelineLayout : uint32, maxDynamicStorageBuffersPerPipelineLayout : uint32, maxSampledTexturesPerShaderStage : uint32, maxSamplersPerShaderStage : uint32, maxStorageBuffersPerShaderStage : uint32, maxStorageTexturesPerShaderStage : uint32, maxUniformBuffersPerShaderStage : uint32, maxUniformBufferBindingSize : uint64, maxStorageBufferBindingSize : uint64, minUniformBufferOffsetAlignment : uint32, minStorageBufferOffsetAlignment : uint32, maxVertexBuffers : uint32, maxBufferSize : uint64, maxVertexAttributes : uint32, maxVertexBufferArrayStride : uint32, maxInterStageShaderVariables : uint32, maxColorAttachments : uint32, maxColorAttachmentBytesPerSample : uint32, maxComputeWorkgroupStorageSize : uint32, maxComputeInvocationsPerWorkgroup : uint32, maxComputeWorkgroupSizeX : uint32, maxComputeWorkgroupSizeY : uint32, maxComputeWorkgroupSizeZ : uint32, maxComputeWorkgroupsPerDimension : uint32, maxImmediateSize : uint32) = Limits(0n, maxTextureDimension1D, maxTextureDimension2D, maxTextureDimension3D, maxTextureArrayLayers, maxBindGroups, maxBindGroupsPlusVertexBuffers, maxBindingsPerBindGroup, maxDynamicUniformBuffersPerPipelineLayout, maxDynamicStorageBuffersPerPipelineLayout, maxSampledTexturesPerShaderStage, maxSamplersPerShaderStage, maxStorageBuffersPerShaderStage, maxStorageTexturesPerShaderStage, maxUniformBuffersPerShaderStage, maxUniformBufferBindingSize, maxStorageBufferBindingSize, minUniformBufferOffsetAlignment, minStorageBufferOffsetAlignment, maxVertexBuffers, maxBufferSize, maxVertexAttributes, maxVertexBufferArrayStride, maxInterStageShaderVariables, maxColorAttachments, maxColorAttachmentBytesPerSample, maxComputeWorkgroupStorageSize, maxComputeInvocationsPerWorkgroup, maxComputeWorkgroupSizeX, maxComputeWorkgroupSizeY, maxComputeWorkgroupSizeZ, maxComputeWorkgroupsPerDimension, maxImmediateSize)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<Limits>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type CompatibilityModeLimits = 
@@ -578,6 +1581,18 @@ type CompatibilityModeLimits =
         val mutable public MaxStorageTexturesInFragmentStage : uint32
         new(nextInChain : nativeint, sType : SType, maxStorageBuffersInVertexStage : uint32, maxStorageTexturesInVertexStage : uint32, maxStorageBuffersInFragmentStage : uint32, maxStorageTexturesInFragmentStage : uint32) = { NextInChain = nextInChain; SType = sType; MaxStorageBuffersInVertexStage = maxStorageBuffersInVertexStage; MaxStorageTexturesInVertexStage = maxStorageTexturesInVertexStage; MaxStorageBuffersInFragmentStage = maxStorageBuffersInFragmentStage; MaxStorageTexturesInFragmentStage = maxStorageTexturesInFragmentStage }
         new(maxStorageBuffersInVertexStage : uint32, maxStorageTexturesInVertexStage : uint32, maxStorageBuffersInFragmentStage : uint32, maxStorageTexturesInFragmentStage : uint32) = CompatibilityModeLimits(0n, Unchecked.defaultof<SType>, maxStorageBuffersInVertexStage, maxStorageTexturesInVertexStage, maxStorageBuffersInFragmentStage, maxStorageTexturesInFragmentStage)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<CompatibilityModeLimits>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnTexelCopyBufferRowAlignmentLimits = 
@@ -587,6 +1602,18 @@ type DawnTexelCopyBufferRowAlignmentLimits =
         val mutable public MinTexelCopyBufferRowAlignment : uint32
         new(nextInChain : nativeint, sType : SType, minTexelCopyBufferRowAlignment : uint32) = { NextInChain = nextInChain; SType = sType; MinTexelCopyBufferRowAlignment = minTexelCopyBufferRowAlignment }
         new(minTexelCopyBufferRowAlignment : uint32) = DawnTexelCopyBufferRowAlignmentLimits(0n, Unchecked.defaultof<SType>, minTexelCopyBufferRowAlignment)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnTexelCopyBufferRowAlignmentLimits>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnHostMappedPointerLimits = 
@@ -596,6 +1623,18 @@ type DawnHostMappedPointerLimits =
         val mutable public HostMappedPointerAlignment : uint32
         new(nextInChain : nativeint, sType : SType, hostMappedPointerAlignment : uint32) = { NextInChain = nextInChain; SType = sType; HostMappedPointerAlignment = hostMappedPointerAlignment }
         new(hostMappedPointerAlignment : uint32) = DawnHostMappedPointerLimits(0n, Unchecked.defaultof<SType>, hostMappedPointerAlignment)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnHostMappedPointerLimits>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DynamicBindingArrayLimits = 
@@ -605,6 +1644,18 @@ type DynamicBindingArrayLimits =
         val mutable public MaxDynamicBindingArraySize : uint32
         new(nextInChain : nativeint, sType : SType, maxDynamicBindingArraySize : uint32) = { NextInChain = nextInChain; SType = sType; MaxDynamicBindingArraySize = maxDynamicBindingArraySize }
         new(maxDynamicBindingArraySize : uint32) = DynamicBindingArrayLimits(0n, Unchecked.defaultof<SType>, maxDynamicBindingArraySize)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DynamicBindingArrayLimits>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SupportedFeatures = 
@@ -612,6 +1663,20 @@ type SupportedFeatures =
         val mutable public FeatureCount : unativeint
         val mutable public Features : nativeptr<FeatureName>
         new(featureCount : unativeint, features : nativeptr<FeatureName>) = { FeatureCount = featureCount; Features = features }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let cnt = int this.FeatureCount
+            let dd = aux
+            step &aux (nsize<nativeptr<FeatureName>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.Features i)
+                off <- off + nsize<FeatureName>
+            self.Features <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SupportedFeatures>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SupportedInstanceFeatures = 
@@ -619,6 +1684,20 @@ type SupportedInstanceFeatures =
         val mutable public FeatureCount : unativeint
         val mutable public Features : nativeptr<InstanceFeatureName>
         new(featureCount : unativeint, features : nativeptr<InstanceFeatureName>) = { FeatureCount = featureCount; Features = features }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let cnt = int this.FeatureCount
+            let dd = aux
+            step &aux (nsize<nativeptr<InstanceFeatureName>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.Features i)
+                off <- off + nsize<InstanceFeatureName>
+            self.Features <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SupportedInstanceFeatures>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SupportedWGSLLanguageFeatures = 
@@ -626,6 +1705,20 @@ type SupportedWGSLLanguageFeatures =
         val mutable public FeatureCount : unativeint
         val mutable public Features : nativeptr<WGSLLanguageFeatureName>
         new(featureCount : unativeint, features : nativeptr<WGSLLanguageFeatureName>) = { FeatureCount = featureCount; Features = features }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let cnt = int this.FeatureCount
+            let dd = aux
+            step &aux (nsize<nativeptr<WGSLLanguageFeatureName>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.Features i)
+                off <- off + nsize<WGSLLanguageFeatureName>
+            self.Features <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SupportedWGSLLanguageFeatures>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type LoggingCallback = delegate of typ : LoggingType * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -637,6 +1730,18 @@ type LoggingCallbackInfo =
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
         new(callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = LoggingCallbackInfo(0n, callback, userdata1, userdata2)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<LoggingCallbackInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type Extent2D = 
@@ -644,6 +1749,12 @@ type Extent2D =
         val mutable public Width : uint32
         val mutable public Height : uint32
         new(width : uint32, height : uint32) = { Width = width; Height = height }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<Extent2D>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type Extent3D = 
@@ -652,6 +1763,12 @@ type Extent3D =
         val mutable public Height : uint32
         val mutable public DepthOrArrayLayers : uint32
         new(width : uint32, height : uint32, depthOrArrayLayers : uint32) = { Width = width; Height = height; DepthOrArrayLayers = depthOrArrayLayers }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<Extent3D>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type ExternalTextureDescriptor = 
@@ -672,6 +1789,42 @@ type ExternalTextureDescriptor =
         val mutable public Rotation : ExternalTextureRotation
         new(nextInChain : nativeint, label : StringView, plane0 : nativeint, plane1 : nativeint, cropOrigin : Origin2D, cropSize : Extent2D, apparentSize : Extent2D, doYuvToRgbConversionOnly : int, yuvToRgbConversionMatrix : nativeptr<float32>, srcTransferFunctionParameters : nativeptr<float32>, dstTransferFunctionParameters : nativeptr<float32>, gamutConversionMatrix : nativeptr<float32>, mirrored : int, rotation : ExternalTextureRotation) = { NextInChain = nextInChain; Label = label; Plane0 = plane0; Plane1 = plane1; CropOrigin = cropOrigin; CropSize = cropSize; ApparentSize = apparentSize; DoYuvToRgbConversionOnly = doYuvToRgbConversionOnly; YuvToRgbConversionMatrix = yuvToRgbConversionMatrix; SrcTransferFunctionParameters = srcTransferFunctionParameters; DstTransferFunctionParameters = dstTransferFunctionParameters; GamutConversionMatrix = gamutConversionMatrix; Mirrored = mirrored; Rotation = rotation }
         new(label : StringView, plane0 : nativeint, plane1 : nativeint, cropOrigin : Origin2D, cropSize : Extent2D, apparentSize : Extent2D, doYuvToRgbConversionOnly : int, yuvToRgbConversionMatrix : nativeptr<float32>, srcTransferFunctionParameters : nativeptr<float32>, dstTransferFunctionParameters : nativeptr<float32>, gamutConversionMatrix : nativeptr<float32>, mirrored : int, rotation : ExternalTextureRotation) = ExternalTextureDescriptor(0n, label, plane0, plane1, cropOrigin, cropSize, apparentSize, doYuvToRgbConversionOnly, yuvToRgbConversionMatrix, srcTransferFunctionParameters, dstTransferFunctionParameters, gamutConversionMatrix, mirrored, rotation)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let dd = aux
+            NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.YuvToRgbConversionMatrix)
+            step &aux nsize<nativeptr<float32>>
+            self.YuvToRgbConversionMatrix <- NativePtr.ofNativeInt (dd - dst)
+            let dd = aux
+            NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.SrcTransferFunctionParameters)
+            step &aux nsize<nativeptr<float32>>
+            self.SrcTransferFunctionParameters <- NativePtr.ofNativeInt (dd - dst)
+            let dd = aux
+            NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.DstTransferFunctionParameters)
+            step &aux nsize<nativeptr<float32>>
+            self.DstTransferFunctionParameters <- NativePtr.ofNativeInt (dd - dst)
+            let dd = aux
+            NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.GamutConversionMatrix)
+            step &aux nsize<nativeptr<float32>>
+            self.GamutConversionMatrix <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+            let offset = NativePtr.toNativeInt &&self.CropOrigin - NativePtr.toNativeInt &&self
+            this.CropOrigin.CopyTo(dst + offset, &aux)
+            let offset = NativePtr.toNativeInt &&self.CropSize - NativePtr.toNativeInt &&self
+            this.CropSize.CopyTo(dst + offset, &aux)
+            let offset = NativePtr.toNativeInt &&self.ApparentSize - NativePtr.toNativeInt &&self
+            this.ApparentSize.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<ExternalTextureDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedBufferMemoryProperties = 
@@ -681,6 +1834,18 @@ type SharedBufferMemoryProperties =
         val mutable public Size : uint64
         new(nextInChain : nativeint, usage : BufferUsage, size : uint64) = { NextInChain = nextInChain; Usage = usage; Size = size }
         new(usage : BufferUsage, size : uint64) = SharedBufferMemoryProperties(0n, usage, size)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedBufferMemoryProperties>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedBufferMemoryDescriptor = 
@@ -689,6 +1854,20 @@ type SharedBufferMemoryDescriptor =
         val mutable public Label : StringView
         new(nextInChain : nativeint, label : StringView) = { NextInChain = nextInChain; Label = label }
         new(label : StringView) = SharedBufferMemoryDescriptor(0n, label)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedBufferMemoryDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryProperties = 
@@ -699,6 +1878,20 @@ type SharedTextureMemoryProperties =
         val mutable public Format : TextureFormat
         new(nextInChain : nativeint, usage : TextureUsage, size : Extent3D, format : TextureFormat) = { NextInChain = nextInChain; Usage = usage; Size = size; Format = format }
         new(usage : TextureUsage, size : Extent3D, format : TextureFormat) = SharedTextureMemoryProperties(0n, usage, size, format)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Size - NativePtr.toNativeInt &&self
+            this.Size.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedTextureMemoryProperties>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryAHardwareBufferProperties = 
@@ -708,6 +1901,20 @@ type SharedTextureMemoryAHardwareBufferProperties =
         val mutable public YCbCrInfo : YCbCrVkDescriptor
         new(nextInChain : nativeint, sType : SType, yCbCrInfo : YCbCrVkDescriptor) = { NextInChain = nextInChain; SType = sType; YCbCrInfo = yCbCrInfo }
         new(yCbCrInfo : YCbCrVkDescriptor) = SharedTextureMemoryAHardwareBufferProperties(0n, Unchecked.defaultof<SType>, yCbCrInfo)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.YCbCrInfo - NativePtr.toNativeInt &&self
+            this.YCbCrInfo.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedTextureMemoryAHardwareBufferProperties>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryDescriptor = 
@@ -716,6 +1923,20 @@ type SharedTextureMemoryDescriptor =
         val mutable public Label : StringView
         new(nextInChain : nativeint, label : StringView) = { NextInChain = nextInChain; Label = label }
         new(label : StringView) = SharedTextureMemoryDescriptor(0n, label)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedTextureMemoryDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedBufferMemoryBeginAccessDescriptor = 
@@ -727,6 +1948,34 @@ type SharedBufferMemoryBeginAccessDescriptor =
         val mutable public SignaledValues : nativeptr<uint64>
         new(nextInChain : nativeint, initialized : int, fenceCount : unativeint, fences : nativeptr<nativeint>, signaledValues : nativeptr<uint64>) = { NextInChain = nextInChain; Initialized = initialized; FenceCount = fenceCount; Fences = fences; SignaledValues = signaledValues }
         new(initialized : int, fenceCount : unativeint, fences : nativeptr<nativeint>, signaledValues : nativeptr<uint64>) = SharedBufferMemoryBeginAccessDescriptor(0n, initialized, fenceCount, fences, signaledValues)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.FenceCount
+            let dd = aux
+            step &aux (nsize<nativeptr<nativeint>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.Fences i)
+                off <- off + nsize<nativeint>
+            self.Fences <- NativePtr.ofNativeInt (dd - dst)
+            let cnt = int this.FenceCount
+            let dd = aux
+            step &aux (nsize<nativeptr<uint64>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.SignaledValues i)
+                off <- off + nsize<uint64>
+            self.SignaledValues <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedBufferMemoryBeginAccessDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedBufferMemoryEndAccessState = 
@@ -738,6 +1987,34 @@ type SharedBufferMemoryEndAccessState =
         val mutable public SignaledValues : nativeptr<uint64>
         new(nextInChain : nativeint, initialized : int, fenceCount : unativeint, fences : nativeptr<nativeint>, signaledValues : nativeptr<uint64>) = { NextInChain = nextInChain; Initialized = initialized; FenceCount = fenceCount; Fences = fences; SignaledValues = signaledValues }
         new(initialized : int, fenceCount : unativeint, fences : nativeptr<nativeint>, signaledValues : nativeptr<uint64>) = SharedBufferMemoryEndAccessState(0n, initialized, fenceCount, fences, signaledValues)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.FenceCount
+            let dd = aux
+            step &aux (nsize<nativeptr<nativeint>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.Fences i)
+                off <- off + nsize<nativeint>
+            self.Fences <- NativePtr.ofNativeInt (dd - dst)
+            let cnt = int this.FenceCount
+            let dd = aux
+            step &aux (nsize<nativeptr<uint64>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.SignaledValues i)
+                off <- off + nsize<uint64>
+            self.SignaledValues <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedBufferMemoryEndAccessState>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryVkDedicatedAllocationDescriptor = 
@@ -747,6 +2024,18 @@ type SharedTextureMemoryVkDedicatedAllocationDescriptor =
         val mutable public DedicatedAllocation : int
         new(nextInChain : nativeint, sType : SType, dedicatedAllocation : int) = { NextInChain = nextInChain; SType = sType; DedicatedAllocation = dedicatedAllocation }
         new(dedicatedAllocation : int) = SharedTextureMemoryVkDedicatedAllocationDescriptor(0n, Unchecked.defaultof<SType>, dedicatedAllocation)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedTextureMemoryVkDedicatedAllocationDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryAHardwareBufferDescriptor = 
@@ -757,6 +2046,18 @@ type SharedTextureMemoryAHardwareBufferDescriptor =
         val mutable public UseExternalFormat : int
         new(nextInChain : nativeint, sType : SType, handle : nativeint, useExternalFormat : int) = { NextInChain = nextInChain; SType = sType; Handle = handle; UseExternalFormat = useExternalFormat }
         new(handle : nativeint, useExternalFormat : int) = SharedTextureMemoryAHardwareBufferDescriptor(0n, Unchecked.defaultof<SType>, handle, useExternalFormat)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedTextureMemoryAHardwareBufferDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryDmaBufPlane = 
@@ -765,6 +2066,12 @@ type SharedTextureMemoryDmaBufPlane =
         val mutable public Offset : uint64
         val mutable public Stride : uint32
         new(fd : int, offset : uint64, stride : uint32) = { Fd = fd; Offset = offset; Stride = stride }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedTextureMemoryDmaBufPlane>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryDmaBufDescriptor = 
@@ -778,6 +2085,28 @@ type SharedTextureMemoryDmaBufDescriptor =
         val mutable public Planes : nativeptr<SharedTextureMemoryDmaBufPlane>
         new(nextInChain : nativeint, sType : SType, size : Extent3D, drmFormat : uint32, drmModifier : uint64, planeCount : unativeint, planes : nativeptr<SharedTextureMemoryDmaBufPlane>) = { NextInChain = nextInChain; SType = sType; Size = size; DrmFormat = drmFormat; DrmModifier = drmModifier; PlaneCount = planeCount; Planes = planes }
         new(size : Extent3D, drmFormat : uint32, drmModifier : uint64, planeCount : unativeint, planes : nativeptr<SharedTextureMemoryDmaBufPlane>) = SharedTextureMemoryDmaBufDescriptor(0n, Unchecked.defaultof<SType>, size, drmFormat, drmModifier, planeCount, planes)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.PlaneCount
+            let dd = aux
+            step &aux (nsize<nativeptr<SharedTextureMemoryDmaBufPlane>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                (NativePtr.get this.Planes i).CopyTo(off, &aux)
+                off <- off + nsize<SharedTextureMemoryDmaBufPlane>
+            self.Planes <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Size - NativePtr.toNativeInt &&self
+            this.Size.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedTextureMemoryDmaBufDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryOpaqueFDDescriptor = 
@@ -791,6 +2120,18 @@ type SharedTextureMemoryOpaqueFDDescriptor =
         val mutable public DedicatedAllocation : int
         new(nextInChain : nativeint, sType : SType, vkImageCreateInfo : nativeint, memoryFD : int, memoryTypeIndex : uint32, allocationSize : uint64, dedicatedAllocation : int) = { NextInChain = nextInChain; SType = sType; VkImageCreateInfo = vkImageCreateInfo; MemoryFD = memoryFD; MemoryTypeIndex = memoryTypeIndex; AllocationSize = allocationSize; DedicatedAllocation = dedicatedAllocation }
         new(vkImageCreateInfo : nativeint, memoryFD : int, memoryTypeIndex : uint32, allocationSize : uint64, dedicatedAllocation : int) = SharedTextureMemoryOpaqueFDDescriptor(0n, Unchecked.defaultof<SType>, vkImageCreateInfo, memoryFD, memoryTypeIndex, allocationSize, dedicatedAllocation)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedTextureMemoryOpaqueFDDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryZirconHandleDescriptor = 
@@ -801,6 +2142,18 @@ type SharedTextureMemoryZirconHandleDescriptor =
         val mutable public AllocationSize : uint64
         new(nextInChain : nativeint, sType : SType, memoryFD : uint32, allocationSize : uint64) = { NextInChain = nextInChain; SType = sType; MemoryFD = memoryFD; AllocationSize = allocationSize }
         new(memoryFD : uint32, allocationSize : uint64) = SharedTextureMemoryZirconHandleDescriptor(0n, Unchecked.defaultof<SType>, memoryFD, allocationSize)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedTextureMemoryZirconHandleDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryDXGISharedHandleDescriptor = 
@@ -811,6 +2164,18 @@ type SharedTextureMemoryDXGISharedHandleDescriptor =
         val mutable public UseKeyedMutex : int
         new(nextInChain : nativeint, sType : SType, handle : nativeint, useKeyedMutex : int) = { NextInChain = nextInChain; SType = sType; Handle = handle; UseKeyedMutex = useKeyedMutex }
         new(handle : nativeint, useKeyedMutex : int) = SharedTextureMemoryDXGISharedHandleDescriptor(0n, Unchecked.defaultof<SType>, handle, useKeyedMutex)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedTextureMemoryDXGISharedHandleDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryIOSurfaceDescriptor = 
@@ -821,6 +2186,18 @@ type SharedTextureMemoryIOSurfaceDescriptor =
         val mutable public AllowStorageBinding : int
         new(nextInChain : nativeint, sType : SType, ioSurface : nativeint, allowStorageBinding : int) = { NextInChain = nextInChain; SType = sType; IoSurface = ioSurface; AllowStorageBinding = allowStorageBinding }
         new(ioSurface : nativeint, allowStorageBinding : int) = SharedTextureMemoryIOSurfaceDescriptor(0n, Unchecked.defaultof<SType>, ioSurface, allowStorageBinding)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedTextureMemoryIOSurfaceDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryEGLImageDescriptor = 
@@ -830,6 +2207,18 @@ type SharedTextureMemoryEGLImageDescriptor =
         val mutable public Image : nativeint
         new(nextInChain : nativeint, sType : SType, image : nativeint) = { NextInChain = nextInChain; SType = sType; Image = image }
         new(image : nativeint) = SharedTextureMemoryEGLImageDescriptor(0n, Unchecked.defaultof<SType>, image)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedTextureMemoryEGLImageDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryBeginAccessDescriptor = 
@@ -842,6 +2231,34 @@ type SharedTextureMemoryBeginAccessDescriptor =
         val mutable public SignaledValues : nativeptr<uint64>
         new(nextInChain : nativeint, concurrentRead : int, initialized : int, fenceCount : unativeint, fences : nativeptr<nativeint>, signaledValues : nativeptr<uint64>) = { NextInChain = nextInChain; ConcurrentRead = concurrentRead; Initialized = initialized; FenceCount = fenceCount; Fences = fences; SignaledValues = signaledValues }
         new(concurrentRead : int, initialized : int, fenceCount : unativeint, fences : nativeptr<nativeint>, signaledValues : nativeptr<uint64>) = SharedTextureMemoryBeginAccessDescriptor(0n, concurrentRead, initialized, fenceCount, fences, signaledValues)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.FenceCount
+            let dd = aux
+            step &aux (nsize<nativeptr<nativeint>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.Fences i)
+                off <- off + nsize<nativeint>
+            self.Fences <- NativePtr.ofNativeInt (dd - dst)
+            let cnt = int this.FenceCount
+            let dd = aux
+            step &aux (nsize<nativeptr<uint64>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.SignaledValues i)
+                off <- off + nsize<uint64>
+            self.SignaledValues <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedTextureMemoryBeginAccessDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryEndAccessState = 
@@ -853,6 +2270,34 @@ type SharedTextureMemoryEndAccessState =
         val mutable public SignaledValues : nativeptr<uint64>
         new(nextInChain : nativeint, initialized : int, fenceCount : unativeint, fences : nativeptr<nativeint>, signaledValues : nativeptr<uint64>) = { NextInChain = nextInChain; Initialized = initialized; FenceCount = fenceCount; Fences = fences; SignaledValues = signaledValues }
         new(initialized : int, fenceCount : unativeint, fences : nativeptr<nativeint>, signaledValues : nativeptr<uint64>) = SharedTextureMemoryEndAccessState(0n, initialized, fenceCount, fences, signaledValues)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.FenceCount
+            let dd = aux
+            step &aux (nsize<nativeptr<nativeint>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.Fences i)
+                off <- off + nsize<nativeint>
+            self.Fences <- NativePtr.ofNativeInt (dd - dst)
+            let cnt = int this.FenceCount
+            let dd = aux
+            step &aux (nsize<nativeptr<uint64>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.SignaledValues i)
+                off <- off + nsize<uint64>
+            self.SignaledValues <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedTextureMemoryEndAccessState>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryVkImageLayoutBeginState = 
@@ -863,6 +2308,18 @@ type SharedTextureMemoryVkImageLayoutBeginState =
         val mutable public NewLayout : int
         new(nextInChain : nativeint, sType : SType, oldLayout : int, newLayout : int) = { NextInChain = nextInChain; SType = sType; OldLayout = oldLayout; NewLayout = newLayout }
         new(oldLayout : int, newLayout : int) = SharedTextureMemoryVkImageLayoutBeginState(0n, Unchecked.defaultof<SType>, oldLayout, newLayout)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedTextureMemoryVkImageLayoutBeginState>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryVkImageLayoutEndState = 
@@ -873,6 +2330,18 @@ type SharedTextureMemoryVkImageLayoutEndState =
         val mutable public NewLayout : int
         new(nextInChain : nativeint, sType : SType, oldLayout : int, newLayout : int) = { NextInChain = nextInChain; SType = sType; OldLayout = oldLayout; NewLayout = newLayout }
         new(oldLayout : int, newLayout : int) = SharedTextureMemoryVkImageLayoutEndState(0n, Unchecked.defaultof<SType>, oldLayout, newLayout)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedTextureMemoryVkImageLayoutEndState>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryD3DSwapchainBeginState = 
@@ -882,6 +2351,18 @@ type SharedTextureMemoryD3DSwapchainBeginState =
         val mutable public IsSwapchain : int
         new(nextInChain : nativeint, sType : SType, isSwapchain : int) = { NextInChain = nextInChain; SType = sType; IsSwapchain = isSwapchain }
         new(isSwapchain : int) = SharedTextureMemoryD3DSwapchainBeginState(0n, Unchecked.defaultof<SType>, isSwapchain)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedTextureMemoryD3DSwapchainBeginState>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedTextureMemoryD3D11BeginState = 
@@ -891,6 +2372,18 @@ type SharedTextureMemoryD3D11BeginState =
         val mutable public RequiresEndAccessFence : int
         new(nextInChain : nativeint, sType : SType, requiresEndAccessFence : int) = { NextInChain = nextInChain; SType = sType; RequiresEndAccessFence = requiresEndAccessFence }
         new(requiresEndAccessFence : int) = SharedTextureMemoryD3D11BeginState(0n, Unchecked.defaultof<SType>, requiresEndAccessFence)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedTextureMemoryD3D11BeginState>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedFenceDescriptor = 
@@ -899,6 +2392,20 @@ type SharedFenceDescriptor =
         val mutable public Label : StringView
         new(nextInChain : nativeint, label : StringView) = { NextInChain = nextInChain; Label = label }
         new(label : StringView) = SharedFenceDescriptor(0n, label)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedFenceDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedFenceVkSemaphoreOpaqueFDDescriptor = 
@@ -908,6 +2415,18 @@ type SharedFenceVkSemaphoreOpaqueFDDescriptor =
         val mutable public Handle : int
         new(nextInChain : nativeint, sType : SType, handle : int) = { NextInChain = nextInChain; SType = sType; Handle = handle }
         new(handle : int) = SharedFenceVkSemaphoreOpaqueFDDescriptor(0n, Unchecked.defaultof<SType>, handle)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedFenceVkSemaphoreOpaqueFDDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedFenceSyncFDDescriptor = 
@@ -917,6 +2436,18 @@ type SharedFenceSyncFDDescriptor =
         val mutable public Handle : int
         new(nextInChain : nativeint, sType : SType, handle : int) = { NextInChain = nextInChain; SType = sType; Handle = handle }
         new(handle : int) = SharedFenceSyncFDDescriptor(0n, Unchecked.defaultof<SType>, handle)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedFenceSyncFDDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedFenceVkSemaphoreZirconHandleDescriptor = 
@@ -926,6 +2457,18 @@ type SharedFenceVkSemaphoreZirconHandleDescriptor =
         val mutable public Handle : uint32
         new(nextInChain : nativeint, sType : SType, handle : uint32) = { NextInChain = nextInChain; SType = sType; Handle = handle }
         new(handle : uint32) = SharedFenceVkSemaphoreZirconHandleDescriptor(0n, Unchecked.defaultof<SType>, handle)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedFenceVkSemaphoreZirconHandleDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedFenceDXGISharedHandleDescriptor = 
@@ -935,6 +2478,18 @@ type SharedFenceDXGISharedHandleDescriptor =
         val mutable public Handle : nativeint
         new(nextInChain : nativeint, sType : SType, handle : nativeint) = { NextInChain = nextInChain; SType = sType; Handle = handle }
         new(handle : nativeint) = SharedFenceDXGISharedHandleDescriptor(0n, Unchecked.defaultof<SType>, handle)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedFenceDXGISharedHandleDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedFenceMTLSharedEventDescriptor = 
@@ -944,6 +2499,18 @@ type SharedFenceMTLSharedEventDescriptor =
         val mutable public SharedEvent : nativeint
         new(nextInChain : nativeint, sType : SType, sharedEvent : nativeint) = { NextInChain = nextInChain; SType = sType; SharedEvent = sharedEvent }
         new(sharedEvent : nativeint) = SharedFenceMTLSharedEventDescriptor(0n, Unchecked.defaultof<SType>, sharedEvent)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedFenceMTLSharedEventDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedFenceEGLSyncDescriptor = 
@@ -953,6 +2520,18 @@ type SharedFenceEGLSyncDescriptor =
         val mutable public Sync : nativeint
         new(nextInChain : nativeint, sType : SType, sync : nativeint) = { NextInChain = nextInChain; SType = sType; Sync = sync }
         new(sync : nativeint) = SharedFenceEGLSyncDescriptor(0n, Unchecked.defaultof<SType>, sync)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedFenceEGLSyncDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnFakeBufferOOMForTesting = 
@@ -964,6 +2543,18 @@ type DawnFakeBufferOOMForTesting =
         val mutable public FakeOOMAtDevice : int
         new(nextInChain : nativeint, sType : SType, fakeOOMAtWireClientMap : int, fakeOOMAtNativeMap : int, fakeOOMAtDevice : int) = { NextInChain = nextInChain; SType = sType; FakeOOMAtWireClientMap = fakeOOMAtWireClientMap; FakeOOMAtNativeMap = fakeOOMAtNativeMap; FakeOOMAtDevice = fakeOOMAtDevice }
         new(fakeOOMAtWireClientMap : int, fakeOOMAtNativeMap : int, fakeOOMAtDevice : int) = DawnFakeBufferOOMForTesting(0n, Unchecked.defaultof<SType>, fakeOOMAtWireClientMap, fakeOOMAtNativeMap, fakeOOMAtDevice)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnFakeBufferOOMForTesting>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnFakeDeviceInitializeErrorForTesting = 
@@ -971,6 +2562,18 @@ type DawnFakeDeviceInitializeErrorForTesting =
         val mutable public NextInChain : nativeint
         val mutable public SType : SType
         new(nextInChain : nativeint, sType : SType) = { NextInChain = nextInChain; SType = sType }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnFakeDeviceInitializeErrorForTesting>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedFenceExportInfo = 
@@ -979,6 +2582,18 @@ type SharedFenceExportInfo =
         val mutable public Type : SharedFenceType
         new(nextInChain : nativeint, typ : SharedFenceType) = { NextInChain = nextInChain; Type = typ }
         new(typ : SharedFenceType) = SharedFenceExportInfo(0n, typ)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedFenceExportInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedFenceVkSemaphoreOpaqueFDExportInfo = 
@@ -988,6 +2603,18 @@ type SharedFenceVkSemaphoreOpaqueFDExportInfo =
         val mutable public Handle : int
         new(nextInChain : nativeint, sType : SType, handle : int) = { NextInChain = nextInChain; SType = sType; Handle = handle }
         new(handle : int) = SharedFenceVkSemaphoreOpaqueFDExportInfo(0n, Unchecked.defaultof<SType>, handle)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedFenceVkSemaphoreOpaqueFDExportInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedFenceSyncFDExportInfo = 
@@ -997,6 +2624,18 @@ type SharedFenceSyncFDExportInfo =
         val mutable public Handle : int
         new(nextInChain : nativeint, sType : SType, handle : int) = { NextInChain = nextInChain; SType = sType; Handle = handle }
         new(handle : int) = SharedFenceSyncFDExportInfo(0n, Unchecked.defaultof<SType>, handle)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedFenceSyncFDExportInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedFenceVkSemaphoreZirconHandleExportInfo = 
@@ -1006,6 +2645,18 @@ type SharedFenceVkSemaphoreZirconHandleExportInfo =
         val mutable public Handle : uint32
         new(nextInChain : nativeint, sType : SType, handle : uint32) = { NextInChain = nextInChain; SType = sType; Handle = handle }
         new(handle : uint32) = SharedFenceVkSemaphoreZirconHandleExportInfo(0n, Unchecked.defaultof<SType>, handle)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedFenceVkSemaphoreZirconHandleExportInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedFenceDXGISharedHandleExportInfo = 
@@ -1015,6 +2666,18 @@ type SharedFenceDXGISharedHandleExportInfo =
         val mutable public Handle : nativeint
         new(nextInChain : nativeint, sType : SType, handle : nativeint) = { NextInChain = nextInChain; SType = sType; Handle = handle }
         new(handle : nativeint) = SharedFenceDXGISharedHandleExportInfo(0n, Unchecked.defaultof<SType>, handle)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedFenceDXGISharedHandleExportInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedFenceMTLSharedEventExportInfo = 
@@ -1024,6 +2687,18 @@ type SharedFenceMTLSharedEventExportInfo =
         val mutable public SharedEvent : nativeint
         new(nextInChain : nativeint, sType : SType, sharedEvent : nativeint) = { NextInChain = nextInChain; SType = sType; SharedEvent = sharedEvent }
         new(sharedEvent : nativeint) = SharedFenceMTLSharedEventExportInfo(0n, Unchecked.defaultof<SType>, sharedEvent)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedFenceMTLSharedEventExportInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SharedFenceEGLSyncExportInfo = 
@@ -1033,12 +2708,36 @@ type SharedFenceEGLSyncExportInfo =
         val mutable public Sync : nativeint
         new(nextInChain : nativeint, sType : SType, sync : nativeint) = { NextInChain = nextInChain; SType = sType; Sync = sync }
         new(sync : nativeint) = SharedFenceEGLSyncExportInfo(0n, Unchecked.defaultof<SType>, sync)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SharedFenceEGLSyncExportInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnFormatCapabilities = 
     struct
         val mutable public NextInChain : nativeint
         new(nextInChain : nativeint) = { NextInChain = nextInChain }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnFormatCapabilities>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnDrmFormatCapabilities = 
@@ -1049,6 +2748,26 @@ type DawnDrmFormatCapabilities =
         val mutable public Properties : nativeptr<DawnDrmFormatProperties>
         new(nextInChain : nativeint, sType : SType, propertiesCount : unativeint, properties : nativeptr<DawnDrmFormatProperties>) = { NextInChain = nextInChain; SType = sType; PropertiesCount = propertiesCount; Properties = properties }
         new(propertiesCount : unativeint, properties : nativeptr<DawnDrmFormatProperties>) = DawnDrmFormatCapabilities(0n, Unchecked.defaultof<SType>, propertiesCount, properties)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.PropertiesCount
+            let dd = aux
+            step &aux (nsize<nativeptr<DawnDrmFormatProperties>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                (NativePtr.get this.Properties i).CopyTo(off, &aux)
+                off <- off + nsize<DawnDrmFormatProperties>
+            self.Properties <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnDrmFormatCapabilities>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnDrmFormatProperties = 
@@ -1056,6 +2775,12 @@ type DawnDrmFormatProperties =
         val mutable public Modifier : uint64
         val mutable public ModifierPlaneCount : uint32
         new(modifier : uint64, modifierPlaneCount : uint32) = { Modifier = modifier; ModifierPlaneCount = modifierPlaneCount }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnDrmFormatProperties>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type TexelCopyBufferInfo = 
@@ -1063,6 +2788,14 @@ type TexelCopyBufferInfo =
         val mutable public Layout : TexelCopyBufferLayout
         val mutable public Buffer : nativeint
         new(layout : TexelCopyBufferLayout, buffer : nativeint) = { Layout = layout; Buffer = buffer }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Layout - NativePtr.toNativeInt &&self
+            this.Layout.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<TexelCopyBufferInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type TexelCopyBufferLayout = 
@@ -1071,6 +2804,12 @@ type TexelCopyBufferLayout =
         val mutable public BytesPerRow : uint32
         val mutable public RowsPerImage : uint32
         new(offset : uint64, bytesPerRow : uint32, rowsPerImage : uint32) = { Offset = offset; BytesPerRow = bytesPerRow; RowsPerImage = rowsPerImage }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<TexelCopyBufferLayout>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type TexelCopyTextureInfo = 
@@ -1080,6 +2819,14 @@ type TexelCopyTextureInfo =
         val mutable public Origin : Origin3D
         val mutable public Aspect : TextureAspect
         new(texture : nativeint, mipLevel : uint32, origin : Origin3D, aspect : TextureAspect) = { Texture = texture; MipLevel = mipLevel; Origin = origin; Aspect = aspect }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Origin - NativePtr.toNativeInt &&self
+            this.Origin.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<TexelCopyTextureInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type ImageCopyExternalTexture = 
@@ -1090,12 +2837,34 @@ type ImageCopyExternalTexture =
         val mutable public NaturalSize : Extent2D
         new(nextInChain : nativeint, externalTexture : nativeint, origin : Origin3D, naturalSize : Extent2D) = { NextInChain = nextInChain; ExternalTexture = externalTexture; Origin = origin; NaturalSize = naturalSize }
         new(externalTexture : nativeint, origin : Origin3D, naturalSize : Extent2D) = ImageCopyExternalTexture(0n, externalTexture, origin, naturalSize)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Origin - NativePtr.toNativeInt &&self
+            this.Origin.CopyTo(dst + offset, &aux)
+            let offset = NativePtr.toNativeInt &&self.NaturalSize - NativePtr.toNativeInt &&self
+            this.NaturalSize.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<ImageCopyExternalTexture>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type Future = 
     struct
         val mutable public Id : uint64
         new(id : uint64) = { Id = id }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<Future>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type FutureWaitInfo = 
@@ -1103,6 +2872,14 @@ type FutureWaitInfo =
         val mutable public Future : Future
         val mutable public Completed : int
         new(future : Future, completed : int) = { Future = future; Completed = completed }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Future - NativePtr.toNativeInt &&self
+            this.Future.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<FutureWaitInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type InstanceLimits = 
@@ -1111,6 +2888,18 @@ type InstanceLimits =
         val mutable public TimedWaitAnyMaxCount : unativeint
         new(nextInChain : nativeint, timedWaitAnyMaxCount : unativeint) = { NextInChain = nextInChain; TimedWaitAnyMaxCount = timedWaitAnyMaxCount }
         new(timedWaitAnyMaxCount : unativeint) = InstanceLimits(0n, timedWaitAnyMaxCount)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<InstanceLimits>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type InstanceDescriptor = 
@@ -1121,6 +2910,30 @@ type InstanceDescriptor =
         val mutable public RequiredLimits : nativeptr<InstanceLimits>
         new(nextInChain : nativeint, requiredFeatureCount : unativeint, requiredFeatures : nativeptr<InstanceFeatureName>, requiredLimits : nativeptr<InstanceLimits>) = { NextInChain = nextInChain; RequiredFeatureCount = requiredFeatureCount; RequiredFeatures = requiredFeatures; RequiredLimits = requiredLimits }
         new(requiredFeatureCount : unativeint, requiredFeatures : nativeptr<InstanceFeatureName>, requiredLimits : nativeptr<InstanceLimits>) = InstanceDescriptor(0n, requiredFeatureCount, requiredFeatures, requiredLimits)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.RequiredFeatureCount
+            let dd = aux
+            step &aux (nsize<nativeptr<InstanceFeatureName>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.RequiredFeatures i)
+                off <- off + nsize<InstanceFeatureName>
+            self.RequiredFeatures <- NativePtr.ofNativeInt (dd - dst)
+            let dd = aux
+            step &aux nsize<nativeptr<InstanceLimits>>
+            (NativePtr.read this.RequiredLimits).CopyTo(dd, &aux)
+            self.RequiredLimits <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<InstanceDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnWireWGSLControl = 
@@ -1132,6 +2945,18 @@ type DawnWireWGSLControl =
         val mutable public EnableTesting : int
         new(nextInChain : nativeint, sType : SType, enableExperimental : int, enableUnsafe : int, enableTesting : int) = { NextInChain = nextInChain; SType = sType; EnableExperimental = enableExperimental; EnableUnsafe = enableUnsafe; EnableTesting = enableTesting }
         new(enableExperimental : int, enableUnsafe : int, enableTesting : int) = DawnWireWGSLControl(0n, Unchecked.defaultof<SType>, enableExperimental, enableUnsafe, enableTesting)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnWireWGSLControl>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnInjectedInvalidSType = 
@@ -1141,6 +2966,18 @@ type DawnInjectedInvalidSType =
         val mutable public InvalidSType : SType
         new(nextInChain : nativeint, sType : SType, invalidSType : SType) = { NextInChain = nextInChain; SType = sType; InvalidSType = invalidSType }
         new(invalidSType : SType) = DawnInjectedInvalidSType(0n, Unchecked.defaultof<SType>, invalidSType)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnInjectedInvalidSType>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type VertexAttribute = 
@@ -1151,6 +2988,18 @@ type VertexAttribute =
         val mutable public ShaderLocation : uint32
         new(nextInChain : nativeint, format : VertexFormat, offset : uint64, shaderLocation : uint32) = { NextInChain = nextInChain; Format = format; Offset = offset; ShaderLocation = shaderLocation }
         new(format : VertexFormat, offset : uint64, shaderLocation : uint32) = VertexAttribute(0n, format, offset, shaderLocation)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<VertexAttribute>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type VertexBufferLayout = 
@@ -1162,6 +3011,26 @@ type VertexBufferLayout =
         val mutable public Attributes : nativeptr<VertexAttribute>
         new(nextInChain : nativeint, stepMode : VertexStepMode, arrayStride : uint64, attributeCount : unativeint, attributes : nativeptr<VertexAttribute>) = { NextInChain = nextInChain; StepMode = stepMode; ArrayStride = arrayStride; AttributeCount = attributeCount; Attributes = attributes }
         new(stepMode : VertexStepMode, arrayStride : uint64, attributeCount : unativeint, attributes : nativeptr<VertexAttribute>) = VertexBufferLayout(0n, stepMode, arrayStride, attributeCount, attributes)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.AttributeCount
+            let dd = aux
+            step &aux (nsize<nativeptr<VertexAttribute>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                (NativePtr.get this.Attributes i).CopyTo(off, &aux)
+                off <- off + nsize<VertexAttribute>
+            self.Attributes <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<VertexBufferLayout>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type Origin3D = 
@@ -1170,6 +3039,12 @@ type Origin3D =
         val mutable public Y : uint32
         val mutable public Z : uint32
         new(x : uint32, y : uint32, z : uint32) = { X = x; Y = y; Z = z }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<Origin3D>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type Origin2D = 
@@ -1177,6 +3052,12 @@ type Origin2D =
         val mutable public X : uint32
         val mutable public Y : uint32
         new(x : uint32, y : uint32) = { X = x; Y = y }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<Origin2D>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type PassTimestampWrites = 
@@ -1187,6 +3068,18 @@ type PassTimestampWrites =
         val mutable public EndOfPassWriteIndex : uint32
         new(nextInChain : nativeint, querySet : nativeint, beginningOfPassWriteIndex : uint32, endOfPassWriteIndex : uint32) = { NextInChain = nextInChain; QuerySet = querySet; BeginningOfPassWriteIndex = beginningOfPassWriteIndex; EndOfPassWriteIndex = endOfPassWriteIndex }
         new(querySet : nativeint, beginningOfPassWriteIndex : uint32, endOfPassWriteIndex : uint32) = PassTimestampWrites(0n, querySet, beginningOfPassWriteIndex, endOfPassWriteIndex)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<PassTimestampWrites>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type PipelineLayoutDescriptor = 
@@ -1198,6 +3091,28 @@ type PipelineLayoutDescriptor =
         val mutable public ImmediateSize : uint32
         new(nextInChain : nativeint, label : StringView, bindGroupLayoutCount : unativeint, bindGroupLayouts : nativeptr<nativeint>, immediateSize : uint32) = { NextInChain = nextInChain; Label = label; BindGroupLayoutCount = bindGroupLayoutCount; BindGroupLayouts = bindGroupLayouts; ImmediateSize = immediateSize }
         new(label : StringView, bindGroupLayoutCount : unativeint, bindGroupLayouts : nativeptr<nativeint>, immediateSize : uint32) = PipelineLayoutDescriptor(0n, label, bindGroupLayoutCount, bindGroupLayouts, immediateSize)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.BindGroupLayoutCount
+            let dd = aux
+            step &aux (nsize<nativeptr<nativeint>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.BindGroupLayouts i)
+                off <- off + nsize<nativeint>
+            self.BindGroupLayouts <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<PipelineLayoutDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type PipelineLayoutPixelLocalStorage = 
@@ -1209,6 +3124,26 @@ type PipelineLayoutPixelLocalStorage =
         val mutable public StorageAttachments : nativeptr<PipelineLayoutStorageAttachment>
         new(nextInChain : nativeint, sType : SType, totalPixelLocalStorageSize : uint64, storageAttachmentCount : unativeint, storageAttachments : nativeptr<PipelineLayoutStorageAttachment>) = { NextInChain = nextInChain; SType = sType; TotalPixelLocalStorageSize = totalPixelLocalStorageSize; StorageAttachmentCount = storageAttachmentCount; StorageAttachments = storageAttachments }
         new(totalPixelLocalStorageSize : uint64, storageAttachmentCount : unativeint, storageAttachments : nativeptr<PipelineLayoutStorageAttachment>) = PipelineLayoutPixelLocalStorage(0n, Unchecked.defaultof<SType>, totalPixelLocalStorageSize, storageAttachmentCount, storageAttachments)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.StorageAttachmentCount
+            let dd = aux
+            step &aux (nsize<nativeptr<PipelineLayoutStorageAttachment>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                (NativePtr.get this.StorageAttachments i).CopyTo(off, &aux)
+                off <- off + nsize<PipelineLayoutStorageAttachment>
+            self.StorageAttachments <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<PipelineLayoutPixelLocalStorage>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type PipelineLayoutStorageAttachment = 
@@ -1218,6 +3153,18 @@ type PipelineLayoutStorageAttachment =
         val mutable public Format : TextureFormat
         new(nextInChain : nativeint, offset : uint64, format : TextureFormat) = { NextInChain = nextInChain; Offset = offset; Format = format }
         new(offset : uint64, format : TextureFormat) = PipelineLayoutStorageAttachment(0n, offset, format)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<PipelineLayoutStorageAttachment>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type ComputeState = 
@@ -1229,6 +3176,28 @@ type ComputeState =
         val mutable public Constants : nativeptr<ConstantEntry>
         new(nextInChain : nativeint, moodule : nativeint, entryPoint : StringView, constantCount : unativeint, constants : nativeptr<ConstantEntry>) = { NextInChain = nextInChain; Module = moodule; EntryPoint = entryPoint; ConstantCount = constantCount; Constants = constants }
         new(moodule : nativeint, entryPoint : StringView, constantCount : unativeint, constants : nativeptr<ConstantEntry>) = ComputeState(0n, moodule, entryPoint, constantCount, constants)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.ConstantCount
+            let dd = aux
+            step &aux (nsize<nativeptr<ConstantEntry>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                (NativePtr.get this.Constants i).CopyTo(off, &aux)
+                off <- off + nsize<ConstantEntry>
+            self.Constants <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.EntryPoint - NativePtr.toNativeInt &&self
+            this.EntryPoint.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<ComputeState>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type QuerySetDescriptor = 
@@ -1239,6 +3208,20 @@ type QuerySetDescriptor =
         val mutable public Count : uint32
         new(nextInChain : nativeint, label : StringView, typ : QueryType, count : uint32) = { NextInChain = nextInChain; Label = label; Type = typ; Count = count }
         new(label : StringView, typ : QueryType, count : uint32) = QuerySetDescriptor(0n, label, typ, count)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<QuerySetDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type QueueDescriptor = 
@@ -1247,6 +3230,20 @@ type QueueDescriptor =
         val mutable public Label : StringView
         new(nextInChain : nativeint, label : StringView) = { NextInChain = nextInChain; Label = label }
         new(label : StringView) = QueueDescriptor(0n, label)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<QueueDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type QueueWorkDoneCallback = delegate of status : QueueWorkDoneStatus * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -1259,6 +3256,18 @@ type QueueWorkDoneCallbackInfo =
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
         new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = QueueWorkDoneCallbackInfo(0n, mode, callback, userdata1, userdata2)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<QueueWorkDoneCallbackInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RenderBundleDescriptor = 
@@ -1267,6 +3276,20 @@ type RenderBundleDescriptor =
         val mutable public Label : StringView
         new(nextInChain : nativeint, label : StringView) = { NextInChain = nextInChain; Label = label }
         new(label : StringView) = RenderBundleDescriptor(0n, label)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<RenderBundleDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RenderBundleEncoderDescriptor = 
@@ -1281,6 +3304,28 @@ type RenderBundleEncoderDescriptor =
         val mutable public StencilReadOnly : int
         new(nextInChain : nativeint, label : StringView, colorFormatCount : unativeint, colorFormats : nativeptr<TextureFormat>, depthStencilFormat : TextureFormat, sampleCount : uint32, depthReadOnly : int, stencilReadOnly : int) = { NextInChain = nextInChain; Label = label; ColorFormatCount = colorFormatCount; ColorFormats = colorFormats; DepthStencilFormat = depthStencilFormat; SampleCount = sampleCount; DepthReadOnly = depthReadOnly; StencilReadOnly = stencilReadOnly }
         new(label : StringView, colorFormatCount : unativeint, colorFormats : nativeptr<TextureFormat>, depthStencilFormat : TextureFormat, sampleCount : uint32, depthReadOnly : int, stencilReadOnly : int) = RenderBundleEncoderDescriptor(0n, label, colorFormatCount, colorFormats, depthStencilFormat, sampleCount, depthReadOnly, stencilReadOnly)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.ColorFormatCount
+            let dd = aux
+            step &aux (nsize<nativeptr<TextureFormat>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.ColorFormats i)
+                off <- off + nsize<TextureFormat>
+            self.ColorFormats <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<RenderBundleEncoderDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RenderPassColorAttachment = 
@@ -1294,6 +3339,20 @@ type RenderPassColorAttachment =
         val mutable public ClearValue : Color
         new(nextInChain : nativeint, view : nativeint, depthSlice : uint32, resolveTarget : nativeint, loadOp : LoadOp, storeOp : StoreOp, clearValue : Color) = { NextInChain = nextInChain; View = view; DepthSlice = depthSlice; ResolveTarget = resolveTarget; LoadOp = loadOp; StoreOp = storeOp; ClearValue = clearValue }
         new(view : nativeint, depthSlice : uint32, resolveTarget : nativeint, loadOp : LoadOp, storeOp : StoreOp, clearValue : Color) = RenderPassColorAttachment(0n, view, depthSlice, resolveTarget, loadOp, storeOp, clearValue)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.ClearValue - NativePtr.toNativeInt &&self
+            this.ClearValue.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<RenderPassColorAttachment>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnRenderPassColorAttachmentRenderToSingleSampled = 
@@ -1303,6 +3362,18 @@ type DawnRenderPassColorAttachmentRenderToSingleSampled =
         val mutable public ImplicitSampleCount : uint32
         new(nextInChain : nativeint, sType : SType, implicitSampleCount : uint32) = { NextInChain = nextInChain; SType = sType; ImplicitSampleCount = implicitSampleCount }
         new(implicitSampleCount : uint32) = DawnRenderPassColorAttachmentRenderToSingleSampled(0n, Unchecked.defaultof<SType>, implicitSampleCount)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnRenderPassColorAttachmentRenderToSingleSampled>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RenderPassDepthStencilAttachment = 
@@ -1319,6 +3390,18 @@ type RenderPassDepthStencilAttachment =
         val mutable public StencilReadOnly : int
         new(nextInChain : nativeint, view : nativeint, depthLoadOp : LoadOp, depthStoreOp : StoreOp, depthClearValue : float32, depthReadOnly : int, stencilLoadOp : LoadOp, stencilStoreOp : StoreOp, stencilClearValue : uint32, stencilReadOnly : int) = { NextInChain = nextInChain; View = view; DepthLoadOp = depthLoadOp; DepthStoreOp = depthStoreOp; DepthClearValue = depthClearValue; DepthReadOnly = depthReadOnly; StencilLoadOp = stencilLoadOp; StencilStoreOp = stencilStoreOp; StencilClearValue = stencilClearValue; StencilReadOnly = stencilReadOnly }
         new(view : nativeint, depthLoadOp : LoadOp, depthStoreOp : StoreOp, depthClearValue : float32, depthReadOnly : int, stencilLoadOp : LoadOp, stencilStoreOp : StoreOp, stencilClearValue : uint32, stencilReadOnly : int) = RenderPassDepthStencilAttachment(0n, view, depthLoadOp, depthStoreOp, depthClearValue, depthReadOnly, stencilLoadOp, stencilStoreOp, stencilClearValue, stencilReadOnly)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<RenderPassDepthStencilAttachment>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RenderPassDescriptor = 
@@ -1332,6 +3415,36 @@ type RenderPassDescriptor =
         val mutable public TimestampWrites : nativeptr<PassTimestampWrites>
         new(nextInChain : nativeint, label : StringView, colorAttachmentCount : unativeint, colorAttachments : nativeptr<RenderPassColorAttachment>, depthStencilAttachment : nativeptr<RenderPassDepthStencilAttachment>, occlusionQuerySet : nativeint, timestampWrites : nativeptr<PassTimestampWrites>) = { NextInChain = nextInChain; Label = label; ColorAttachmentCount = colorAttachmentCount; ColorAttachments = colorAttachments; DepthStencilAttachment = depthStencilAttachment; OcclusionQuerySet = occlusionQuerySet; TimestampWrites = timestampWrites }
         new(label : StringView, colorAttachmentCount : unativeint, colorAttachments : nativeptr<RenderPassColorAttachment>, depthStencilAttachment : nativeptr<RenderPassDepthStencilAttachment>, occlusionQuerySet : nativeint, timestampWrites : nativeptr<PassTimestampWrites>) = RenderPassDescriptor(0n, label, colorAttachmentCount, colorAttachments, depthStencilAttachment, occlusionQuerySet, timestampWrites)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.ColorAttachmentCount
+            let dd = aux
+            step &aux (nsize<nativeptr<RenderPassColorAttachment>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                (NativePtr.get this.ColorAttachments i).CopyTo(off, &aux)
+                off <- off + nsize<RenderPassColorAttachment>
+            self.ColorAttachments <- NativePtr.ofNativeInt (dd - dst)
+            let dd = aux
+            step &aux nsize<nativeptr<RenderPassDepthStencilAttachment>>
+            (NativePtr.read this.DepthStencilAttachment).CopyTo(dd, &aux)
+            self.DepthStencilAttachment <- NativePtr.ofNativeInt (dd - dst)
+            let dd = aux
+            step &aux nsize<nativeptr<PassTimestampWrites>>
+            (NativePtr.read this.TimestampWrites).CopyTo(dd, &aux)
+            self.TimestampWrites <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<RenderPassDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type RenderPassDescriptorMaxDrawCount = RenderPassMaxDrawCount
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -1342,6 +3455,18 @@ type RenderPassMaxDrawCount =
         val mutable public MaxDrawCount : uint64
         new(nextInChain : nativeint, sType : SType, maxDrawCount : uint64) = { NextInChain = nextInChain; SType = sType; MaxDrawCount = maxDrawCount }
         new(maxDrawCount : uint64) = RenderPassMaxDrawCount(0n, Unchecked.defaultof<SType>, maxDrawCount)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<RenderPassMaxDrawCount>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RenderPassDescriptorExpandResolveRect = 
@@ -1354,6 +3479,18 @@ type RenderPassDescriptorExpandResolveRect =
         val mutable public Height : uint32
         new(nextInChain : nativeint, sType : SType, x : uint32, y : uint32, width : uint32, height : uint32) = { NextInChain = nextInChain; SType = sType; X = x; Y = y; Width = width; Height = height }
         new(x : uint32, y : uint32, width : uint32, height : uint32) = RenderPassDescriptorExpandResolveRect(0n, Unchecked.defaultof<SType>, x, y, width, height)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<RenderPassDescriptorExpandResolveRect>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RenderPassDescriptorResolveRect = 
@@ -1368,6 +3505,18 @@ type RenderPassDescriptorResolveRect =
         val mutable public Height : uint32
         new(nextInChain : nativeint, sType : SType, colorOffsetX : uint32, colorOffsetY : uint32, resolveOffsetX : uint32, resolveOffsetY : uint32, width : uint32, height : uint32) = { NextInChain = nextInChain; SType = sType; ColorOffsetX = colorOffsetX; ColorOffsetY = colorOffsetY; ResolveOffsetX = resolveOffsetX; ResolveOffsetY = resolveOffsetY; Width = width; Height = height }
         new(colorOffsetX : uint32, colorOffsetY : uint32, resolveOffsetX : uint32, resolveOffsetY : uint32, width : uint32, height : uint32) = RenderPassDescriptorResolveRect(0n, Unchecked.defaultof<SType>, colorOffsetX, colorOffsetY, resolveOffsetX, resolveOffsetY, width, height)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<RenderPassDescriptorResolveRect>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RenderPassPixelLocalStorage = 
@@ -1379,6 +3528,26 @@ type RenderPassPixelLocalStorage =
         val mutable public StorageAttachments : nativeptr<RenderPassStorageAttachment>
         new(nextInChain : nativeint, sType : SType, totalPixelLocalStorageSize : uint64, storageAttachmentCount : unativeint, storageAttachments : nativeptr<RenderPassStorageAttachment>) = { NextInChain = nextInChain; SType = sType; TotalPixelLocalStorageSize = totalPixelLocalStorageSize; StorageAttachmentCount = storageAttachmentCount; StorageAttachments = storageAttachments }
         new(totalPixelLocalStorageSize : uint64, storageAttachmentCount : unativeint, storageAttachments : nativeptr<RenderPassStorageAttachment>) = RenderPassPixelLocalStorage(0n, Unchecked.defaultof<SType>, totalPixelLocalStorageSize, storageAttachmentCount, storageAttachments)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.StorageAttachmentCount
+            let dd = aux
+            step &aux (nsize<nativeptr<RenderPassStorageAttachment>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                (NativePtr.get this.StorageAttachments i).CopyTo(off, &aux)
+                off <- off + nsize<RenderPassStorageAttachment>
+            self.StorageAttachments <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<RenderPassPixelLocalStorage>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RenderPassStorageAttachment = 
@@ -1391,6 +3560,20 @@ type RenderPassStorageAttachment =
         val mutable public ClearValue : Color
         new(nextInChain : nativeint, offset : uint64, storage : nativeint, loadOp : LoadOp, storeOp : StoreOp, clearValue : Color) = { NextInChain = nextInChain; Offset = offset; Storage = storage; LoadOp = loadOp; StoreOp = storeOp; ClearValue = clearValue }
         new(offset : uint64, storage : nativeint, loadOp : LoadOp, storeOp : StoreOp, clearValue : Color) = RenderPassStorageAttachment(0n, offset, storage, loadOp, storeOp, clearValue)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.ClearValue - NativePtr.toNativeInt &&self
+            this.ClearValue.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<RenderPassStorageAttachment>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type RequestDeviceCallback = delegate of status : RequestDeviceStatus * device : nativeint * message : StringView * userdata1 : nativeint * userdata2 : nativeint -> unit
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -1403,6 +3586,18 @@ type RequestDeviceCallbackInfo =
         val mutable public Userdata2 : nativeint
         new(nextInChain : nativeint, mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = { NextInChain = nextInChain; Mode = mode; Callback = callback; Userdata1 = userdata1; Userdata2 = userdata2 }
         new(mode : CallbackMode, callback : nativeint, userdata1 : nativeint, userdata2 : nativeint) = RequestDeviceCallbackInfo(0n, mode, callback, userdata1, userdata2)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<RequestDeviceCallbackInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type VertexState = 
@@ -1416,6 +3611,36 @@ type VertexState =
         val mutable public Buffers : nativeptr<VertexBufferLayout>
         new(nextInChain : nativeint, moodule : nativeint, entryPoint : StringView, constantCount : unativeint, constants : nativeptr<ConstantEntry>, bufferCount : unativeint, buffers : nativeptr<VertexBufferLayout>) = { NextInChain = nextInChain; Module = moodule; EntryPoint = entryPoint; ConstantCount = constantCount; Constants = constants; BufferCount = bufferCount; Buffers = buffers }
         new(moodule : nativeint, entryPoint : StringView, constantCount : unativeint, constants : nativeptr<ConstantEntry>, bufferCount : unativeint, buffers : nativeptr<VertexBufferLayout>) = VertexState(0n, moodule, entryPoint, constantCount, constants, bufferCount, buffers)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.ConstantCount
+            let dd = aux
+            step &aux (nsize<nativeptr<ConstantEntry>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                (NativePtr.get this.Constants i).CopyTo(off, &aux)
+                off <- off + nsize<ConstantEntry>
+            self.Constants <- NativePtr.ofNativeInt (dd - dst)
+            let cnt = int this.BufferCount
+            let dd = aux
+            step &aux (nsize<nativeptr<VertexBufferLayout>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                (NativePtr.get this.Buffers i).CopyTo(off, &aux)
+                off <- off + nsize<VertexBufferLayout>
+            self.Buffers <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.EntryPoint - NativePtr.toNativeInt &&self
+            this.EntryPoint.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<VertexState>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type PrimitiveState = 
@@ -1428,6 +3653,18 @@ type PrimitiveState =
         val mutable public UnclippedDepth : int
         new(nextInChain : nativeint, topology : PrimitiveTopology, stripIndexFormat : IndexFormat, frontFace : FrontFace, cullMode : CullMode, unclippedDepth : int) = { NextInChain = nextInChain; Topology = topology; StripIndexFormat = stripIndexFormat; FrontFace = frontFace; CullMode = cullMode; UnclippedDepth = unclippedDepth }
         new(topology : PrimitiveTopology, stripIndexFormat : IndexFormat, frontFace : FrontFace, cullMode : CullMode, unclippedDepth : int) = PrimitiveState(0n, topology, stripIndexFormat, frontFace, cullMode, unclippedDepth)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<PrimitiveState>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DepthStencilState = 
@@ -1445,6 +3682,22 @@ type DepthStencilState =
         val mutable public DepthBiasClamp : float32
         new(nextInChain : nativeint, format : TextureFormat, depthWriteEnabled : OptionalBool, depthCompare : CompareFunction, stencilFront : StencilFaceState, stencilBack : StencilFaceState, stencilReadMask : uint32, stencilWriteMask : uint32, depthBias : int, depthBiasSlopeScale : float32, depthBiasClamp : float32) = { NextInChain = nextInChain; Format = format; DepthWriteEnabled = depthWriteEnabled; DepthCompare = depthCompare; StencilFront = stencilFront; StencilBack = stencilBack; StencilReadMask = stencilReadMask; StencilWriteMask = stencilWriteMask; DepthBias = depthBias; DepthBiasSlopeScale = depthBiasSlopeScale; DepthBiasClamp = depthBiasClamp }
         new(format : TextureFormat, depthWriteEnabled : OptionalBool, depthCompare : CompareFunction, stencilFront : StencilFaceState, stencilBack : StencilFaceState, stencilReadMask : uint32, stencilWriteMask : uint32, depthBias : int, depthBiasSlopeScale : float32, depthBiasClamp : float32) = DepthStencilState(0n, format, depthWriteEnabled, depthCompare, stencilFront, stencilBack, stencilReadMask, stencilWriteMask, depthBias, depthBiasSlopeScale, depthBiasClamp)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.StencilFront - NativePtr.toNativeInt &&self
+            this.StencilFront.CopyTo(dst + offset, &aux)
+            let offset = NativePtr.toNativeInt &&self.StencilBack - NativePtr.toNativeInt &&self
+            this.StencilBack.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DepthStencilState>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type MultisampleState = 
@@ -1455,6 +3708,18 @@ type MultisampleState =
         val mutable public AlphaToCoverageEnabled : int
         new(nextInChain : nativeint, count : uint32, mask : uint32, alphaToCoverageEnabled : int) = { NextInChain = nextInChain; Count = count; Mask = mask; AlphaToCoverageEnabled = alphaToCoverageEnabled }
         new(count : uint32, mask : uint32, alphaToCoverageEnabled : int) = MultisampleState(0n, count, mask, alphaToCoverageEnabled)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<MultisampleState>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type FragmentState = 
@@ -1468,6 +3733,36 @@ type FragmentState =
         val mutable public Targets : nativeptr<ColorTargetState>
         new(nextInChain : nativeint, moodule : nativeint, entryPoint : StringView, constantCount : unativeint, constants : nativeptr<ConstantEntry>, targetCount : unativeint, targets : nativeptr<ColorTargetState>) = { NextInChain = nextInChain; Module = moodule; EntryPoint = entryPoint; ConstantCount = constantCount; Constants = constants; TargetCount = targetCount; Targets = targets }
         new(moodule : nativeint, entryPoint : StringView, constantCount : unativeint, constants : nativeptr<ConstantEntry>, targetCount : unativeint, targets : nativeptr<ColorTargetState>) = FragmentState(0n, moodule, entryPoint, constantCount, constants, targetCount, targets)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.ConstantCount
+            let dd = aux
+            step &aux (nsize<nativeptr<ConstantEntry>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                (NativePtr.get this.Constants i).CopyTo(off, &aux)
+                off <- off + nsize<ConstantEntry>
+            self.Constants <- NativePtr.ofNativeInt (dd - dst)
+            let cnt = int this.TargetCount
+            let dd = aux
+            step &aux (nsize<nativeptr<ColorTargetState>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                (NativePtr.get this.Targets i).CopyTo(off, &aux)
+                off <- off + nsize<ColorTargetState>
+            self.Targets <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.EntryPoint - NativePtr.toNativeInt &&self
+            this.EntryPoint.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<FragmentState>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type ColorTargetState = 
@@ -1478,6 +3773,22 @@ type ColorTargetState =
         val mutable public WriteMask : ColorWriteMask
         new(nextInChain : nativeint, format : TextureFormat, blend : nativeptr<BlendState>, writeMask : ColorWriteMask) = { NextInChain = nextInChain; Format = format; Blend = blend; WriteMask = writeMask }
         new(format : TextureFormat, blend : nativeptr<BlendState>, writeMask : ColorWriteMask) = ColorTargetState(0n, format, blend, writeMask)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let dd = aux
+            step &aux nsize<nativeptr<BlendState>>
+            (NativePtr.read this.Blend).CopyTo(dd, &aux)
+            self.Blend <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<ColorTargetState>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type ColorTargetStateExpandResolveTextureDawn = 
@@ -1487,6 +3798,18 @@ type ColorTargetStateExpandResolveTextureDawn =
         val mutable public Enabled : int
         new(nextInChain : nativeint, sType : SType, enabled : int) = { NextInChain = nextInChain; SType = sType; Enabled = enabled }
         new(enabled : int) = ColorTargetStateExpandResolveTextureDawn(0n, Unchecked.defaultof<SType>, enabled)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<ColorTargetStateExpandResolveTextureDawn>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type BlendState = 
@@ -1494,6 +3817,16 @@ type BlendState =
         val mutable public Color : BlendComponent
         val mutable public Alpha : BlendComponent
         new(color : BlendComponent, alpha : BlendComponent) = { Color = color; Alpha = alpha }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Color - NativePtr.toNativeInt &&self
+            this.Color.CopyTo(dst + offset, &aux)
+            let offset = NativePtr.toNativeInt &&self.Alpha - NativePtr.toNativeInt &&self
+            this.Alpha.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<BlendState>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type RenderPipelineDescriptor = 
@@ -1508,6 +3841,34 @@ type RenderPipelineDescriptor =
         val mutable public Fragment : nativeptr<FragmentState>
         new(nextInChain : nativeint, label : StringView, layout : nativeint, vertex : VertexState, primitive : PrimitiveState, depthStencil : nativeptr<DepthStencilState>, multisample : MultisampleState, fragment : nativeptr<FragmentState>) = { NextInChain = nextInChain; Label = label; Layout = layout; Vertex = vertex; Primitive = primitive; DepthStencil = depthStencil; Multisample = multisample; Fragment = fragment }
         new(label : StringView, layout : nativeint, vertex : VertexState, primitive : PrimitiveState, depthStencil : nativeptr<DepthStencilState>, multisample : MultisampleState, fragment : nativeptr<FragmentState>) = RenderPipelineDescriptor(0n, label, layout, vertex, primitive, depthStencil, multisample, fragment)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let dd = aux
+            step &aux nsize<nativeptr<DepthStencilState>>
+            (NativePtr.read this.DepthStencil).CopyTo(dd, &aux)
+            self.DepthStencil <- NativePtr.ofNativeInt (dd - dst)
+            let dd = aux
+            step &aux nsize<nativeptr<FragmentState>>
+            (NativePtr.read this.Fragment).CopyTo(dd, &aux)
+            self.Fragment <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+            let offset = NativePtr.toNativeInt &&self.Vertex - NativePtr.toNativeInt &&self
+            this.Vertex.CopyTo(dst + offset, &aux)
+            let offset = NativePtr.toNativeInt &&self.Primitive - NativePtr.toNativeInt &&self
+            this.Primitive.CopyTo(dst + offset, &aux)
+            let offset = NativePtr.toNativeInt &&self.Multisample - NativePtr.toNativeInt &&self
+            this.Multisample.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<RenderPipelineDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SamplerDescriptor = 
@@ -1526,6 +3887,20 @@ type SamplerDescriptor =
         val mutable public MaxAnisotropy : uint16
         new(nextInChain : nativeint, label : StringView, addressModeU : AddressMode, addressModeV : AddressMode, addressModeW : AddressMode, magFilter : FilterMode, minFilter : FilterMode, mipmapFilter : MipmapFilterMode, lodMinClamp : float32, lodMaxClamp : float32, compare : CompareFunction, maxAnisotropy : uint16) = { NextInChain = nextInChain; Label = label; AddressModeU = addressModeU; AddressModeV = addressModeV; AddressModeW = addressModeW; MagFilter = magFilter; MinFilter = minFilter; MipmapFilter = mipmapFilter; LodMinClamp = lodMinClamp; LodMaxClamp = lodMaxClamp; Compare = compare; MaxAnisotropy = maxAnisotropy }
         new(label : StringView, addressModeU : AddressMode, addressModeV : AddressMode, addressModeW : AddressMode, magFilter : FilterMode, minFilter : FilterMode, mipmapFilter : MipmapFilterMode, lodMinClamp : float32, lodMaxClamp : float32, compare : CompareFunction, maxAnisotropy : uint16) = SamplerDescriptor(0n, label, addressModeU, addressModeV, addressModeW, magFilter, minFilter, mipmapFilter, lodMinClamp, lodMaxClamp, compare, maxAnisotropy)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SamplerDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type ShaderModuleDescriptor = 
@@ -1534,6 +3909,20 @@ type ShaderModuleDescriptor =
         val mutable public Label : StringView
         new(nextInChain : nativeint, label : StringView) = { NextInChain = nextInChain; Label = label }
         new(label : StringView) = ShaderModuleDescriptor(0n, label)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<ShaderModuleDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type ShaderModuleSPIRVDescriptor = ShaderSourceSPIRV
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -1545,6 +3934,26 @@ type ShaderSourceSPIRV =
         val mutable public Code : nativeptr<uint32>
         new(nextInChain : nativeint, sType : SType, codeSize : uint32, code : nativeptr<uint32>) = { NextInChain = nextInChain; SType = sType; CodeSize = codeSize; Code = code }
         new(codeSize : uint32, code : nativeptr<uint32>) = ShaderSourceSPIRV(0n, Unchecked.defaultof<SType>, codeSize, code)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.CodeSize
+            let dd = aux
+            step &aux (nsize<nativeptr<uint32>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.Code i)
+                off <- off + nsize<uint32>
+            self.Code <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<ShaderSourceSPIRV>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type ShaderModuleWGSLDescriptor = ShaderSourceWGSL
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -1555,6 +3964,20 @@ type ShaderSourceWGSL =
         val mutable public Code : StringView
         new(nextInChain : nativeint, sType : SType, code : StringView) = { NextInChain = nextInChain; SType = sType; Code = code }
         new(code : StringView) = ShaderSourceWGSL(0n, Unchecked.defaultof<SType>, code)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Code - NativePtr.toNativeInt &&self
+            this.Code.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<ShaderSourceWGSL>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnShaderModuleSPIRVOptionsDescriptor = 
@@ -1564,6 +3987,18 @@ type DawnShaderModuleSPIRVOptionsDescriptor =
         val mutable public AllowNonUniformDerivatives : int
         new(nextInChain : nativeint, sType : SType, allowNonUniformDerivatives : int) = { NextInChain = nextInChain; SType = sType; AllowNonUniformDerivatives = allowNonUniformDerivatives }
         new(allowNonUniformDerivatives : int) = DawnShaderModuleSPIRVOptionsDescriptor(0n, Unchecked.defaultof<SType>, allowNonUniformDerivatives)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnShaderModuleSPIRVOptionsDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type ShaderModuleCompilationOptions = 
@@ -1573,6 +4008,18 @@ type ShaderModuleCompilationOptions =
         val mutable public StrictMath : int
         new(nextInChain : nativeint, sType : SType, strictMath : int) = { NextInChain = nextInChain; SType = sType; StrictMath = strictMath }
         new(strictMath : int) = ShaderModuleCompilationOptions(0n, Unchecked.defaultof<SType>, strictMath)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<ShaderModuleCompilationOptions>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type StencilFaceState = 
@@ -1582,6 +4029,12 @@ type StencilFaceState =
         val mutable public DepthFailOp : StencilOperation
         val mutable public PassOp : StencilOperation
         new(compare : CompareFunction, failOp : StencilOperation, depthFailOp : StencilOperation, passOp : StencilOperation) = { Compare = compare; FailOp = failOp; DepthFailOp = depthFailOp; PassOp = passOp }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<StencilFaceState>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SurfaceDescriptor = 
@@ -1590,6 +4043,20 @@ type SurfaceDescriptor =
         val mutable public Label : StringView
         new(nextInChain : nativeint, label : StringView) = { NextInChain = nextInChain; Label = label }
         new(label : StringView) = SurfaceDescriptor(0n, label)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SurfaceDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type SurfaceDescriptorFromAndroidNativeWindow = SurfaceSourceAndroidNativeWindow
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -1600,6 +4067,18 @@ type SurfaceSourceAndroidNativeWindow =
         val mutable public Window : nativeint
         new(nextInChain : nativeint, sType : SType, window : nativeint) = { NextInChain = nextInChain; SType = sType; Window = window }
         new(window : nativeint) = SurfaceSourceAndroidNativeWindow(0n, Unchecked.defaultof<SType>, window)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SurfaceSourceAndroidNativeWindow>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type EmscriptenSurfaceSourceCanvasHTMLSelector = 
@@ -1609,6 +4088,20 @@ type EmscriptenSurfaceSourceCanvasHTMLSelector =
         val mutable public Selector : StringView
         new(nextInChain : nativeint, sType : SType, selector : StringView) = { NextInChain = nextInChain; SType = sType; Selector = selector }
         new(selector : StringView) = EmscriptenSurfaceSourceCanvasHTMLSelector(0n, Unchecked.defaultof<SType>, selector)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Selector - NativePtr.toNativeInt &&self
+            this.Selector.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<EmscriptenSurfaceSourceCanvasHTMLSelector>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type SurfaceDescriptorFromMetalLayer = SurfaceSourceMetalLayer
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -1619,6 +4112,18 @@ type SurfaceSourceMetalLayer =
         val mutable public Layer : nativeint
         new(nextInChain : nativeint, sType : SType, layer : nativeint) = { NextInChain = nextInChain; SType = sType; Layer = layer }
         new(layer : nativeint) = SurfaceSourceMetalLayer(0n, Unchecked.defaultof<SType>, layer)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SurfaceSourceMetalLayer>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type SurfaceDescriptorFromWindowsHWND = SurfaceSourceWindowsHWND
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -1630,6 +4135,18 @@ type SurfaceSourceWindowsHWND =
         val mutable public Hwnd : nativeint
         new(nextInChain : nativeint, sType : SType, hinstance : nativeint, hwnd : nativeint) = { NextInChain = nextInChain; SType = sType; Hinstance = hinstance; Hwnd = hwnd }
         new(hinstance : nativeint, hwnd : nativeint) = SurfaceSourceWindowsHWND(0n, Unchecked.defaultof<SType>, hinstance, hwnd)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SurfaceSourceWindowsHWND>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type SurfaceDescriptorFromXcbWindow = SurfaceSourceXCBWindow
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -1641,6 +4158,18 @@ type SurfaceSourceXCBWindow =
         val mutable public Window : uint32
         new(nextInChain : nativeint, sType : SType, connection : nativeint, window : uint32) = { NextInChain = nextInChain; SType = sType; Connection = connection; Window = window }
         new(connection : nativeint, window : uint32) = SurfaceSourceXCBWindow(0n, Unchecked.defaultof<SType>, connection, window)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SurfaceSourceXCBWindow>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type SurfaceDescriptorFromXlibWindow = SurfaceSourceXlibWindow
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -1652,6 +4181,18 @@ type SurfaceSourceXlibWindow =
         val mutable public Window : uint64
         new(nextInChain : nativeint, sType : SType, display : nativeint, window : uint64) = { NextInChain = nextInChain; SType = sType; Display = display; Window = window }
         new(display : nativeint, window : uint64) = SurfaceSourceXlibWindow(0n, Unchecked.defaultof<SType>, display, window)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SurfaceSourceXlibWindow>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 type SurfaceDescriptorFromWaylandSurface = SurfaceSourceWaylandSurface
 [<Struct; StructLayout(LayoutKind.Sequential)>]
@@ -1663,6 +4204,18 @@ type SurfaceSourceWaylandSurface =
         val mutable public Surface : nativeint
         new(nextInChain : nativeint, sType : SType, display : nativeint, surface : nativeint) = { NextInChain = nextInChain; SType = sType; Display = display; Surface = surface }
         new(display : nativeint, surface : nativeint) = SurfaceSourceWaylandSurface(0n, Unchecked.defaultof<SType>, display, surface)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SurfaceSourceWaylandSurface>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SurfaceDescriptorFromWindowsCoreWindow = 
@@ -1672,6 +4225,18 @@ type SurfaceDescriptorFromWindowsCoreWindow =
         val mutable public CoreWindow : nativeint
         new(nextInChain : nativeint, sType : SType, coreWindow : nativeint) = { NextInChain = nextInChain; SType = sType; CoreWindow = coreWindow }
         new(coreWindow : nativeint) = SurfaceDescriptorFromWindowsCoreWindow(0n, Unchecked.defaultof<SType>, coreWindow)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SurfaceDescriptorFromWindowsCoreWindow>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SurfaceDescriptorFromWindowsUWPSwapChainPanel = 
@@ -1681,6 +4246,18 @@ type SurfaceDescriptorFromWindowsUWPSwapChainPanel =
         val mutable public SwapChainPanel : nativeint
         new(nextInChain : nativeint, sType : SType, swapChainPanel : nativeint) = { NextInChain = nextInChain; SType = sType; SwapChainPanel = swapChainPanel }
         new(swapChainPanel : nativeint) = SurfaceDescriptorFromWindowsUWPSwapChainPanel(0n, Unchecked.defaultof<SType>, swapChainPanel)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SurfaceDescriptorFromWindowsUWPSwapChainPanel>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SurfaceDescriptorFromWindowsWinUISwapChainPanel = 
@@ -1690,6 +4267,18 @@ type SurfaceDescriptorFromWindowsWinUISwapChainPanel =
         val mutable public SwapChainPanel : nativeint
         new(nextInChain : nativeint, sType : SType, swapChainPanel : nativeint) = { NextInChain = nextInChain; SType = sType; SwapChainPanel = swapChainPanel }
         new(swapChainPanel : nativeint) = SurfaceDescriptorFromWindowsWinUISwapChainPanel(0n, Unchecked.defaultof<SType>, swapChainPanel)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SurfaceDescriptorFromWindowsWinUISwapChainPanel>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SurfaceColorManagement = 
@@ -1700,6 +4289,18 @@ type SurfaceColorManagement =
         val mutable public ToneMappingMode : ToneMappingMode
         new(nextInChain : nativeint, sType : SType, colorSpace : PredefinedColorSpace, toneMappingMode : ToneMappingMode) = { NextInChain = nextInChain; SType = sType; ColorSpace = colorSpace; ToneMappingMode = toneMappingMode }
         new(colorSpace : PredefinedColorSpace, toneMappingMode : ToneMappingMode) = SurfaceColorManagement(0n, Unchecked.defaultof<SType>, colorSpace, toneMappingMode)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SurfaceColorManagement>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SurfaceTexture = 
@@ -1709,6 +4310,18 @@ type SurfaceTexture =
         val mutable public Status : SurfaceGetCurrentTextureStatus
         new(nextInChain : nativeint, texture : nativeint, status : SurfaceGetCurrentTextureStatus) = { NextInChain = nextInChain; Texture = texture; Status = status }
         new(texture : nativeint, status : SurfaceGetCurrentTextureStatus) = SurfaceTexture(0n, texture, status)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SurfaceTexture>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type TextureDescriptor = 
@@ -1725,6 +4338,30 @@ type TextureDescriptor =
         val mutable public ViewFormats : nativeptr<TextureFormat>
         new(nextInChain : nativeint, label : StringView, usage : TextureUsage, dimension : TextureDimension, size : Extent3D, format : TextureFormat, mipLevelCount : uint32, sampleCount : uint32, viewFormatCount : unativeint, viewFormats : nativeptr<TextureFormat>) = { NextInChain = nextInChain; Label = label; Usage = usage; Dimension = dimension; Size = size; Format = format; MipLevelCount = mipLevelCount; SampleCount = sampleCount; ViewFormatCount = viewFormatCount; ViewFormats = viewFormats }
         new(label : StringView, usage : TextureUsage, dimension : TextureDimension, size : Extent3D, format : TextureFormat, mipLevelCount : uint32, sampleCount : uint32, viewFormatCount : unativeint, viewFormats : nativeptr<TextureFormat>) = TextureDescriptor(0n, label, usage, dimension, size, format, mipLevelCount, sampleCount, viewFormatCount, viewFormats)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.ViewFormatCount
+            let dd = aux
+            step &aux (nsize<nativeptr<TextureFormat>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.ViewFormats i)
+                off <- off + nsize<TextureFormat>
+            self.ViewFormats <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+            let offset = NativePtr.toNativeInt &&self.Size - NativePtr.toNativeInt &&self
+            this.Size.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<TextureDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type TextureBindingViewDimensionDescriptor = 
@@ -1734,6 +4371,18 @@ type TextureBindingViewDimensionDescriptor =
         val mutable public TextureBindingViewDimension : TextureViewDimension
         new(nextInChain : nativeint, sType : SType, textureBindingViewDimension : TextureViewDimension) = { NextInChain = nextInChain; SType = sType; TextureBindingViewDimension = textureBindingViewDimension }
         new(textureBindingViewDimension : TextureViewDimension) = TextureBindingViewDimensionDescriptor(0n, Unchecked.defaultof<SType>, textureBindingViewDimension)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<TextureBindingViewDimensionDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type TextureViewDescriptor = 
@@ -1750,6 +4399,20 @@ type TextureViewDescriptor =
         val mutable public Usage : TextureUsage
         new(nextInChain : nativeint, label : StringView, format : TextureFormat, dimension : TextureViewDimension, baseMipLevel : uint32, mipLevelCount : uint32, baseArrayLayer : uint32, arrayLayerCount : uint32, aspect : TextureAspect, usage : TextureUsage) = { NextInChain = nextInChain; Label = label; Format = format; Dimension = dimension; BaseMipLevel = baseMipLevel; MipLevelCount = mipLevelCount; BaseArrayLayer = baseArrayLayer; ArrayLayerCount = arrayLayerCount; Aspect = aspect; Usage = usage }
         new(label : StringView, format : TextureFormat, dimension : TextureViewDimension, baseMipLevel : uint32, mipLevelCount : uint32, baseArrayLayer : uint32, arrayLayerCount : uint32, aspect : TextureAspect, usage : TextureUsage) = TextureViewDescriptor(0n, label, format, dimension, baseMipLevel, mipLevelCount, baseArrayLayer, arrayLayerCount, aspect, usage)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<TextureViewDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type TexelBufferViewDescriptor = 
@@ -1761,6 +4424,20 @@ type TexelBufferViewDescriptor =
         val mutable public Size : uint64
         new(nextInChain : nativeint, label : StringView, format : TextureFormat, offset : uint64, size : uint64) = { NextInChain = nextInChain; Label = label; Format = format; Offset = offset; Size = size }
         new(label : StringView, format : TextureFormat, offset : uint64, size : uint64) = TexelBufferViewDescriptor(0n, label, format, offset, size)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
+            this.Label.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<TexelBufferViewDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type TextureComponentSwizzleDescriptor = 
@@ -1770,6 +4447,20 @@ type TextureComponentSwizzleDescriptor =
         val mutable public Swizzle : TextureComponentSwizzle
         new(nextInChain : nativeint, sType : SType, swizzle : TextureComponentSwizzle) = { NextInChain = nextInChain; SType = sType; Swizzle = swizzle }
         new(swizzle : TextureComponentSwizzle) = TextureComponentSwizzleDescriptor(0n, Unchecked.defaultof<SType>, swizzle)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+            let offset = NativePtr.toNativeInt &&self.Swizzle - NativePtr.toNativeInt &&self
+            this.Swizzle.CopyTo(dst + offset, &aux)
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<TextureComponentSwizzleDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type TextureComponentSwizzle = 
@@ -1779,6 +4470,12 @@ type TextureComponentSwizzle =
         val mutable public B : ComponentSwizzle
         val mutable public A : ComponentSwizzle
         new(r : ComponentSwizzle, g : ComponentSwizzle, b : ComponentSwizzle, a : ComponentSwizzle) = { R = r; G = g; B = b; A = a }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<TextureComponentSwizzle>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type YCbCrVkDescriptor = 
@@ -1799,6 +4496,18 @@ type YCbCrVkDescriptor =
         val mutable public ExternalFormat : uint64
         new(nextInChain : nativeint, sType : SType, vkFormat : uint32, vkYCbCrModel : uint32, vkYCbCrRange : uint32, vkComponentSwizzleRed : uint32, vkComponentSwizzleGreen : uint32, vkComponentSwizzleBlue : uint32, vkComponentSwizzleAlpha : uint32, vkXChromaOffset : uint32, vkYChromaOffset : uint32, vkChromaFilter : FilterMode, forceExplicitReconstruction : int, externalFormat : uint64) = { NextInChain = nextInChain; SType = sType; VkFormat = vkFormat; VkYCbCrModel = vkYCbCrModel; VkYCbCrRange = vkYCbCrRange; VkComponentSwizzleRed = vkComponentSwizzleRed; VkComponentSwizzleGreen = vkComponentSwizzleGreen; VkComponentSwizzleBlue = vkComponentSwizzleBlue; VkComponentSwizzleAlpha = vkComponentSwizzleAlpha; VkXChromaOffset = vkXChromaOffset; VkYChromaOffset = vkYChromaOffset; VkChromaFilter = vkChromaFilter; ForceExplicitReconstruction = forceExplicitReconstruction; ExternalFormat = externalFormat }
         new(vkFormat : uint32, vkYCbCrModel : uint32, vkYCbCrRange : uint32, vkComponentSwizzleRed : uint32, vkComponentSwizzleGreen : uint32, vkComponentSwizzleBlue : uint32, vkComponentSwizzleAlpha : uint32, vkXChromaOffset : uint32, vkYChromaOffset : uint32, vkChromaFilter : FilterMode, forceExplicitReconstruction : int, externalFormat : uint64) = YCbCrVkDescriptor(0n, Unchecked.defaultof<SType>, vkFormat, vkYCbCrModel, vkYCbCrRange, vkComponentSwizzleRed, vkComponentSwizzleGreen, vkComponentSwizzleBlue, vkComponentSwizzleAlpha, vkXChromaOffset, vkYChromaOffset, vkChromaFilter, forceExplicitReconstruction, externalFormat)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<YCbCrVkDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnTextureInternalUsageDescriptor = 
@@ -1808,6 +4517,18 @@ type DawnTextureInternalUsageDescriptor =
         val mutable public InternalUsage : TextureUsage
         new(nextInChain : nativeint, sType : SType, internalUsage : TextureUsage) = { NextInChain = nextInChain; SType = sType; InternalUsage = internalUsage }
         new(internalUsage : TextureUsage) = DawnTextureInternalUsageDescriptor(0n, Unchecked.defaultof<SType>, internalUsage)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnTextureInternalUsageDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnEncoderInternalUsageDescriptor = 
@@ -1817,6 +4538,18 @@ type DawnEncoderInternalUsageDescriptor =
         val mutable public UseInternalUsages : int
         new(nextInChain : nativeint, sType : SType, useInternalUsages : int) = { NextInChain = nextInChain; SType = sType; UseInternalUsages = useInternalUsages }
         new(useInternalUsages : int) = DawnEncoderInternalUsageDescriptor(0n, Unchecked.defaultof<SType>, useInternalUsages)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnEncoderInternalUsageDescriptor>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnAdapterPropertiesPowerPreference = 
@@ -1826,6 +4559,18 @@ type DawnAdapterPropertiesPowerPreference =
         val mutable public PowerPreference : PowerPreference
         new(nextInChain : nativeint, sType : SType, powerPreference : PowerPreference) = { NextInChain = nextInChain; SType = sType; PowerPreference = powerPreference }
         new(powerPreference : PowerPreference) = DawnAdapterPropertiesPowerPreference(0n, Unchecked.defaultof<SType>, powerPreference)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnAdapterPropertiesPowerPreference>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type MemoryHeapInfo = 
@@ -1833,6 +4578,12 @@ type MemoryHeapInfo =
         val mutable public Properties : HeapProperty
         val mutable public Size : uint64
         new(properties : HeapProperty, size : uint64) = { Properties = properties; Size = size }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<MemoryHeapInfo>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type AdapterPropertiesMemoryHeaps = 
@@ -1843,6 +4594,26 @@ type AdapterPropertiesMemoryHeaps =
         val mutable public HeapInfo : nativeptr<MemoryHeapInfo>
         new(nextInChain : nativeint, sType : SType, heapCount : unativeint, heapInfo : nativeptr<MemoryHeapInfo>) = { NextInChain = nextInChain; SType = sType; HeapCount = heapCount; HeapInfo = heapInfo }
         new(heapCount : unativeint, heapInfo : nativeptr<MemoryHeapInfo>) = AdapterPropertiesMemoryHeaps(0n, Unchecked.defaultof<SType>, heapCount, heapInfo)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.HeapCount
+            let dd = aux
+            step &aux (nsize<nativeptr<MemoryHeapInfo>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                (NativePtr.get this.HeapInfo i).CopyTo(off, &aux)
+                off <- off + nsize<MemoryHeapInfo>
+            self.HeapInfo <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<AdapterPropertiesMemoryHeaps>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type AdapterPropertiesD3D = 
@@ -1852,6 +4623,18 @@ type AdapterPropertiesD3D =
         val mutable public ShaderModel : uint32
         new(nextInChain : nativeint, sType : SType, shaderModel : uint32) = { NextInChain = nextInChain; SType = sType; ShaderModel = shaderModel }
         new(shaderModel : uint32) = AdapterPropertiesD3D(0n, Unchecked.defaultof<SType>, shaderModel)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<AdapterPropertiesD3D>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type AdapterPropertiesVk = 
@@ -1861,6 +4644,18 @@ type AdapterPropertiesVk =
         val mutable public DriverVersion : uint32
         new(nextInChain : nativeint, sType : SType, driverVersion : uint32) = { NextInChain = nextInChain; SType = sType; DriverVersion = driverVersion }
         new(driverVersion : uint32) = AdapterPropertiesVk(0n, Unchecked.defaultof<SType>, driverVersion)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<AdapterPropertiesVk>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type DawnBufferDescriptorErrorInfoFromWireClient = 
@@ -1870,6 +4665,18 @@ type DawnBufferDescriptorErrorInfoFromWireClient =
         val mutable public OutOfMemory : int
         new(nextInChain : nativeint, sType : SType, outOfMemory : int) = { NextInChain = nextInChain; SType = sType; OutOfMemory = outOfMemory }
         new(outOfMemory : int) = DawnBufferDescriptorErrorInfoFromWireClient(0n, Unchecked.defaultof<SType>, outOfMemory)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<DawnBufferDescriptorErrorInfoFromWireClient>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type SubgroupMatrixConfig = 
@@ -1880,6 +4687,12 @@ type SubgroupMatrixConfig =
         val mutable public N : uint32
         val mutable public K : uint32
         new(componentType : SubgroupMatrixComponentType, resultComponentType : SubgroupMatrixComponentType, M : uint32, N : uint32, K : uint32) = { ComponentType = componentType; ResultComponentType = resultComponentType; M = M; N = N; K = K }
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<SubgroupMatrixConfig>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 [<Struct; StructLayout(LayoutKind.Sequential)>]
 type AdapterPropertiesSubgroupMatrixConfigs = 
@@ -1890,6 +4703,26 @@ type AdapterPropertiesSubgroupMatrixConfigs =
         val mutable public Configs : nativeptr<SubgroupMatrixConfig>
         new(nextInChain : nativeint, sType : SType, configCount : unativeint, configs : nativeptr<SubgroupMatrixConfig>) = { NextInChain = nextInChain; SType = sType; ConfigCount = configCount; Configs = configs }
         new(configCount : unativeint, configs : nativeptr<SubgroupMatrixConfig>) = AdapterPropertiesSubgroupMatrixConfigs(0n, Unchecked.defaultof<SType>, configCount, configs)
+        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) =
+            let mutable self = this
+            let n = decodeStruct self.NextInChain
+            if not (isNull n) then
+                let ptr = aux
+                step &aux n.SizeInBytes
+                n.CopyTo(ptr, &aux)
+                self.NextInChain <- ptr - dst
+            let cnt = int this.ConfigCount
+            let dd = aux
+            step &aux (nsize<nativeptr<SubgroupMatrixConfig>> * nativeint cnt)
+            let mutable off = dd
+            for i in 0 .. cnt - 1 do
+                (NativePtr.get this.Configs i).CopyTo(off, &aux)
+                off <- off + nsize<SubgroupMatrixConfig>
+            self.Configs <- NativePtr.ofNativeInt (dd - dst)
+            NativePtr.write (NativePtr.ofNativeInt dst) self
+        interface IWebGPUStruct with
+            member this.SizeInBytes = nsize<AdapterPropertiesSubgroupMatrixConfigs>
+            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)
     end
 module WebGPU = 
 

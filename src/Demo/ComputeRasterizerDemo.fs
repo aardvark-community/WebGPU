@@ -133,7 +133,7 @@ module Obj =
         //use s = System.IO.File.OpenRead "C:/Users/Simon/Desktop/stanford-bunny.obj"
         //let tmp = "c:/Dev/VRVis/WebGPU/src/Demo/resources/exterior.obj"
         //let tmp = "c:/Dev/VRVis/WebGPU/src/Demo/resources/sponza.obj"
-        let tmp = @"C:\Users\haaser\Desktop\mesh\sibenik.obj"
+        let tmp = @"/Users/schorsch/Library/CloudStorage/OneDrive-Personal/stuff/mesh/sibenik.obj"
         //let tmp = "C:/Users/Simon/Desktop/stanford-bunny.obj"
         let mesh = Aardvark.Data.Wavefront.ObjParser.Load tmp
         //System.IO.File.Delete tmp
@@ -658,6 +658,8 @@ let scanTest() =
     let rasterizer = DefaultRasterizer.compile
 
     let app = WebGPUApplication.Create(true).Result
+    
+    
     let win = app.CreateGameWindow(vsync = true)
 
 
@@ -690,13 +692,23 @@ let scanTest() =
 
 let run() =
     Aardvark.Init()
-    WebGPUConfig.shaderCaching <- false
-    WebGPUConfig.captureStackTraces <- true
+    WebGPUConfig.shaderCaching <- true
+    WebGPUConfig.captureStackTraces <- false
 
     let rasterizer = BinRasterizer.BinRasterizer.compileAndRun "all"
     //let rasterizer = DefaultRasterizer.compile
      
-    let app = WebGPUApplication.Create(true).Result
+    let app = WebGPUApplication.Create(false).Result
+    
+    let device = app.Device
+    
+    
+    let a = device.CreateBuffer(BufferUsage.CopyDst ||| BufferUsage.CopySrc, Array.init 1024 byte).Result
+    let b = device.CreateBuffer(BufferUsage.CopyDst ||| BufferUsage.CopySrc, Array.zeroCreate<byte> 1024).Result
+
+
+    
+    
     let win = app.CreateGameWindow(vsync = true)
 
     let cam =
