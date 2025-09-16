@@ -934,7 +934,7 @@ module Shader =
                 let bMin = jobBounds.[jobId + jobBoundsOffset].XY
                 let bMax = jobBounds.[jobId + jobBoundsOffset].ZW
                 
-                let res = if boxTriangle4 (V3f(bMin, -1.0f)) (V3f(bMax, 1.0f)) p0 p1 p2 then 1 else 0
+                let res = if boxTriangle3 (V3f(bMin, -1.0f)) (V3f(bMax, 1.0f)) p0 p1 p2 then 1 else 0
                 
                 
                 let outIndex = jobId * uniform.TriangleChunkSize + triangleId

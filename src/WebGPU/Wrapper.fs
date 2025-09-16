@@ -425,11 +425,11 @@ type DeviceDescriptor =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.RequiredFeatures i)
                 off <- off + nsize<FeatureName>
-            self.RequiredFeatures <- NativePtr.ofNativeInt (dd - dst)
-            let dd = aux
-            step &aux nsize<nativeptr<Limits>>
-            (NativePtr.read this.RequiredLimits).CopyTo(dd, &aux)
-            self.RequiredLimits <- NativePtr.ofNativeInt (dd - dst)
+            if NativePtr.toNativeInt this.RequiredLimits <> 0n then
+                let dd = aux
+                step &aux nsize<nativeptr<Limits>>
+                (NativePtr.read this.RequiredLimits).CopyTo(dd, &aux)
+                self.RequiredLimits <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
             let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
             this.Label.CopyTo(dst + offset, &aux)
@@ -486,7 +486,6 @@ type DawnTogglesDescriptor =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.EnabledToggles i)
                 off <- off + nsize<byte>
-            self.EnabledToggles <- NativePtr.ofNativeInt (dd - dst)
             let cnt = int this.DisabledToggleCount
             let dd = aux
             step &aux (nsize<nativeptr<nativeptr<byte>>> * nativeint cnt)
@@ -494,7 +493,6 @@ type DawnTogglesDescriptor =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.DisabledToggles i)
                 off <- off + nsize<byte>
-            self.DisabledToggles <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<DawnTogglesDescriptor>
@@ -573,7 +571,6 @@ type DawnWGSLBlocklist =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.BlocklistedFeatures i)
                 off <- off + nsize<byte>
-            self.BlocklistedFeatures <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<DawnWGSLBlocklist>
@@ -650,7 +647,6 @@ type BindGroupDescriptor =
             for i in 0 .. cnt - 1 do
                 (NativePtr.get this.Entries i).CopyTo(off, &aux)
                 off <- off + nsize<BindGroupEntry>
-            self.Entries <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
             let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
             this.Label.CopyTo(dst + offset, &aux)
@@ -772,7 +768,6 @@ type SurfaceCapabilities =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.Formats i)
                 off <- off + nsize<TextureFormat>
-            self.Formats <- NativePtr.ofNativeInt (dd - dst)
             let cnt = int this.PresentModeCount
             let dd = aux
             step &aux (nsize<nativeptr<PresentMode>> * nativeint cnt)
@@ -780,7 +775,6 @@ type SurfaceCapabilities =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.PresentModes i)
                 off <- off + nsize<PresentMode>
-            self.PresentModes <- NativePtr.ofNativeInt (dd - dst)
             let cnt = int this.AlphaModeCount
             let dd = aux
             step &aux (nsize<nativeptr<CompositeAlphaMode>> * nativeint cnt)
@@ -788,7 +782,6 @@ type SurfaceCapabilities =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.AlphaModes i)
                 off <- off + nsize<CompositeAlphaMode>
-            self.AlphaModes <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<SurfaceCapabilities>
@@ -824,7 +817,6 @@ type SurfaceConfiguration =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.ViewFormats i)
                 off <- off + nsize<TextureFormat>
-            self.ViewFormats <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<SurfaceConfiguration>
@@ -994,7 +986,6 @@ type BindGroupLayoutDescriptor =
             for i in 0 .. cnt - 1 do
                 (NativePtr.get this.Entries i).CopyTo(off, &aux)
                 off <- off + nsize<BindGroupLayoutEntry>
-            self.Entries <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
             let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
             this.Label.CopyTo(dst + offset, &aux)
@@ -1214,7 +1205,6 @@ type CompilationInfo =
             for i in 0 .. cnt - 1 do
                 (NativePtr.get this.Messages i).CopyTo(off, &aux)
                 off <- off + nsize<CompilationMessage>
-            self.Messages <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<CompilationInfo>
@@ -1310,10 +1300,11 @@ type ComputePassDescriptor =
                 step &aux n.SizeInBytes
                 n.CopyTo(ptr, &aux)
                 self.NextInChain <- ptr - dst
-            let dd = aux
-            step &aux nsize<nativeptr<PassTimestampWrites>>
-            (NativePtr.read this.TimestampWrites).CopyTo(dd, &aux)
-            self.TimestampWrites <- NativePtr.ofNativeInt (dd - dst)
+            if NativePtr.toNativeInt this.TimestampWrites <> 0n then
+                let dd = aux
+                step &aux nsize<nativeptr<PassTimestampWrites>>
+                (NativePtr.read this.TimestampWrites).CopyTo(dd, &aux)
+                self.TimestampWrites <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
             let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
             this.Label.CopyTo(dst + offset, &aux)
@@ -1369,18 +1360,21 @@ type CopyTextureForBrowserOptions =
                 step &aux n.SizeInBytes
                 n.CopyTo(ptr, &aux)
                 self.NextInChain <- ptr - dst
-            let dd = aux
-            NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.SrcTransferFunctionParameters)
-            step &aux nsize<nativeptr<float32>>
-            self.SrcTransferFunctionParameters <- NativePtr.ofNativeInt (dd - dst)
-            let dd = aux
-            NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.ConversionMatrix)
-            step &aux nsize<nativeptr<float32>>
-            self.ConversionMatrix <- NativePtr.ofNativeInt (dd - dst)
-            let dd = aux
-            NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.DstTransferFunctionParameters)
-            step &aux nsize<nativeptr<float32>>
-            self.DstTransferFunctionParameters <- NativePtr.ofNativeInt (dd - dst)
+            if NativePtr.toNativeInt this.SrcTransferFunctionParameters <> 0n then
+                let dd = aux
+                NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.SrcTransferFunctionParameters)
+                step &aux nsize<nativeptr<float32>>
+                self.SrcTransferFunctionParameters <- NativePtr.ofNativeInt (dd - dst)
+            if NativePtr.toNativeInt this.ConversionMatrix <> 0n then
+                let dd = aux
+                NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.ConversionMatrix)
+                step &aux nsize<nativeptr<float32>>
+                self.ConversionMatrix <- NativePtr.ofNativeInt (dd - dst)
+            if NativePtr.toNativeInt this.DstTransferFunctionParameters <> 0n then
+                let dd = aux
+                NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.DstTransferFunctionParameters)
+                step &aux nsize<nativeptr<float32>>
+                self.DstTransferFunctionParameters <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<CopyTextureForBrowserOptions>
@@ -1672,7 +1666,6 @@ type SupportedFeatures =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.Features i)
                 off <- off + nsize<FeatureName>
-            self.Features <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<SupportedFeatures>
@@ -1693,7 +1686,6 @@ type SupportedInstanceFeatures =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.Features i)
                 off <- off + nsize<InstanceFeatureName>
-            self.Features <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<SupportedInstanceFeatures>
@@ -1714,7 +1706,6 @@ type SupportedWGSLLanguageFeatures =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.Features i)
                 off <- off + nsize<WGSLLanguageFeatureName>
-            self.Features <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<SupportedWGSLLanguageFeatures>
@@ -1797,22 +1788,26 @@ type ExternalTextureDescriptor =
                 step &aux n.SizeInBytes
                 n.CopyTo(ptr, &aux)
                 self.NextInChain <- ptr - dst
-            let dd = aux
-            NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.YuvToRgbConversionMatrix)
-            step &aux nsize<nativeptr<float32>>
-            self.YuvToRgbConversionMatrix <- NativePtr.ofNativeInt (dd - dst)
-            let dd = aux
-            NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.SrcTransferFunctionParameters)
-            step &aux nsize<nativeptr<float32>>
-            self.SrcTransferFunctionParameters <- NativePtr.ofNativeInt (dd - dst)
-            let dd = aux
-            NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.DstTransferFunctionParameters)
-            step &aux nsize<nativeptr<float32>>
-            self.DstTransferFunctionParameters <- NativePtr.ofNativeInt (dd - dst)
-            let dd = aux
-            NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.GamutConversionMatrix)
-            step &aux nsize<nativeptr<float32>>
-            self.GamutConversionMatrix <- NativePtr.ofNativeInt (dd - dst)
+            if NativePtr.toNativeInt this.YuvToRgbConversionMatrix <> 0n then
+                let dd = aux
+                NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.YuvToRgbConversionMatrix)
+                step &aux nsize<nativeptr<float32>>
+                self.YuvToRgbConversionMatrix <- NativePtr.ofNativeInt (dd - dst)
+            if NativePtr.toNativeInt this.SrcTransferFunctionParameters <> 0n then
+                let dd = aux
+                NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.SrcTransferFunctionParameters)
+                step &aux nsize<nativeptr<float32>>
+                self.SrcTransferFunctionParameters <- NativePtr.ofNativeInt (dd - dst)
+            if NativePtr.toNativeInt this.DstTransferFunctionParameters <> 0n then
+                let dd = aux
+                NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.DstTransferFunctionParameters)
+                step &aux nsize<nativeptr<float32>>
+                self.DstTransferFunctionParameters <- NativePtr.ofNativeInt (dd - dst)
+            if NativePtr.toNativeInt this.GamutConversionMatrix <> 0n then
+                let dd = aux
+                NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.GamutConversionMatrix)
+                step &aux nsize<nativeptr<float32>>
+                self.GamutConversionMatrix <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
             let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
             this.Label.CopyTo(dst + offset, &aux)
@@ -1963,7 +1958,6 @@ type SharedBufferMemoryBeginAccessDescriptor =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.Fences i)
                 off <- off + nsize<nativeint>
-            self.Fences <- NativePtr.ofNativeInt (dd - dst)
             let cnt = int this.FenceCount
             let dd = aux
             step &aux (nsize<nativeptr<uint64>> * nativeint cnt)
@@ -1971,7 +1965,6 @@ type SharedBufferMemoryBeginAccessDescriptor =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.SignaledValues i)
                 off <- off + nsize<uint64>
-            self.SignaledValues <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<SharedBufferMemoryBeginAccessDescriptor>
@@ -2002,7 +1995,6 @@ type SharedBufferMemoryEndAccessState =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.Fences i)
                 off <- off + nsize<nativeint>
-            self.Fences <- NativePtr.ofNativeInt (dd - dst)
             let cnt = int this.FenceCount
             let dd = aux
             step &aux (nsize<nativeptr<uint64>> * nativeint cnt)
@@ -2010,7 +2002,6 @@ type SharedBufferMemoryEndAccessState =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.SignaledValues i)
                 off <- off + nsize<uint64>
-            self.SignaledValues <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<SharedBufferMemoryEndAccessState>
@@ -2100,7 +2091,6 @@ type SharedTextureMemoryDmaBufDescriptor =
             for i in 0 .. cnt - 1 do
                 (NativePtr.get this.Planes i).CopyTo(off, &aux)
                 off <- off + nsize<SharedTextureMemoryDmaBufPlane>
-            self.Planes <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
             let offset = NativePtr.toNativeInt &&self.Size - NativePtr.toNativeInt &&self
             this.Size.CopyTo(dst + offset, &aux)
@@ -2246,7 +2236,6 @@ type SharedTextureMemoryBeginAccessDescriptor =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.Fences i)
                 off <- off + nsize<nativeint>
-            self.Fences <- NativePtr.ofNativeInt (dd - dst)
             let cnt = int this.FenceCount
             let dd = aux
             step &aux (nsize<nativeptr<uint64>> * nativeint cnt)
@@ -2254,7 +2243,6 @@ type SharedTextureMemoryBeginAccessDescriptor =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.SignaledValues i)
                 off <- off + nsize<uint64>
-            self.SignaledValues <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<SharedTextureMemoryBeginAccessDescriptor>
@@ -2285,7 +2273,6 @@ type SharedTextureMemoryEndAccessState =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.Fences i)
                 off <- off + nsize<nativeint>
-            self.Fences <- NativePtr.ofNativeInt (dd - dst)
             let cnt = int this.FenceCount
             let dd = aux
             step &aux (nsize<nativeptr<uint64>> * nativeint cnt)
@@ -2293,7 +2280,6 @@ type SharedTextureMemoryEndAccessState =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.SignaledValues i)
                 off <- off + nsize<uint64>
-            self.SignaledValues <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<SharedTextureMemoryEndAccessState>
@@ -2763,7 +2749,6 @@ type DawnDrmFormatCapabilities =
             for i in 0 .. cnt - 1 do
                 (NativePtr.get this.Properties i).CopyTo(off, &aux)
                 off <- off + nsize<DawnDrmFormatProperties>
-            self.Properties <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<DawnDrmFormatCapabilities>
@@ -2925,11 +2910,11 @@ type InstanceDescriptor =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.RequiredFeatures i)
                 off <- off + nsize<InstanceFeatureName>
-            self.RequiredFeatures <- NativePtr.ofNativeInt (dd - dst)
-            let dd = aux
-            step &aux nsize<nativeptr<InstanceLimits>>
-            (NativePtr.read this.RequiredLimits).CopyTo(dd, &aux)
-            self.RequiredLimits <- NativePtr.ofNativeInt (dd - dst)
+            if NativePtr.toNativeInt this.RequiredLimits <> 0n then
+                let dd = aux
+                step &aux nsize<nativeptr<InstanceLimits>>
+                (NativePtr.read this.RequiredLimits).CopyTo(dd, &aux)
+                self.RequiredLimits <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<InstanceDescriptor>
@@ -3026,7 +3011,6 @@ type VertexBufferLayout =
             for i in 0 .. cnt - 1 do
                 (NativePtr.get this.Attributes i).CopyTo(off, &aux)
                 off <- off + nsize<VertexAttribute>
-            self.Attributes <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<VertexBufferLayout>
@@ -3106,7 +3090,6 @@ type PipelineLayoutDescriptor =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.BindGroupLayouts i)
                 off <- off + nsize<nativeint>
-            self.BindGroupLayouts <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
             let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
             this.Label.CopyTo(dst + offset, &aux)
@@ -3139,7 +3122,6 @@ type PipelineLayoutPixelLocalStorage =
             for i in 0 .. cnt - 1 do
                 (NativePtr.get this.StorageAttachments i).CopyTo(off, &aux)
                 off <- off + nsize<PipelineLayoutStorageAttachment>
-            self.StorageAttachments <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<PipelineLayoutPixelLocalStorage>
@@ -3191,7 +3173,6 @@ type ComputeState =
             for i in 0 .. cnt - 1 do
                 (NativePtr.get this.Constants i).CopyTo(off, &aux)
                 off <- off + nsize<ConstantEntry>
-            self.Constants <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
             let offset = NativePtr.toNativeInt &&self.EntryPoint - NativePtr.toNativeInt &&self
             this.EntryPoint.CopyTo(dst + offset, &aux)
@@ -3319,7 +3300,6 @@ type RenderBundleEncoderDescriptor =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.ColorFormats i)
                 off <- off + nsize<TextureFormat>
-            self.ColorFormats <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
             let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
             this.Label.CopyTo(dst + offset, &aux)
@@ -3430,15 +3410,16 @@ type RenderPassDescriptor =
             for i in 0 .. cnt - 1 do
                 (NativePtr.get this.ColorAttachments i).CopyTo(off, &aux)
                 off <- off + nsize<RenderPassColorAttachment>
-            self.ColorAttachments <- NativePtr.ofNativeInt (dd - dst)
-            let dd = aux
-            step &aux nsize<nativeptr<RenderPassDepthStencilAttachment>>
-            (NativePtr.read this.DepthStencilAttachment).CopyTo(dd, &aux)
-            self.DepthStencilAttachment <- NativePtr.ofNativeInt (dd - dst)
-            let dd = aux
-            step &aux nsize<nativeptr<PassTimestampWrites>>
-            (NativePtr.read this.TimestampWrites).CopyTo(dd, &aux)
-            self.TimestampWrites <- NativePtr.ofNativeInt (dd - dst)
+            if NativePtr.toNativeInt this.DepthStencilAttachment <> 0n then
+                let dd = aux
+                step &aux nsize<nativeptr<RenderPassDepthStencilAttachment>>
+                (NativePtr.read this.DepthStencilAttachment).CopyTo(dd, &aux)
+                self.DepthStencilAttachment <- NativePtr.ofNativeInt (dd - dst)
+            if NativePtr.toNativeInt this.TimestampWrites <> 0n then
+                let dd = aux
+                step &aux nsize<nativeptr<PassTimestampWrites>>
+                (NativePtr.read this.TimestampWrites).CopyTo(dd, &aux)
+                self.TimestampWrites <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
             let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
             this.Label.CopyTo(dst + offset, &aux)
@@ -3543,7 +3524,6 @@ type RenderPassPixelLocalStorage =
             for i in 0 .. cnt - 1 do
                 (NativePtr.get this.StorageAttachments i).CopyTo(off, &aux)
                 off <- off + nsize<RenderPassStorageAttachment>
-            self.StorageAttachments <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<RenderPassPixelLocalStorage>
@@ -3626,7 +3606,6 @@ type VertexState =
             for i in 0 .. cnt - 1 do
                 (NativePtr.get this.Constants i).CopyTo(off, &aux)
                 off <- off + nsize<ConstantEntry>
-            self.Constants <- NativePtr.ofNativeInt (dd - dst)
             let cnt = int this.BufferCount
             let dd = aux
             step &aux (nsize<nativeptr<VertexBufferLayout>> * nativeint cnt)
@@ -3634,7 +3613,6 @@ type VertexState =
             for i in 0 .. cnt - 1 do
                 (NativePtr.get this.Buffers i).CopyTo(off, &aux)
                 off <- off + nsize<VertexBufferLayout>
-            self.Buffers <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
             let offset = NativePtr.toNativeInt &&self.EntryPoint - NativePtr.toNativeInt &&self
             this.EntryPoint.CopyTo(dst + offset, &aux)
@@ -3748,7 +3726,6 @@ type FragmentState =
             for i in 0 .. cnt - 1 do
                 (NativePtr.get this.Constants i).CopyTo(off, &aux)
                 off <- off + nsize<ConstantEntry>
-            self.Constants <- NativePtr.ofNativeInt (dd - dst)
             let cnt = int this.TargetCount
             let dd = aux
             step &aux (nsize<nativeptr<ColorTargetState>> * nativeint cnt)
@@ -3756,7 +3733,6 @@ type FragmentState =
             for i in 0 .. cnt - 1 do
                 (NativePtr.get this.Targets i).CopyTo(off, &aux)
                 off <- off + nsize<ColorTargetState>
-            self.Targets <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
             let offset = NativePtr.toNativeInt &&self.EntryPoint - NativePtr.toNativeInt &&self
             this.EntryPoint.CopyTo(dst + offset, &aux)
@@ -3781,10 +3757,11 @@ type ColorTargetState =
                 step &aux n.SizeInBytes
                 n.CopyTo(ptr, &aux)
                 self.NextInChain <- ptr - dst
-            let dd = aux
-            step &aux nsize<nativeptr<BlendState>>
-            (NativePtr.read this.Blend).CopyTo(dd, &aux)
-            self.Blend <- NativePtr.ofNativeInt (dd - dst)
+            if NativePtr.toNativeInt this.Blend <> 0n then
+                let dd = aux
+                step &aux nsize<nativeptr<BlendState>>
+                (NativePtr.read this.Blend).CopyTo(dd, &aux)
+                self.Blend <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<ColorTargetState>
@@ -3849,14 +3826,16 @@ type RenderPipelineDescriptor =
                 step &aux n.SizeInBytes
                 n.CopyTo(ptr, &aux)
                 self.NextInChain <- ptr - dst
-            let dd = aux
-            step &aux nsize<nativeptr<DepthStencilState>>
-            (NativePtr.read this.DepthStencil).CopyTo(dd, &aux)
-            self.DepthStencil <- NativePtr.ofNativeInt (dd - dst)
-            let dd = aux
-            step &aux nsize<nativeptr<FragmentState>>
-            (NativePtr.read this.Fragment).CopyTo(dd, &aux)
-            self.Fragment <- NativePtr.ofNativeInt (dd - dst)
+            if NativePtr.toNativeInt this.DepthStencil <> 0n then
+                let dd = aux
+                step &aux nsize<nativeptr<DepthStencilState>>
+                (NativePtr.read this.DepthStencil).CopyTo(dd, &aux)
+                self.DepthStencil <- NativePtr.ofNativeInt (dd - dst)
+            if NativePtr.toNativeInt this.Fragment <> 0n then
+                let dd = aux
+                step &aux nsize<nativeptr<FragmentState>>
+                (NativePtr.read this.Fragment).CopyTo(dd, &aux)
+                self.Fragment <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
             let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
             this.Label.CopyTo(dst + offset, &aux)
@@ -3949,7 +3928,6 @@ type ShaderSourceSPIRV =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.Code i)
                 off <- off + nsize<uint32>
-            self.Code <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<ShaderSourceSPIRV>
@@ -4353,7 +4331,6 @@ type TextureDescriptor =
             for i in 0 .. cnt - 1 do
                 NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.ViewFormats i)
                 off <- off + nsize<TextureFormat>
-            self.ViewFormats <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
             let offset = NativePtr.toNativeInt &&self.Label - NativePtr.toNativeInt &&self
             this.Label.CopyTo(dst + offset, &aux)
@@ -4609,7 +4586,6 @@ type AdapterPropertiesMemoryHeaps =
             for i in 0 .. cnt - 1 do
                 (NativePtr.get this.HeapInfo i).CopyTo(off, &aux)
                 off <- off + nsize<MemoryHeapInfo>
-            self.HeapInfo <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<AdapterPropertiesMemoryHeaps>
@@ -4718,7 +4694,6 @@ type AdapterPropertiesSubgroupMatrixConfigs =
             for i in 0 .. cnt - 1 do
                 (NativePtr.get this.Configs i).CopyTo(off, &aux)
                 off <- off + nsize<SubgroupMatrixConfig>
-            self.Configs <- NativePtr.ofNativeInt (dd - dst)
             NativePtr.write (NativePtr.ofNativeInt dst) self
         interface IWebGPUStruct with
             member this.SizeInBytes = nsize<AdapterPropertiesSubgroupMatrixConfigs>

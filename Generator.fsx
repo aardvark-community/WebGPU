@@ -1200,19 +1200,21 @@ module RawWrapper =
                                 if isPointer then
                                     match tryResolveType t with
                                     | Some (Struct _) ->
-                                        printfn $"            let dd = aux"
-                                        printfn $"            step &aux nsize<{fsharpName n.Type}>"
-                                        printfn $"            (NativePtr.read this.{pascalCase n.Name}).CopyTo(dd, &aux)"
+                                        printfn $"            if NativePtr.toNativeInt this.{pascalCase n.Name} <> 0n then"
+                                        printfn $"                let dd = aux"
+                                        printfn $"                step &aux nsize<{fsharpName n.Type}>"
+                                        printfn $"                (NativePtr.read this.{pascalCase n.Name}).CopyTo(dd, &aux)"
+                                        printfn $"                self.{pascalCase n.Name} <- NativePtr.ofNativeInt (dd - dst)"
                                     | _ ->
-                                        printfn $"            let dd = aux"
-                                        printfn $"            NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.{pascalCase n.Name})"
-                                        printfn $"            step &aux nsize<{fsharpName n.Type}>"
+                                        printfn $"            if NativePtr.toNativeInt this.{pascalCase n.Name} <> 0n then"
+                                        printfn $"                let dd = aux"
+                                        printfn $"                NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.{pascalCase n.Name})"
+                                        printfn $"                step &aux nsize<{fsharpName n.Type}>"
+                                        printfn $"                self.{pascalCase n.Name} <- NativePtr.ofNativeInt (dd - dst)"
                                 //else
                                     // printfn $"            let offset = NativePtr.toNativeInt &&self.{pascalCase n.Name} - NativePtr.toNativeInt &&self"
                                     // printfn $"            this.{pascalCase n.Name}.CopyTo(dst + offset, &aux)"
                                     
-                            if isPointer then
-                                printfn $"            self.{pascalCase n.Name} <- NativePtr.ofNativeInt (dd - dst)"
                                     
                         printfn "            NativePtr.write (NativePtr.ofNativeInt dst) self"
                             
