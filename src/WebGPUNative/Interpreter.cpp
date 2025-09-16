@@ -212,7 +212,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
         ptr += 4;
         CommandStreamCommand cmd = *((CommandStreamCommand*)ptr);
         ptr += sizeof(CommandStreamCommand);
-        printf("%s/%d\n", cmdName(cmd), size);
         switch(cmd) {
             case CommandEncoderFinish: {
                 // descriptor
@@ -234,7 +233,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                     // EXT!!!!
                 }
                 if (descriptor.label.data != NULL) descriptor.label.data = (const char*)((size_t)descriptor.label.data + (uint8_t*)&descriptor.label);
-                printf("wgpuCommandEncoderFinish(0x%X,0x%X)\n", commandEncoder, &descriptor);
                 wgpuCommandEncoderFinish(commandEncoder, &descriptor);
             }
             break; 
@@ -276,7 +274,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                         // EXT!!!!
                     }
                 }
-                printf("wgpuCommandEncoderBeginComputePass(0x%X,0x%X)\n", commandEncoder, &descriptor);
                 computePassEncoder = wgpuCommandEncoderBeginComputePass(commandEncoder, &descriptor);
             }
             break; 
@@ -360,7 +357,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                         // EXT!!!!
                     }
                 }
-                printf("wgpuCommandEncoderBeginRenderPass(0x%X,0x%X)\n", commandEncoder, &descriptor);
                 renderPassEncoder = wgpuCommandEncoderBeginRenderPass(commandEncoder, &descriptor);
             }
             break; 
@@ -380,7 +376,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // size
                 uint64_t size = *((uint64_t*)ptr);
                 ptr += align8(sizeof(uint64_t));
-                printf("wgpuCommandEncoderCopyBufferToBuffer(0x%X,0x%X,0x%X,0x%X,0x%X,0x%X)\n", commandEncoder, source, sourceOffset, destination, destinationOffset, size);
                 wgpuCommandEncoderCopyBufferToBuffer(commandEncoder, source, sourceOffset, destination, destinationOffset, size);
             }
             break; 
@@ -397,7 +392,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 WGPUExtent3D* copySizeSrc = ((WGPUExtent3D*)(ptr + *((size_t*)ptr)));
                 ptr += sizeof(void*);
                 WGPUExtent3D copySize = *copySizeSrc;
-                printf("wgpuCommandEncoderCopyBufferToTexture(0x%X,0x%X,0x%X,0x%X)\n", commandEncoder, &source, &destination, &copySize);
                 wgpuCommandEncoderCopyBufferToTexture(commandEncoder, &source, &destination, &copySize);
             }
             break; 
@@ -414,7 +408,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 WGPUExtent3D* copySizeSrc = ((WGPUExtent3D*)(ptr + *((size_t*)ptr)));
                 ptr += sizeof(void*);
                 WGPUExtent3D copySize = *copySizeSrc;
-                printf("wgpuCommandEncoderCopyTextureToBuffer(0x%X,0x%X,0x%X,0x%X)\n", commandEncoder, &source, &destination, &copySize);
                 wgpuCommandEncoderCopyTextureToBuffer(commandEncoder, &source, &destination, &copySize);
             }
             break; 
@@ -431,7 +424,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 WGPUExtent3D* copySizeSrc = ((WGPUExtent3D*)(ptr + *((size_t*)ptr)));
                 ptr += sizeof(void*);
                 WGPUExtent3D copySize = *copySizeSrc;
-                printf("wgpuCommandEncoderCopyTextureToTexture(0x%X,0x%X,0x%X,0x%X)\n", commandEncoder, &source, &destination, &copySize);
                 wgpuCommandEncoderCopyTextureToTexture(commandEncoder, &source, &destination, &copySize);
             }
             break; 
@@ -445,7 +437,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // size
                 uint64_t size = *((uint64_t*)ptr);
                 ptr += align8(sizeof(uint64_t));
-                printf("wgpuCommandEncoderClearBuffer(0x%X,0x%X,0x%X,0x%X)\n", commandEncoder, buffer, offset, size);
                 wgpuCommandEncoderClearBuffer(commandEncoder, buffer, offset, size);
             }
             break; 
@@ -455,7 +446,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 WGPUStringView message = *messageSrc ;
                 if (message.data != NULL) message.data = (const char*)((size_t)message.data + (uint8_t*)messageSrc);
                 ptr += align8(sizeof(WGPUStringView));
-                printf("wgpuCommandEncoderInjectValidationError(0x%X,0x%X)\n", commandEncoder, message);
                 wgpuCommandEncoderInjectValidationError(commandEncoder, message);
             }
             break; 
@@ -465,12 +455,10 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 WGPUStringView markerLabel = *markerLabelSrc ;
                 if (markerLabel.data != NULL) markerLabel.data = (const char*)((size_t)markerLabel.data + (uint8_t*)markerLabelSrc);
                 ptr += align8(sizeof(WGPUStringView));
-                printf("wgpuCommandEncoderInsertDebugMarker(0x%X,0x%X)\n", commandEncoder, markerLabel);
                 wgpuCommandEncoderInsertDebugMarker(commandEncoder, markerLabel);
             }
             break; 
             case CommandEncoderPopDebugGroup: {
-                printf("wgpuCommandEncoderPopDebugGroup(0x%X)\n", commandEncoder);
                 wgpuCommandEncoderPopDebugGroup(commandEncoder);
             }
             break; 
@@ -480,7 +468,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 WGPUStringView groupLabel = *groupLabelSrc ;
                 if (groupLabel.data != NULL) groupLabel.data = (const char*)((size_t)groupLabel.data + (uint8_t*)groupLabelSrc);
                 ptr += align8(sizeof(WGPUStringView));
-                printf("wgpuCommandEncoderPushDebugGroup(0x%X,0x%X)\n", commandEncoder, groupLabel);
                 wgpuCommandEncoderPushDebugGroup(commandEncoder, groupLabel);
             }
             break; 
@@ -500,7 +487,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // destinationOffset
                 uint64_t destinationOffset = *((uint64_t*)ptr);
                 ptr += align8(sizeof(uint64_t));
-                printf("wgpuCommandEncoderResolveQuerySet(0x%X,0x%X,0x%X,0x%X,0x%X,0x%X)\n", commandEncoder, querySet, firstQuery, queryCount, destination, destinationOffset);
                 wgpuCommandEncoderResolveQuerySet(commandEncoder, querySet, firstQuery, queryCount, destination, destinationOffset);
             }
             break; 
@@ -517,7 +503,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // size
                 uint64_t size = *((uint64_t*)ptr);
                 ptr += align8(sizeof(uint64_t));
-                printf("wgpuCommandEncoderWriteBuffer(0x%X,0x%X,0x%X,0x%X,0x%X)\n", commandEncoder, buffer, bufferOffset, data, size);
                 wgpuCommandEncoderWriteBuffer(commandEncoder, buffer, bufferOffset, data, size);
             }
             break; 
@@ -528,7 +513,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // queryIndex
                 uint32_t queryIndex = *((uint32_t*)ptr);
                 ptr += align8(sizeof(uint32_t));
-                printf("wgpuCommandEncoderWriteTimestamp(0x%X,0x%X,0x%X)\n", commandEncoder, querySet, queryIndex);
                 wgpuCommandEncoderWriteTimestamp(commandEncoder, querySet, queryIndex);
             }
             break; 
@@ -538,12 +522,10 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 WGPUStringView markerLabel = *markerLabelSrc ;
                 if (markerLabel.data != NULL) markerLabel.data = (const char*)((size_t)markerLabel.data + (uint8_t*)markerLabelSrc);
                 ptr += align8(sizeof(WGPUStringView));
-                printf("wgpuComputePassEncoderInsertDebugMarker(0x%X,0x%X)\n", computePassEncoder, markerLabel);
                 wgpuComputePassEncoderInsertDebugMarker(computePassEncoder, markerLabel);
             }
             break; 
             case ComputePassEncoderPopDebugGroup: {
-                printf("wgpuComputePassEncoderPopDebugGroup(0x%X)\n", computePassEncoder);
                 wgpuComputePassEncoderPopDebugGroup(computePassEncoder);
             }
             break; 
@@ -553,7 +535,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 WGPUStringView groupLabel = *groupLabelSrc ;
                 if (groupLabel.data != NULL) groupLabel.data = (const char*)((size_t)groupLabel.data + (uint8_t*)groupLabelSrc);
                 ptr += align8(sizeof(WGPUStringView));
-                printf("wgpuComputePassEncoderPushDebugGroup(0x%X,0x%X)\n", computePassEncoder, groupLabel);
                 wgpuComputePassEncoderPushDebugGroup(computePassEncoder, groupLabel);
             }
             break; 
@@ -561,7 +542,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // pipeline
                 WGPUComputePipeline pipeline = *((WGPUComputePipeline*)ptr);
                 ptr += align8(sizeof(WGPUComputePipeline));
-                printf("wgpuComputePassEncoderSetPipeline(0x%X,0x%X)\n", computePassEncoder, pipeline);
                 wgpuComputePassEncoderSetPipeline(computePassEncoder, pipeline);
             }
             break; 
@@ -578,7 +558,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // dynamicOffsets
                 uint32_t* dynamicOffsets = (uint32_t*)(ptr + *((size_t*)ptr));
                 ptr += sizeof(void*);
-                printf("wgpuComputePassEncoderSetBindGroup(0x%X,0x%X,0x%X,0x%X,0x%X)\n", computePassEncoder, groupIndex, group, dynamicOffsetCount, dynamicOffsets);
                 wgpuComputePassEncoderSetBindGroup(computePassEncoder, groupIndex, group, dynamicOffsetCount, dynamicOffsets);
             }
             break; 
@@ -589,7 +568,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // queryIndex
                 uint32_t queryIndex = *((uint32_t*)ptr);
                 ptr += align8(sizeof(uint32_t));
-                printf("wgpuComputePassEncoderWriteTimestamp(0x%X,0x%X,0x%X)\n", computePassEncoder, querySet, queryIndex);
                 wgpuComputePassEncoderWriteTimestamp(computePassEncoder, querySet, queryIndex);
             }
             break; 
@@ -603,7 +581,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // workgroupCountZ
                 uint32_t workgroupCountZ = *((uint32_t*)ptr);
                 ptr += align8(sizeof(uint32_t));
-                printf("wgpuComputePassEncoderDispatchWorkgroups(0x%X,0x%X,0x%X,0x%X)\n", computePassEncoder, workgroupCountX, workgroupCountY, workgroupCountZ);
                 wgpuComputePassEncoderDispatchWorkgroups(computePassEncoder, workgroupCountX, workgroupCountY, workgroupCountZ);
             }
             break; 
@@ -614,12 +591,10 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // indirectOffset
                 uint64_t indirectOffset = *((uint64_t*)ptr);
                 ptr += align8(sizeof(uint64_t));
-                printf("wgpuComputePassEncoderDispatchWorkgroupsIndirect(0x%X,0x%X,0x%X)\n", computePassEncoder, indirectBuffer, indirectOffset);
                 wgpuComputePassEncoderDispatchWorkgroupsIndirect(computePassEncoder, indirectBuffer, indirectOffset);
             }
             break; 
             case ComputePassEncoderEnd: {
-                printf("wgpuComputePassEncoderEnd(0x%X)\n", computePassEncoder);
                 wgpuComputePassEncoderEnd(computePassEncoder);
             }
             break; 
@@ -633,7 +608,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // size
                 size_t size = *((size_t*)ptr);
                 ptr += align8(sizeof(size_t));
-                printf("wgpuComputePassEncoderSetImmediateData(0x%X,0x%X,0x%X,0x%X)\n", computePassEncoder, offset, data, size);
                 wgpuComputePassEncoderSetImmediateData(computePassEncoder, offset, data, size);
             }
             break; 
@@ -641,7 +615,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // pipeline
                 WGPURenderPipeline pipeline = *((WGPURenderPipeline*)ptr);
                 ptr += align8(sizeof(WGPURenderPipeline));
-                printf("wgpuRenderPassEncoderSetPipeline(0x%X,0x%X)\n", renderPassEncoder, pipeline);
                 wgpuRenderPassEncoderSetPipeline(renderPassEncoder, pipeline);
             }
             break; 
@@ -658,7 +631,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // dynamicOffsets
                 uint32_t* dynamicOffsets = (uint32_t*)(ptr + *((size_t*)ptr));
                 ptr += sizeof(void*);
-                printf("wgpuRenderPassEncoderSetBindGroup(0x%X,0x%X,0x%X,0x%X,0x%X)\n", renderPassEncoder, groupIndex, group, dynamicOffsetCount, dynamicOffsets);
                 wgpuRenderPassEncoderSetBindGroup(renderPassEncoder, groupIndex, group, dynamicOffsetCount, dynamicOffsets);
             }
             break; 
@@ -675,7 +647,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // firstInstance
                 uint32_t firstInstance = *((uint32_t*)ptr);
                 ptr += align8(sizeof(uint32_t));
-                printf("wgpuRenderPassEncoderDraw(0x%X,0x%X,0x%X,0x%X,0x%X)\n", renderPassEncoder, vertexCount, instanceCount, firstVertex, firstInstance);
                 wgpuRenderPassEncoderDraw(renderPassEncoder, vertexCount, instanceCount, firstVertex, firstInstance);
             }
             break; 
@@ -695,7 +666,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // firstInstance
                 uint32_t firstInstance = *((uint32_t*)ptr);
                 ptr += align8(sizeof(uint32_t));
-                printf("wgpuRenderPassEncoderDrawIndexed(0x%X,0x%X,0x%X,0x%X,0x%X,0x%X)\n", renderPassEncoder, indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
                 wgpuRenderPassEncoderDrawIndexed(renderPassEncoder, indexCount, instanceCount, firstIndex, baseVertex, firstInstance);
             }
             break; 
@@ -706,7 +676,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // indirectOffset
                 uint64_t indirectOffset = *((uint64_t*)ptr);
                 ptr += align8(sizeof(uint64_t));
-                printf("wgpuRenderPassEncoderDrawIndirect(0x%X,0x%X,0x%X)\n", renderPassEncoder, indirectBuffer, indirectOffset);
                 wgpuRenderPassEncoderDrawIndirect(renderPassEncoder, indirectBuffer, indirectOffset);
             }
             break; 
@@ -717,7 +686,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // indirectOffset
                 uint64_t indirectOffset = *((uint64_t*)ptr);
                 ptr += align8(sizeof(uint64_t));
-                printf("wgpuRenderPassEncoderDrawIndexedIndirect(0x%X,0x%X,0x%X)\n", renderPassEncoder, indirectBuffer, indirectOffset);
                 wgpuRenderPassEncoderDrawIndexedIndirect(renderPassEncoder, indirectBuffer, indirectOffset);
             }
             break; 
@@ -737,7 +705,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // drawCountBufferOffset
                 uint64_t drawCountBufferOffset = *((uint64_t*)ptr);
                 ptr += align8(sizeof(uint64_t));
-                printf("wgpuRenderPassEncoderMultiDrawIndirect(0x%X,0x%X,0x%X,0x%X,0x%X,0x%X)\n", renderPassEncoder, indirectBuffer, indirectOffset, maxDrawCount, drawCountBuffer, drawCountBufferOffset);
                 wgpuRenderPassEncoderMultiDrawIndirect(renderPassEncoder, indirectBuffer, indirectOffset, maxDrawCount, drawCountBuffer, drawCountBufferOffset);
             }
             break; 
@@ -757,7 +724,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // drawCountBufferOffset
                 uint64_t drawCountBufferOffset = *((uint64_t*)ptr);
                 ptr += align8(sizeof(uint64_t));
-                printf("wgpuRenderPassEncoderMultiDrawIndexedIndirect(0x%X,0x%X,0x%X,0x%X,0x%X,0x%X)\n", renderPassEncoder, indirectBuffer, indirectOffset, maxDrawCount, drawCountBuffer, drawCountBufferOffset);
                 wgpuRenderPassEncoderMultiDrawIndexedIndirect(renderPassEncoder, indirectBuffer, indirectOffset, maxDrawCount, drawCountBuffer, drawCountBufferOffset);
             }
             break; 
@@ -768,7 +734,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // bundles
                 WGPURenderBundle* bundles = (WGPURenderBundle*)(ptr + *((size_t*)ptr));
                 ptr += sizeof(void*);
-                printf("wgpuRenderPassEncoderExecuteBundles(0x%X,0x%X,0x%X)\n", renderPassEncoder, bundleCount, bundles);
                 wgpuRenderPassEncoderExecuteBundles(renderPassEncoder, bundleCount, bundles);
             }
             break; 
@@ -778,12 +743,10 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 WGPUStringView markerLabel = *markerLabelSrc ;
                 if (markerLabel.data != NULL) markerLabel.data = (const char*)((size_t)markerLabel.data + (uint8_t*)markerLabelSrc);
                 ptr += align8(sizeof(WGPUStringView));
-                printf("wgpuRenderPassEncoderInsertDebugMarker(0x%X,0x%X)\n", renderPassEncoder, markerLabel);
                 wgpuRenderPassEncoderInsertDebugMarker(renderPassEncoder, markerLabel);
             }
             break; 
             case RenderPassEncoderPopDebugGroup: {
-                printf("wgpuRenderPassEncoderPopDebugGroup(0x%X)\n", renderPassEncoder);
                 wgpuRenderPassEncoderPopDebugGroup(renderPassEncoder);
             }
             break; 
@@ -793,7 +756,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 WGPUStringView groupLabel = *groupLabelSrc ;
                 if (groupLabel.data != NULL) groupLabel.data = (const char*)((size_t)groupLabel.data + (uint8_t*)groupLabelSrc);
                 ptr += align8(sizeof(WGPUStringView));
-                printf("wgpuRenderPassEncoderPushDebugGroup(0x%X,0x%X)\n", renderPassEncoder, groupLabel);
                 wgpuRenderPassEncoderPushDebugGroup(renderPassEncoder, groupLabel);
             }
             break; 
@@ -801,7 +763,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // reference
                 uint32_t reference = *((uint32_t*)ptr);
                 ptr += align8(sizeof(uint32_t));
-                printf("wgpuRenderPassEncoderSetStencilReference(0x%X,0x%X)\n", renderPassEncoder, reference);
                 wgpuRenderPassEncoderSetStencilReference(renderPassEncoder, reference);
             }
             break; 
@@ -810,7 +771,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 WGPUColor* colorSrc = ((WGPUColor*)(ptr + *((size_t*)ptr)));
                 ptr += sizeof(void*);
                 WGPUColor color = *colorSrc;
-                printf("wgpuRenderPassEncoderSetBlendConstant(0x%X,0x%X)\n", renderPassEncoder, &color);
                 wgpuRenderPassEncoderSetBlendConstant(renderPassEncoder, &color);
             }
             break; 
@@ -833,7 +793,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // maxDepth
                 float maxDepth = *((float*)ptr);
                 ptr += align8(sizeof(float));
-                printf("wgpuRenderPassEncoderSetViewport(0x%X,0x%X,0x%X,0x%X,0x%X,0x%X,0x%X)\n", renderPassEncoder, x, y, width, height, minDepth, maxDepth);
                 wgpuRenderPassEncoderSetViewport(renderPassEncoder, x, y, width, height, minDepth, maxDepth);
             }
             break; 
@@ -850,7 +809,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // height
                 uint32_t height = *((uint32_t*)ptr);
                 ptr += align8(sizeof(uint32_t));
-                printf("wgpuRenderPassEncoderSetScissorRect(0x%X,0x%X,0x%X,0x%X,0x%X)\n", renderPassEncoder, x, y, width, height);
                 wgpuRenderPassEncoderSetScissorRect(renderPassEncoder, x, y, width, height);
             }
             break; 
@@ -867,7 +825,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // size
                 uint64_t size = *((uint64_t*)ptr);
                 ptr += align8(sizeof(uint64_t));
-                printf("wgpuRenderPassEncoderSetVertexBuffer(0x%X,0x%X,0x%X,0x%X,0x%X)\n", renderPassEncoder, slot, buffer, offset, size);
                 wgpuRenderPassEncoderSetVertexBuffer(renderPassEncoder, slot, buffer, offset, size);
             }
             break; 
@@ -884,7 +841,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // size
                 uint64_t size = *((uint64_t*)ptr);
                 ptr += align8(sizeof(uint64_t));
-                printf("wgpuRenderPassEncoderSetIndexBuffer(0x%X,0x%X,0x%X,0x%X,0x%X)\n", renderPassEncoder, buffer, format, offset, size);
                 wgpuRenderPassEncoderSetIndexBuffer(renderPassEncoder, buffer, format, offset, size);
             }
             break; 
@@ -892,12 +848,10 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // queryIndex
                 uint32_t queryIndex = *((uint32_t*)ptr);
                 ptr += align8(sizeof(uint32_t));
-                printf("wgpuRenderPassEncoderBeginOcclusionQuery(0x%X,0x%X)\n", renderPassEncoder, queryIndex);
                 wgpuRenderPassEncoderBeginOcclusionQuery(renderPassEncoder, queryIndex);
             }
             break; 
             case RenderPassEncoderEndOcclusionQuery: {
-                printf("wgpuRenderPassEncoderEndOcclusionQuery(0x%X)\n", renderPassEncoder);
                 wgpuRenderPassEncoderEndOcclusionQuery(renderPassEncoder);
             }
             break; 
@@ -908,17 +862,14 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // queryIndex
                 uint32_t queryIndex = *((uint32_t*)ptr);
                 ptr += align8(sizeof(uint32_t));
-                printf("wgpuRenderPassEncoderWriteTimestamp(0x%X,0x%X,0x%X)\n", renderPassEncoder, querySet, queryIndex);
                 wgpuRenderPassEncoderWriteTimestamp(renderPassEncoder, querySet, queryIndex);
             }
             break; 
             case RenderPassEncoderPixelLocalStorageBarrier: {
-                printf("wgpuRenderPassEncoderPixelLocalStorageBarrier(0x%X)\n", renderPassEncoder);
                 wgpuRenderPassEncoderPixelLocalStorageBarrier(renderPassEncoder);
             }
             break; 
             case RenderPassEncoderEnd: {
-                printf("wgpuRenderPassEncoderEnd(0x%X)\n", renderPassEncoder);
                 wgpuRenderPassEncoderEnd(renderPassEncoder);
             }
             break; 
@@ -932,7 +883,6 @@ DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t*
                 // size
                 size_t size = *((size_t*)ptr);
                 ptr += align8(sizeof(size_t));
-                printf("wgpuRenderPassEncoderSetImmediateData(0x%X,0x%X,0x%X,0x%X)\n", renderPassEncoder, offset, data, size);
                 wgpuRenderPassEncoderSetImmediateData(renderPassEncoder, offset, data, size);
             }
             break; 

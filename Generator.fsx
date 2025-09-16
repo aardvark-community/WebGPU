@@ -3373,7 +3373,7 @@ module CommandStream =
         printfn "        ptr += 4;"
         printfn "        CommandStreamCommand cmd = *((CommandStreamCommand*)ptr);"
         printfn "        ptr += sizeof(CommandStreamCommand);"
-        printfn "        printf(\"%%s/%%d\\n\", cmdName(cmd), size);"
+        //printfn "        printf(\"%%s/%%d\\n\", cmdName(cmd), size);"
         printfn "        switch(cmd) {"
         
         
@@ -3534,11 +3534,11 @@ module CommandStream =
             let selfType = pascalCase self.TypeName
             let methName = pascalCase meth.Name
             
-            let argFormat =
-                (camelCase self.TypeName) :: (res |> Seq.toList)
-                |> List.map (fun a -> "0x%X")
-                |> String.concat ","
-            printfn $"                printf(\"wgpu{selfType}{methName}({argFormat})\\n\", {args});"
+            // let argFormat =
+            //     (camelCase self.TypeName) :: (res |> Seq.toList)
+            //     |> List.map (fun a -> "0x%X")
+            //     |> String.concat ","
+            // printfn $"                printf(\"wgpu{selfType}{methName}({argFormat})\\n\", {args});"
             if selfType = "CommandEncoder" then
                 if methName = "BeginRenderPass" then
                     printfn $"                renderPassEncoder = wgpu{selfType}{methName}({args});"
