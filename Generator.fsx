@@ -577,13 +577,16 @@ let rx = System.Text.RegularExpressions.Regex "^[0-9]+.*$"
               
 // print native wrapper
 let pascalCase (str : string) =
-    let res = 
-        str.Split(" ")
-        |> Array.map (fun str -> str.Substring(0, 1).ToUpper() + str.Substring(1))
-        |> String.concat ""
+    if str = "nextInChain" then
+        str
+    else
+        let res = 
+            str.Split(" ")
+            |> Array.map (fun str -> str.Substring(0, 1).ToUpper() + str.Substring(1))
+            |> String.concat ""
 
-    if rx.IsMatch res then "D" + res
-    else res
+        if rx.IsMatch res then "D" + res
+        else res
 
 let camelCase (str : string) =
     let res = 
@@ -800,7 +803,6 @@ module Enums =
                 ()
         File.WriteAllText(Path.Combine(__SOURCE_DIRECTORY__, "src", "WebGPU", "Enums.fs"), b.ToString())
 
-
 module RawWrapper =
     
     let rec externName (t : TypeRef) =
@@ -889,6 +891,50 @@ module RawWrapper =
                 | "const*const*" -> $"nativeptr<nativeptr<{baseType}>>"
                 | _ -> failwith "asdasdsad"
       
+    let rec fsharpNameFull (t : TypeRef) =
+        
+        let def = table.[t.TypeName]
+        
+        let baseType = 
+            match def with
+            | Object o -> "nativeint"
+            | Enum e -> pascalCase e.Name
+            | Delegate d -> "nativeint" //pascalCase d.Name
+            | Alias a -> fsharpNameFull a.Type
+            | Struct a -> $"WebGPU.Raw.{pascalCase a.Name}"
+            | Function _ -> failwith "not a type"
+            | CallbackInfo c -> $"WebGPU.Raw.{pascalCase c.Name}"
+            | Native n ->
+                match n.Name with
+                | "int8_t" -> "int8"
+                | "uint8_t" -> "uint8"
+                | "int16_t" -> "int16"
+                | "uint16_t" -> "uint16"
+                | "int32_t" | "int"  -> "int"
+                | "uint32_t" -> "uint32"
+                | "int64_t" -> "int64"
+                | "uint64_t" -> "uint64"
+                | "void" -> "unit"
+                | "bool" -> "int"
+                | "char" -> "byte"
+                | "float" -> "float32"
+                | "double" -> "double"
+                | "size_t" -> "unativeint"
+                | "void *" | "void const *" -> "nativeint"
+                | _ -> failwithf "bad native type: %A" n.Name
+            
+            
+        match t.Annotation with
+        | None -> baseType
+        | Some a ->
+            if baseType = "unit" then
+                "nativeint"
+            else
+                match a with
+                | "*" -> $"nativeptr<{baseType}>"
+                | "const*" -> $"nativeptr<{baseType}>"
+                | "const*const*" -> $"nativeptr<nativeptr<{baseType}>>"
+                | _ -> failwith "asdasdsad"
     [<Struct>]
     type TypeSize(ptrCount : int, size : int, custom : Map<string, int>) =
         member x.PointerCount = ptrCount
@@ -951,6 +997,45 @@ module RawWrapper =
         printfn "open Microsoft.FSharp.NativeInterop"
         printfn "open WebGPU"
         printfn "#nowarn \"9\""
+        printfn "#nowarn \"51\""
+        printfn "#nowarn \"26\""
+        
+        printfn "[<AllowNullLiteral>]"
+        printfn "type IWebGPUStruct ="
+        printfn "    abstract member SizeInBytes : nativeint"
+        printfn "    abstract member CopyTo : nativeint * byref<nativeint> -> unit"
+        
+        printfn "[<AutoOpen>]"
+        printfn "module private NativeUtilities ="
+        printfn "    let inline nsize<'a> = nativeint sizeof<'a>"
+        printfn "    let inline sum (n : int) (ptr : nativeptr<'x>) ([<InlineIfLambda>] action : 'x -> 'a) ="
+        printfn "        let mutable res = LanguagePrimitives.GenericZero<'a>"
+        printfn "        for i in 0 .. n - 1 do res <- res + action (NativePtr.get ptr i)"
+        printfn "        res"
+        
+        printfn "    let inline step (aux : byref<nativeint>) (size : nativeint) ="
+        printfn "        let n = aux + size"
+        printfn "        if n &&& 7n = 0n then aux <- n"
+        printfn "        else aux <- (1n + (aux >>> 3)) <<< 3"
+        
+        
+        printfn "    let decodeStruct (ptr : nativeint) = "
+        printfn "        if ptr = 0n then null"
+        printfn "        else"
+        //printfn "        let next = NativePtr.read (NativePtr.ofNativeInt<nativeint> ptr)"
+        printfn "            let sType = NativePtr.read (NativePtr.ofNativeInt<SType> (ptr + nsize<nativeint>))"
+        printfn "            match sType with"
+        for a in all do
+            match a with
+            | Struct s when Option.isSome s.Chained  ->
+                printfn "            | SType.%s ->" (pascalCase s.Name)
+                printfn "                let p = NativePtr.ofNativeInt<%s> ptr" (pascalCase s.Name)
+                printfn "                NativePtr.read p :> IWebGPUStruct"
+            | _ ->
+                ()
+        printfn "            | _ -> failwithf \"Unknown SType %%A\" sType"
+        
+        
         
         
         
@@ -979,7 +1064,12 @@ module RawWrapper =
             | Struct s | CallbackInfo s ->
                 if s.Fields.IsEmpty && Option.isNone s.Extensible && List.isEmpty s.ChainRoots then
                     printfn "[<StructLayout(LayoutKind.Explicit, Size = 4)>]"
-                    printfn "type %s = struct end" (pascalCase s.Name)
+                    printfn "type %s =" (pascalCase s.Name)
+                    printfn "    struct "
+                    printfn "        interface IWebGPUStruct with"
+                    printfn "            member this.SizeInBytes = 0n"
+                    printfn "            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = ()"
+                    printfn "    end"
                 else
                     
                     
@@ -1010,6 +1100,9 @@ module RawWrapper =
                         // let name = pascalCase f.Name
                         // printfn $"    member _.{pascalCase f.Name} : {typ} = {camelCase f.Name}"
                         
+                    
+                        
+                        
                     let ctorArgs = 
                         fields |> List.map (fun f ->
                             let typ = fsharpName f.Type
@@ -1030,6 +1123,8 @@ module RawWrapper =
                             )
                             |> String.concat ", "
                             
+                            
+                            
                         let ctoruse =
                             let u = s.Fields |> List.map (fun f -> camelCase f.Name)
                             let args = 
@@ -1041,6 +1136,123 @@ module RawWrapper =
                                     u
                             String.concat ", " args
                         printfn $"        new({ctorArgs}) = {pascalCase s.Name}({ctoruse})"
+                    
+                    
+                    
+                    let nestedFields =
+                        s.Fields |> List.choose (fun f ->
+                            match f.Type.Annotation with
+                            | Some _ when f.Type.TypeName <> "void" -> Some (f, true)
+                            | _ ->
+                                match tryResolveType f.Type with
+                                | Some (Struct _) ->
+                                    Some (f, false)
+                                | _ ->
+                                    None
+                        )
+                        
+                    printfn "        member this.CopyTo(dst : nativeint, aux : byref<nativeint>) ="
+                    printfn "            let mutable self = this"
+                    
+                    if s.Name = "string view" then
+                        printfn "            let len = int this.Length"
+                        printfn "            let ptr = aux"
+                        printfn "            step &aux (nativeint len)"
+                        printfn "            let srcSpan = System.Span<byte>(NativePtr.toVoidPtr this.Data, len)"
+                        printfn "            let dstSpan = System.Span<byte>(NativePtr.toVoidPtr (NativePtr.ofNativeInt<byte> ptr), len)"
+                        printfn "            srcSpan.CopyTo(dstSpan)"
+                        printfn "            self.Data <- NativePtr.ofNativeInt (ptr - dst)"
+                        printfn "            NativePtr.write (NativePtr.ofNativeInt dst) self"
+                        
+                        
+                    else
+                        if Option.isSome s.Extensible || Option.isSome s.Chained then
+                            printfn "            let n = decodeStruct self.NextInChain"
+                            printfn "            if not (isNull n) then"
+                            printfn "                let ptr = aux"
+                            printfn "                step &aux n.SizeInBytes"
+                            printfn "                n.CopyTo(ptr, &aux)"
+                            printfn "                self.NextInChain <- ptr - dst"
+                            
+                        for n, isPointer in nestedFields do
+                            let t = { n.Type with Annotation = None }
+                            match n.Length with
+                            | Some l ->
+                                printfn $"            let cnt = int this.{pascalCase l}"
+                                match tryResolveType t with
+                                | Some (Struct _) ->
+                                    printfn $"            let dd = aux"
+                                    printfn $"            step &aux (nsize<{fsharpName n.Type}> * nativeint cnt)"
+                                    printfn $"            let mutable off = dd"
+                                    printfn $"            for i in 0 .. cnt - 1 do"
+                                    printfn $"                (NativePtr.get this.{pascalCase n.Name} i).CopyTo(off, &aux)"
+                                    printfn $"                off <- off + nsize<{fsharpName t}>"
+                                    
+                                    ()
+                                | _ ->
+                                    printfn $"            let dd = aux"
+                                    printfn $"            step &aux (nsize<{fsharpName n.Type}> * nativeint cnt)"
+                                    printfn $"            let mutable off = dd"
+                                    printfn $"            for i in 0 .. cnt - 1 do"
+                                    printfn $"                NativePtr.write (NativePtr.ofNativeInt off) (NativePtr.get this.{pascalCase n.Name} i)"
+                                    printfn $"                off <- off + nsize<{fsharpName t}>"
+                            | None ->
+                                if isPointer then
+                                    match tryResolveType t with
+                                    | Some (Struct _) ->
+                                        printfn $"            if NativePtr.toNativeInt this.{pascalCase n.Name} <> 0n then"
+                                        printfn $"                let dd = aux"
+                                        printfn $"                step &aux nsize<{fsharpName n.Type}>"
+                                        printfn $"                (NativePtr.read this.{pascalCase n.Name}).CopyTo(dd, &aux)"
+                                        printfn $"                self.{pascalCase n.Name} <- NativePtr.ofNativeInt (dd - dst)"
+                                    | _ ->
+                                        printfn $"            if NativePtr.toNativeInt this.{pascalCase n.Name} <> 0n then"
+                                        printfn $"                let dd = aux"
+                                        printfn $"                NativePtr.write (NativePtr.ofNativeInt dd) (NativePtr.read this.{pascalCase n.Name})"
+                                        printfn $"                step &aux nsize<{fsharpName n.Type}>"
+                                        printfn $"                self.{pascalCase n.Name} <- NativePtr.ofNativeInt (dd - dst)"
+                                //else
+                                    // printfn $"            let offset = NativePtr.toNativeInt &&self.{pascalCase n.Name} - NativePtr.toNativeInt &&self"
+                                    // printfn $"            this.{pascalCase n.Name}.CopyTo(dst + offset, &aux)"
+                                    
+                                    
+                        printfn "            NativePtr.write (NativePtr.ofNativeInt dst) self"
+                            
+                        for n, isPointer in nestedFields do
+                            let t = { n.Type with Annotation = None }
+                            let t = { n.Type with Annotation = None }
+                            match n.Length with
+                            | None when not isPointer ->
+                                printfn $"            let offset = NativePtr.toNativeInt &&self.{pascalCase n.Name} - NativePtr.toNativeInt &&self"
+                                printfn $"            this.{pascalCase n.Name}.CopyTo(dst + offset, &aux)"
+                    
+                            | _ ->
+                                ()
+                    // printfn $"        static member Read(src : nativeint) : {pascalCase s.Name} ="
+                    // printfn $"            let mutable self = NativePtr.read (NativePtr.ofNativeInt<{pascalCase s.Name}> src)"
+                    // if s.Name = "string view" then
+                    //     printfn $"            self.Data <- NativePtr.ofNativeInt (NativePtr.toNativeInt self.Data + src)"
+                    // else
+                    //     if Option.isSome s.Extensible || Option.isSome s.Chained then
+                    //         printfn $"            if self.NextInChain <> 0n then"
+                    //         printfn $"                self.NextInChain <- self.NextInChain + src"
+                    //         printfn $"                let n = decodeStruct self.NextInChain"
+                    //     for n, isPointer in nestedFields do
+                    //         let t = { n.Type with Annotation = None }
+                    //         match n.Length with
+                    //         | Some l ->
+                    //             printfn $"            self.{pascalCase n.Name} <- NativePtr.ofNativeInt (NativePtr.toNativeInt self.{pascalCase n.Name} + src)"
+                    //         | None ->
+                    //             if isPointer then
+                    //                 printfn $"            self.{pascalCase n.Name} <- NativePtr.ofNativeInt (NativePtr.toNativeInt self.{pascalCase n.Name} + src)"
+                    //             else
+                    //                 printfn $"            self.{pascalCase n.Name} <- {pascalCase n.Type.TypeName}.Read(src + NativePtr.toNativeInt &&self.{pascalCase n.Name} - NativePtr.toNativeInt &&self)"
+                    //     
+                    // printfn $"            self"
+                    
+                    printfn $"        interface IWebGPUStruct with"
+                    printfn $"            member this.SizeInBytes = nsize<{pascalCase s.Name}>"
+                    printfn $"            member this.CopyTo(dst : nativeint, aux : byref<nativeint>) = this.CopyTo(dst, &aux)"
                     
                     printfn "    end"
             | Function _ | Native _ | Object _ ->
@@ -1307,8 +1519,12 @@ module Frontend =
                                 | FieldOfType(Object _, _) ->
                                     yield $"let {handleField} = {var} |> Array.map (fun a -> a.Handle)"
                                     yield $"use {ptrField} = fixed ({handleField})"
-                                    yield $"let {lenField} = {cntTypeStr} {var}.Length"
-                                    yield! code
+                                    yield "try"
+                                    yield $"    let {lenField} = {cntTypeStr} {var}.Length"
+                                    for l in code do
+                                        yield  $"    {l}"
+                                    yield "finally"
+                                    yield "    ()"
                                 | FieldOfType(Struct _, _) ->
                                     yield $"WebGPU.Raw.Pinnable.pinArray device {var} (fun {ptrField} ->"
                                     yield $"    let {lenField} = {cntTypeStr} {var}.Length"
@@ -1317,8 +1533,12 @@ module Frontend =
                                     yield ")"
                                 | _ ->
                                     yield $"use {ptrField} = fixed ({var})"
-                                    yield $"let {lenField} = {cntTypeStr} {var}.Length"
-                                    yield! code
+                                    yield "try"
+                                    yield $"    let {lenField} = {cntTypeStr} {var}.Length"
+                                    for c in code do
+                                        yield $"    {c}"
+                                    yield "finally"
+                                    yield "    ()"
                             ]
                         Read = fun vars ->
                             let lenField = vars.[cntName]
@@ -1330,7 +1550,7 @@ module Frontend =
                                     else ""
                                 $"let ptr = {ptrField} in Array.init (int {lenField}) (fun i -> new {innerType}({prefix}NativePtr.get ptr i))"//TODO3 {lenField} {ptrField}"
                             | FieldOfType(Struct _, _) ->
-                                $"let ptr = {ptrField} in Array.init (int {lenField}) (fun i -> let r = NativePtr.toByRef (NativePtr.add ptr i) in {innerType}.Read(device, &r))"
+                                $"let ptr = {ptrField} in Array.init (int {lenField}) (fun i -> let r = NativePtr.toByRef (NativePtr.add ptr i) in {innerType}.Read(device, NativePtr.add ptr i, relativePointers))"
                             | _ ->
                                 $"let ptr = {ptrField} in Array.init (int {lenField}) (fun i -> NativePtr.get ptr i)"
                     }
@@ -1370,18 +1590,26 @@ module Frontend =
                                             | FieldOfType(Object _, _) ->
                                                 yield $"let mutable {handleField} = {var}.Handle"
                                                 yield $"use {ptrField} = fixed (&{handleField})"
-                                                yield! code
+                                                yield "try"
+                                                for c in code do
+                                                    yield $"    {c}"
+                                                yield "finally"
+                                                yield "    ()"
                                             | FieldOfType(Struct _, _) ->
                                                 yield $"WebGPU.Raw.Pinnable.pinArray [| {var} |] (fun {ptrField} ->"
                                                 for c in code do
                                                     yield $"    {c}"
                                                 yield $"    let {var}Result = NativePtr.toByRef {ptrField}"
-                                                yield $"    {var} <- {innerType}.Read(device, &{var}Result)"
+                                                yield $"    {var} <- {innerType}.Read(device, {ptrField}, relativePointers)"
                                                 yield ")"
                                             | _ ->
                                                 yield $"let mutable {handleField} = {var}"
                                                 yield $"use {ptrField} = fixed (&{handleField})"
-                                                yield! code
+                                                yield "try"
+                                                for c in code do
+                                                    yield $"    {c}"
+                                                yield "finally"
+                                                yield "    ()"
                                         ]
                                     Read = fun vars ->
                                         let ptrField = vars.[ptr.Name]
@@ -1392,7 +1620,7 @@ module Frontend =
                                                 else ""
                                             $"let ptr = {ptrField} in new {innerType}({prefix}NativePtr.read ptr)"
                                         | FieldOfType(Struct _, _) ->
-                                            $"let ptr = {ptrField} in let r = NativePtr.toByRef ptr in {innerType}.Read(device, &r)"
+                                            $"let ptr = {ptrField} in {innerType}.Read(device, ptr, relativePointers)"
                                         | _ ->
                                             $"let ptr = {ptrField} in NativePtr.read ptr"
                                 }
@@ -1424,7 +1652,15 @@ module Frontend =
                                     $"    let {varName}Data = Encoding.UTF8.GetBytes({var})"
                                     $"    {varName} <- {stream}.Array({varName}Data)"
                                 ]
-                            PinFrontend = fun var code -> $"use {varName} = fixed (if isNull {var} then null else Encoding.UTF8.GetBytes({var}))" :: code
+                            PinFrontend = fun var code ->
+                                [
+                                    yield $"use {varName} = fixed (if isNull {var} then null else Encoding.UTF8.GetBytes({var}))"
+                                    yield "try"
+                                    for l in code do
+                                        yield $"    {l}"
+                                    yield "finally"
+                                    yield "    ()"
+                                ]
                             Read = fun var -> $"Marshal.PtrToStringAnsi(NativePtr.toNativeInt {var.[h.Name]})"
                         }
                     marshalInternal allFields (self :: acc) t
@@ -1497,8 +1733,12 @@ module Frontend =
                                 [
                                     yield $"let {arrName} = if isNull {var} then null else Encoding.UTF8.GetBytes({var})"
                                     yield $"use {ptrName} = fixed {arrName}"
-                                    yield $"let {structName} = WebGPU.Raw.StringView({ptrName}, if isNull {arrName} then 0un else unativeint {arrName}.Length)"
-                                    yield! code
+                                    yield "try"
+                                    yield $"    let {structName} = WebGPU.Raw.StringView({ptrName}, if isNull {arrName} then 0un else unativeint {arrName}.Length)"
+                                    for c in code do
+                                        yield $"    {c}"
+                                    yield "finally"
+                                    yield "    ()"
                                 ]
 
                             let self =
@@ -1517,6 +1757,7 @@ module Frontend =
                                         ]
                                     PinFrontend = wrap
                                     Read = fun var ->
+                                        
                                         $"let {ptrName} = NativePtr.toNativeInt({var.[h.Name]}.Data) in if {ptrName} = 0n then null else Marshal.PtrToStringUTF8({ptrName}, int({var.[h.Name]}.Length))"
                                         // match h.Type.Annotation with
                                         // | Some ("*" | "const*") ->
@@ -1539,14 +1780,17 @@ module Frontend =
                                         let len = List.length code
                                         yield $"            let mutable {var}Native = Unchecked.defaultof<WebGPU.Raw.{pascalCase h.Type.TypeName}>"
                                         yield $"            use {varName} = fixed &{var}Native"
+                                        yield $"            try"
                                         for i,c in List.indexed code do
                                             if i < len - 1 then
-                                                yield $"            {c}"
+                                                yield $"                {c}"
                                             else
-                                                yield $"            let _ret = {c}"
-                                                yield $"            {var}Copy <- {pascalCase h.Type.TypeName}.Read(device, &{var}Native)"
-                                                yield $"            _ret"
+                                                yield $"                let _ret = {c}"
+                                                yield $"                {var}Copy <- {pascalCase h.Type.TypeName}.Read(device, {varName}, relativePointers)"
+                                                yield $"                _ret"
                                         
+                                        yield $"            finally"
+                                        yield "                ()"
                                         yield $"        else"
                                         let len = List.length code
                                         for i,c in List.indexed code do
@@ -1554,10 +1798,10 @@ module Frontend =
                                                 yield $"            {c}"
                                             else
                                                 yield $"            let _ret = {c}"
-                                                yield $"            let {var}Result = NativePtr.toByRef {varName}"
-                                                yield $"            {var}Copy <- {pascalCase h.Type.TypeName}.Read(device, &{var}Result)"
+                                                yield $"            {var}Copy <- {pascalCase h.Type.TypeName}.Read(device, {varName}, relativePointers)"
                                                 yield $"            _ret"
-                                        yield $"    )"
+                                        yield $"        )"
+                                        
                                         yield "finally"
                                         yield $"    {var} <- {var}Copy"
                                     ]
@@ -1602,9 +1846,9 @@ module Frontend =
                                     Read = fun var ->
                                         match h.Type.Annotation with
                                         | Some ("*" | "const*") ->
-                                            $"let m = NativePtr.toByRef {var.[h.Name]} in {frontendName false h.Type}.Read(device, &m)" //$"//TODO1 {var}"
+                                            $"{frontendName false h.Type}.Read(device, {var.[h.Name]}, relativePointers)" //$"//TODO1 {var}"
                                         | _ ->
-                                            $"{frontendName false h.Type}.Read(device, &{var.[h.Name]})"
+                                            $"use pppp = fixed &{var.[h.Name]} in {frontendName false h.Type}.Read(device, pppp, relativePointers)"
                                 }
                             marshalInternal allFields (self :: acc) t
                     | Some (Delegate d) ->
@@ -1641,6 +1885,7 @@ module Frontend =
                                     yield $"let mutable {subName} = {{ new IDisposable with member __.Dispose() = () }}"
                                     yield $"let {delName} = WebGPU.Raw.{frontendName false h.Type}(fun {backendArgDef} ->"
                                     let names = d.Args |> List.map (fun a -> a.Name, camelCase a.Name) |> Map.ofList
+                                    
                                     for a in mm do
                                         let name = camelCase a.FrontendField.Name
                                         let code = names |> a.Read
@@ -1811,6 +2056,7 @@ module Frontend =
         printfn "open Microsoft.FSharp.NativeInterop"
         printfn "#nowarn \"9\""
         printfn "#nowarn \"26\""
+        printfn "#nowarn \"51\""
         printfn "#nowarn \"1182\""
         
         printfn "[<AllowNullLiteral>]"
@@ -1834,7 +2080,7 @@ module Frontend =
             | _ -> failwith "bad s type"
 
         printfn "module private ExtensionDecoder ="
-        printfn "    let decode<'a when 'a :> IExtension> (device : Device) (ptr : nativeint) : 'a ="
+        printfn "    let decode<'a when 'a :> IExtension> (device : Device) (relativePointers : bool) (ptr : nativeint) : 'a ="
         printfn "        if ptr = 0n then"
         printfn "            Unchecked.defaultof<'a>"
         printfn "        else"
@@ -1859,8 +2105,7 @@ module Frontend =
                 match tryResolveType { TypeName = s; Annotation = None } with
                 | Some (Struct sd) when not (List.isEmpty sd.ChainRoots) ->
                     printfn $"                | SType.{pascalCase s} ->"
-                    printfn $"                    let rr = NativePtr.toByRef (NativePtr.ofNativeInt<WebGPU.Raw.{pascalCase s}> (ptr))"
-                    printfn $"                    {pascalCase s}.Read(device, &rr) :> obj :?> 'a"
+                    printfn $"                    {pascalCase s}.Read(device, (NativePtr.ofNativeInt<WebGPU.Raw.{pascalCase s}> (ptr)), relativePointers) :> obj :?> 'a"
                 | _ ->
                     ()
             printfn "                | _ -> failwithf \"bad s type: %%A\" sType" 
@@ -1872,7 +2117,7 @@ module Frontend =
         
         printfn "[<AbstractClass; Sealed>]"
         printfn "type private PinHelper() ="
-        printfn $"    static member inline PinNullable<'r>(x : IExtension, action : nativeint -> 'r) = "
+        printfn $"    static member inline PinNullable<'r>(x : IExtension, [<InlineIfLambda>] action : nativeint -> 'r) = "
         printfn $"        if isNull x then action 0n"
         printfn $"        else x.Pin action"
         
@@ -1952,7 +2197,9 @@ module Frontend =
                     printfn $"    static member Null = Unchecked.defaultof<{pascalCase s.Name}>"
                     
                     printfn $"    [<CompilationRepresentation(CompilationRepresentationFlags.Static)>]"
+                    //printfn $"    [<System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)>]"
                     printfn $"    member this.Pin<'r>(device : Device, action : nativeptr<WebGPU.Raw.{pascalCase s.Name}> -> 'r) : 'r = "
+                    printfn $"        let relativePointers = false"
                     printfn $"        if isNull (this :> obj) then"
                     // printfn $"            let mutable v = Unchecked.defaultof<WebGPU.Raw.{pascalCase s.Name}>"
                     // printfn $"            use ptr = fixed &v"
@@ -1982,7 +2229,8 @@ module Frontend =
                                         yield $"        {a}"
                                 yield $"    )"
                                 yield "use ptr = fixed &value"
-                                yield "action ptr"
+                                yield "try action ptr"
+                                yield "finally ()"
                             ]
                         )
                         
@@ -2064,7 +2312,50 @@ module Frontend =
                 printfn $"    interface WebGPU.Raw.IPinnable<Device, WebGPU.Raw.{pascalCase s.Name}> with"
                 printfn $"        member x.Pin(device, action) = x.Pin(device, action)"
                     
-                printfn $"    static member Read(device : Device, backend : inref<WebGPU.Raw.{pascalCase s.Name}>) = "
+                printfn $"    member x.CopyTo(dst : nativeint, aux : byref<nativeint>) ="
+                printfn $"        let mutable a = aux"
+                printfn $"        try"
+                printfn $"           x.Pin(Unchecked.defaultof<_>, fun src ->"
+                printfn $"               (NativePtr.read src).CopyTo(dst, &a)"
+                printfn $"           )"
+                printfn $"        finally"
+                printfn $"            aux <- a"
+                    
+                printfn $"    static member Read(device : Device, ptr : nativeptr<WebGPU.Raw.{pascalCase s.Name}>, relativePointers : bool) = "
+                printfn $"        let mutable backend = NativePtr.read ptr"
+                
+                let nestedFields =
+                    s.Fields |> List.choose (fun f ->
+                        match f.Type.Annotation with
+                        | Some _ when f.Type.TypeName <> "void" -> Some (f, true)
+                        | _ ->
+                            match tryResolveType f.Type with
+                            | Some (Struct s) when s.Name = "string view" ->
+                                Some (f, false)
+                            | _ ->
+                                None
+                    )
+                    
+                
+                    
+                if List.isEmpty nestedFields && Option.isNone s.Extensible && Option.isNone s.Chained then
+                    ()
+                else
+                    printfn $"        if relativePointers then"
+                    
+                    if Option.isSome s.Extensible || Option.isSome s.Chained then
+                        printfn $"            if backend.NextInChain <> 0n then"
+                        printfn $"                backend.NextInChain <- NativePtr.toNativeInt ptr + backend.NextInChain"
+                    
+                    for (f, isPointer) in nestedFields do
+                        if isPointer then
+                            printfn $"            if NativePtr.toNativeInt backend.{pascalCase f.Name} <> 0n then"
+                            printfn $"                backend.{pascalCase f.Name} <- NativePtr.ofNativeInt (NativePtr.toNativeInt ptr + NativePtr.toNativeInt backend.{pascalCase f.Name})"
+                        elif f.Type.TypeName = "string view" then
+                            printfn $"            if NativePtr.toNativeInt backend.{pascalCase f.Name}.Data <> 0n then"
+                            printfn $"                let offset = NativePtr.toNativeInt &&backend.{pascalCase f.Name} - NativePtr.toNativeInt &&backend"
+                            printfn $"                backend.{pascalCase f.Name}.Data <- NativePtr.ofNativeInt (NativePtr.toNativeInt ptr + offset + NativePtr.toNativeInt backend.{pascalCase f.Name}.Data)"
+                
                 
                 match marshal with
                 | [] when not extensible && not chained ->
@@ -2095,7 +2386,7 @@ module Frontend =
                                 | roots -> List.head roots //failwithf "bad roots: %A" roots
                             else s.Name
                         if Set.contains rootName chainRootTypes then
-                            printfn $"            Next = ExtensionDecoder.decode<I{pascalCase rootName}Extension> device backend.NextInChain"
+                            printfn $"            Next = ExtensionDecoder.decode<I{pascalCase rootName}Extension> device relativePointers backend.NextInChain"
                         // else
                         //     printfn $"            Next = ExtensionDecoder.decode<IExtension> device backend.NextInChain"
                         //
@@ -2103,7 +2394,17 @@ module Frontend =
                         
                         printfn $"            {name} = {value}"
                     printfn "        }"
-                    
+                
+                
+                printfn $"    static member Read(device : Device, r : inref<WebGPU.Raw.{pascalCase s.Name}>) = "
+                printfn $"        use ptr = fixed &r"
+                printfn $"        {pascalCase s.Name}.Read(device, ptr, false)"
+                
+                printfn $"    static member Read(device : Device, ptr : nativeint, ?relativePointers : bool) = "
+                printfn $"        {pascalCase s.Name}.Read(device, NativePtr.ofNativeInt ptr, defaultArg relativePointers true)"
+                
+                printfn $"    static member SizeInBytes = nativeint sizeof<WebGPU.Raw.{pascalCase s.Name}>"
+                
             | Object o ->
                 let isDeviceChild = Set.contains o.Name deviceChildren
                 
@@ -2202,6 +2503,7 @@ module Frontend =
                         
                         printfn $"    let {camelCase propertyName} ="
                         printfn $"        lazy ("
+                        printfn $"            let relativePointers = false"
                         printfn $"            let mutable res = WebGPU.Raw.WebGPU.{pascalCase methName}(handle)"
                         printfn $"            {read}"
                         printfn $"        )"
@@ -2321,15 +2623,19 @@ module Frontend =
                             else m.Name
                         
                         printfn $"    member {thisName}.{pascalCase propertyName} : {frontendName false ret.FrontendField.Type} ="
+                        printfn "        let relativePointers = false"
                         printfn "        let mutable res = Unchecked.defaultof<_>"
                         printfn "        let ptr = fixed &res"
+                        printfn "        try"
                         if Option.isSome goodStatus then
-                            printfn $"        let status = WebGPU.Raw.WebGPU.{pascalCase methName}(handle, ptr)"
-                            printfn $"        if status <> {goodStatus.Value} then failwith \"{pascalCase m.Name} failed\""
+                            printfn $"            let status = WebGPU.Raw.WebGPU.{pascalCase methName}(handle, ptr)"
+                            printfn $"            if status <> {goodStatus.Value} then failwith \"{pascalCase m.Name} failed\""
                         else
-                            printfn $"        WebGPU.Raw.WebGPU.{pascalCase methName}(handle, ptr)"
+                            printfn $"            WebGPU.Raw.WebGPU.{pascalCase methName}(handle, ptr)"
                             
-                        printfn $"        {read}"
+                        printfn $"            {read}"
+                        printfn "        finally"
+                        printfn "            ()"
                     | _ -> 
                         let ret =
                             marshal [{ Name = "result"; Tags = []; Type = m.Return; Default = None; Optional = false; Length = None }]
@@ -2350,7 +2656,7 @@ module Frontend =
                             else $" : {frontendName false ret.FrontendField.Type}"
                         
                         printfn $"    member {thisName}.{pascalCase m.Name}({argdef}){typeAnnotation} ="
-                        
+                        printfn $"        let relativePointers = false"
                         let body = 
                             pinArgs mm (fun pinned ->
                                 let argNames = 
@@ -2452,41 +2758,816 @@ module Frontend =
         printfn "    member x.UInt16Array = "
         printfn "        use ptr = fixed content"
         printfn "        let ptr = NativePtr.ofNativeInt<uint16> (NativePtr.toNativeInt ptr)"
-        printfn "        Array.init (content.Length / 2) (fun i -> NativePtr.get ptr i)"
+        printfn "        try Array.init (content.Length / 2) (fun i -> NativePtr.get ptr i) finally ()"
         printfn "    member x.UInt32Array = "
         printfn "        use ptr = fixed content"
         printfn "        let ptr = NativePtr.ofNativeInt<uint32> (NativePtr.toNativeInt ptr)"
-        printfn "        Array.init (content.Length / 4) (fun i -> NativePtr.get ptr i)"
+        printfn "        try Array.init (content.Length / 4) (fun i -> NativePtr.get ptr i) finally ()"
         printfn "    member x.UInt64Array = "
         printfn "        use ptr = fixed content"
         printfn "        let ptr = NativePtr.ofNativeInt<uint64> (NativePtr.toNativeInt ptr)"
-        printfn "        Array.init (content.Length / 8) (fun i -> NativePtr.get ptr i)"
+        printfn "        try Array.init (content.Length / 8) (fun i -> NativePtr.get ptr i) finally ()"
         printfn "    member x.Int8Array = "
         printfn "        use ptr = fixed content"
         printfn "        let ptr = NativePtr.ofNativeInt<int8> (NativePtr.toNativeInt ptr)"
-        printfn "        Array.init (content.Length) (fun i -> NativePtr.get ptr i)"
+        printfn "        try Array.init (content.Length) (fun i -> NativePtr.get ptr i) finally ()"
         printfn "    member x.Int16Array = "
         printfn "        use ptr = fixed content"
         printfn "        let ptr = NativePtr.ofNativeInt<int16> (NativePtr.toNativeInt ptr)"
-        printfn "        Array.init (content.Length / 2) (fun i -> NativePtr.get ptr i)"
+        printfn "        try Array.init (content.Length / 2) (fun i -> NativePtr.get ptr i) finally ()"
         printfn "    member x.Int32Array = "
         printfn "        use ptr = fixed content"
         printfn "        let ptr = NativePtr.ofNativeInt<int32> (NativePtr.toNativeInt ptr)"
-        printfn "        Array.init (content.Length / 4) (fun i -> NativePtr.get ptr i)"
+        printfn "        try Array.init (content.Length / 4) (fun i -> NativePtr.get ptr i) finally ()"
         printfn "    member x.Int64Array = "
         printfn "        use ptr = fixed content"
         printfn "        let ptr = NativePtr.ofNativeInt<int64> (NativePtr.toNativeInt ptr)"
-        printfn "        Array.init (content.Length / 8) (fun i -> NativePtr.get ptr i)"
+        printfn "        try Array.init (content.Length / 8) (fun i -> NativePtr.get ptr i) finally ()"
         printfn "    member x.Float32Array = "
         printfn "        use ptr = fixed content"
         printfn "        let ptr = NativePtr.ofNativeInt<float32> (NativePtr.toNativeInt ptr)"
-        printfn "        Array.init (content.Length / 4) (fun i -> NativePtr.get ptr i)"
+        printfn "        try Array.init (content.Length / 4) (fun i -> NativePtr.get ptr i) finally ()"
         printfn "    member x.Float64Array = "
         printfn "        use ptr = fixed content"
         printfn "        let ptr = NativePtr.ofNativeInt<double> (NativePtr.toNativeInt ptr)"
-        printfn "        Array.init (content.Length / 8) (fun i -> NativePtr.get ptr i)"
+        printfn "        try Array.init (content.Length / 8) (fun i -> NativePtr.get ptr i) finally ()"
                     
         File.WriteAllText(Path.Combine(__SOURCE_DIRECTORY__, "src", "WebGPU", "Frontend.fs"), b.ToString())
+
+module CommandStream =
+    
+        
+    let meths =
+        all |> Array.collect (fun def ->
+            match def with
+            | Definition.Object o ->
+                if o.Name = "command encoder" || o.Name = "render pass encoder" || o.Name = "compute pass encoder" then
+                    
+                    o.Methods |> List.toArray |> Array.choose (fun m ->
+                        if m.Name = "add ref" || m.Name = "release" || m.Name = "set label" then
+                            None
+                        else
+                            Some { m with Args = { FieldDef.Type = { TypeName = o.Name; Annotation = None }; Name = "self"; Default = None; Optional = false; Length = None; Tags = [] } :: m.Args }    
+                    )
+                    
+                else
+                    [||]
+            | _ ->
+                [||]
+        )
+    
+    
+    let commands =
+        meths |> Array.mapi (fun i m ->
+            let self = List.head m.Args
+            let name = sprintf "%s%s" (pascalCase self.Type.TypeName) (pascalCase m.Name)
+            name, i, m
+        )
+        
+    let print() =
+        
+        let b = System.Text.StringBuilder()
+        let printfn fmt = fmt |> Printf.kprintf (fun str -> b.AppendLine str |> ignore)
+        
+            
+        printfn "namespace WebGPU"
+        printfn "open System"
+        printfn "open System.Text"
+        printfn "open System.Diagnostics"
+        printfn "open System.Runtime.InteropServices"
+        printfn "open Microsoft.FSharp.NativeInterop"
+        printfn "open WebGPU.Raw"
+        printfn "#nowarn \"9\""
+        printfn "#nowarn \"26\""
+        printfn "#nowarn \"1182\""
+        
+  
+        printfn "[<AutoOpen>]"
+        printfn "module private NativeUtilities ="
+        printfn "    let inline nsize<'a> = nativeint sizeof<'a>"
+        printfn "    let inline sum (n : int) (ptr : nativeptr<'x>) ([<InlineIfLambda>] action : 'x -> 'a) ="
+        printfn "        let mutable res = LanguagePrimitives.GenericZero<'a>"
+        printfn "        for i in 0 .. n - 1 do res <- res + action (NativePtr.get ptr i)"
+        printfn "        res"
+        
+        printfn "    let inline step (aux : byref<nativeint>) (size : nativeint) ="
+        printfn "        let n = aux + size"
+        printfn "        if n &&& 7n = 0n then aux <- n"
+        printfn "        else aux <- (1n + (n >>> 3)) <<< 3"
+              
+        printfn "    let inline align8 (n : nativeint) ="
+        printfn "        if n &&& 7n = 0n then n"
+        printfn "        else (1n + (n >>> 3)) <<< 3"
+              
+        
+        
+        printfn "type CommandStreamCommand ="
+        let mutable map = Map.empty
+        for name, i, m in commands do
+            printfn "    | %s = %d" name i
+            map <- Map.add name i map
+            
+        printfn "module private RawCommandStreamExt ="
+        printfn "    [<DllImport(\"WebGPUNative\")>]"
+        printfn "    extern void gpuRunInterpreter(void* cmd, void* start, void* e)"
+        printfn "type RawCommandStream() ="
+        printfn "    let memory = Marshal.AllocHGlobal(32 <<< 20)"
+        printfn "    let mutable ptr = memory"
+            
+        for name, idx, meth in commands do
+            let self = List.head meth.Args
+            let meth = { meth with Args = List.tail meth.Args }
+            
+            let argDef = meth.Args |> List.map (fun a -> $"{camelCase a.Name} : {RawWrapper.fsharpName a.Type}") |> String.concat ", "
+            
+            printfn $"    member this.{name}({argDef}) : unit ="
+            printfn $"        let start = ptr"
+            printfn $"        ptr <- ptr + 4n"
+            printfn $"        NativePtr.write (NativePtr.ofNativeInt ptr) CommandStreamCommand.{name}"
+            printfn $"        ptr <- ptr + nsize<CommandStreamCommand>"
+        
+            let typeNames = 
+                meth.Args |> List.map (fun a ->
+                    match a.Type.Annotation with
+                    | Some _ -> "nativeint"
+                    | None -> RawWrapper.fsharpName a.Type
+                )
+                |> List.countBy id
+                
+            match typeNames with
+            | [] -> printfn $"        let argSize = 0n"
+            | l ->
+                let total =
+                    l
+                    |> List.map (fun (n, c) ->
+                        if c = 1 then $"align8 nsize<{n}>"
+                        else$"align8 nsize<{n}> * {c}n"
+                    )
+                    |> String.concat " + "
+                printfn $"        let argSize = {total}"
+            
+            printfn $"        let mutable aux = ptr + argSize"
+            for a in meth.Args do
+                let t = { a.Type with Annotation = None }
+                
+                printfn $"        // {camelCase a.Name}"
+                let isPointer = Option.isSome a.Type.Annotation
+                let hasLength = Option.isSome a.Length
+                
+                if isPointer then
+                    if hasLength then
+                        
+                        match tryResolveType t with
+                        | Some (Struct _ | CallbackInfo _) ->
+                            failwith ""
+                        | _ ->
+                            
+                            let srcVoidPtr =
+                                if t.TypeName = "void" then $"NativePtr.toVoidPtr (NativePtr.ofNativeInt<byte> {camelCase a.Name})"
+                                else $"NativePtr.toVoidPtr {camelCase a.Name}"
+                            
+                            printfn $"        let _{camelCase a.Name}Storage = aux"
+                            printfn $"        let _{camelCase a.Name}Size = nsize<{RawWrapper.fsharpName t}> * nativeint {camelCase a.Length.Value}"
+                            printfn $"        step &aux _{camelCase a.Name}Size"
+                            printfn $"        let srcSpan = System.Span<byte>({srcVoidPtr}, int _{camelCase a.Name}Size)"
+                            printfn $"        let dstSpan = System.Span<byte>(NativePtr.toVoidPtr (NativePtr.ofNativeInt<byte> _{camelCase a.Name}Storage), int _{camelCase a.Name}Size)"
+                            printfn $"        srcSpan.CopyTo(dstSpan)"
+                            printfn $"        NativePtr.write (NativePtr.ofNativeInt ptr) (_{camelCase a.Name}Storage - ptr)"
+                            printfn $"        step &ptr nsize<nativeint>"
+                            
+                    else
+                        // assume single element
+                        printfn $"        let _{camelCase a.Name} = NativePtr.read {camelCase a.Name}"
+                        
+                        match tryResolveType t with
+                        | Some (Struct s | CallbackInfo s) ->
+                            printfn $"        let _{camelCase a.Name}Storage = aux"
+                            printfn $"        step &aux nsize<{pascalCase s.Name}>"
+                            printfn $"        _{camelCase a.Name}.CopyTo(_{camelCase a.Name}Storage, &aux)"
+                            printfn $"        NativePtr.write (NativePtr.ofNativeInt ptr) (_{camelCase a.Name}Storage - ptr)"
+                            printfn $"        step &ptr nsize<nativeint>"
+                        | _ ->
+                            printfn $"        let _{camelCase a.Name}Storage = aux"
+                            printfn $"        step &aux nsize<{RawWrapper.fsharpName a.Type}>"
+                            printfn $"        NativePtr.write (NativePtr.ofNativeInt ptr) (_{camelCase a.Name}Storage - ptr)"
+                            printfn $"        step &ptr nsize<nativeint>"
+                    
+                else
+                    match tryResolveType t with
+                    | Some (Struct s | CallbackInfo s) ->
+                        printfn $"        {camelCase a.Name}.CopyTo(ptr, &aux)"
+                        printfn $"        step &ptr nsize<{RawWrapper.fsharpName t}>"
+                    | _ ->
+                        printfn $"        NativePtr.write (NativePtr.ofNativeInt ptr) {camelCase a.Name}"
+                        printfn $"        step &ptr nsize<{RawWrapper.fsharpName a.Type}>"
+            
+            printfn $"        // end"
+            printfn $"        ptr <- aux"
+            printfn $"        let size = aux - start"
+            printfn $"        NativePtr.write (NativePtr.ofNativeInt start) (int size)"
+            
+            
+        printfn $"    member x.Run(cmd : nativeint) ="
+        printfn $"        RawCommandStreamExt.gpuRunInterpreter(cmd, memory, ptr)"
+        
+        printfn "    member x.Start = memory"
+        printfn "    member x.End = ptr"
+        printfn "    member x.Reset() ="
+        printfn "        ptr <- memory"
+        
+        printfn "    member private x.Dispose(disposing : bool) ="
+        printfn "        if disposing then System.GC.SuppressFinalize(x)"
+        printfn "        Marshal.FreeHGlobal(memory)"
+        
+        printfn "    member x.Dispose() = x.Dispose true"
+        printfn "    override x.Finalize() = x.Dispose false"
+        printfn "    interface IDisposable with"
+        printfn "        member x.Dispose() = x.Dispose true"
+        
+        
+        
+        
+        printfn "open WebGPU"
+        printfn "type CommandStreamInternal(device : Device) ="
+        printfn "    let raw = new RawCommandStream()"
+        
+        printfn "    member x.Device = device"
+            
+        for name, idx, meth in commands do
+            let self = List.head meth.Args
+            let meth = { meth with Args = List.tail meth.Args }
+            
+            let m = Frontend.marshal meth.Args
+            
+            
+            
+            let argDef = 
+                m |> List.map (fun m -> 
+                    $"{camelCase m.FrontendField.Name} : {Frontend.frontendName false m.FrontendField.Type}" 
+                )
+                |> String.concat ", "
+                
+            printfn $"    member _.{name}({argDef}) : unit ="
+            let code = 
+                Frontend.pinArgs m (fun map ->
+                    [
+                        let argDef = 
+                            m |> List.map (fun m -> 
+                                $"{camelCase m.FrontendField.Name} : {Frontend.frontendName false m.FrontendField.Type}" 
+                            )
+                            |> String.concat ", "
+                            
+                        let argNames = 
+                            meth.Args |> List.map (fun a -> 
+                                match Map.tryFind a.Name map with
+                                | Some v -> v
+                                | None -> "Unchecked.defaultof<_>"
+                            )
+                        let arguse =
+                            argNames
+                            |> String.concat ", "
+                        
+                        yield $"raw.{name}({arguse})"
+                    ]
+                )
+                
+            for c in code do
+                printfn $"        {c}"
+            
+            
+        printfn "    member x.Commands ="
+        printfn "        let relativePointers = true"
+        printfn "        let res = ResizeArray()"
+        printfn "        let mutable ptr = raw.Start"
+        printfn "        let mutable start = 0n"
+        
+        printfn "        while ptr <> raw.End do"
+        printfn "            start <- ptr"
+        printfn "            let size = NativePtr.read (NativePtr.ofNativeInt<int> ptr)"
+        printfn "            ptr <- ptr + nsize<int>"
+        printfn "            let cmd = NativePtr.read (NativePtr.ofNativeInt<CommandStreamCommand> ptr)"
+        printfn "            ptr <- ptr + nsize<CommandStreamCommand>"
+        printfn "            match cmd with"
+        for name, idx, meth in commands do
+            printfn "            | CommandStreamCommand.%s ->" name
+            let self = List.head meth.Args
+            let meth = { meth with Args = List.tail meth.Args }
+            let m = Frontend.marshal meth.Args
+            
+            
+            for f in meth.Args do
+                let t = { f.Type with Annotation = None }
+                let isPointer = Option.isSome f.Type.Annotation
+                if isPointer then
+                    let wrap =
+                        if t.TypeName = "void" then ""
+                        else $"NativePtr.ofNativeInt<{RawWrapper.fsharpNameFull t}> "
+                    printfn $"                let _{camelCase f.Name} = {wrap}(NativePtr.read (NativePtr.ofNativeInt<nativeint> ptr) + start)"
+                    printfn $"                step &ptr nsize<nativeint>"
+                else
+                    match tryResolveType t with
+                    | Some (Struct s | CallbackInfo s) ->
+                        printfn $"                let mutable _{camelCase f.Name} = NativePtr.read (NativePtr.ofNativeInt<{RawWrapper.fsharpNameFull t}> ptr)"
+                        
+                        if t.TypeName = "string view" then
+                            printfn $"                _{camelCase f.Name}.Data <- NativePtr.ofNativeInt (NativePtr.toNativeInt _{camelCase f.Name}.Data + ptr)"
+                        printfn $"                step &ptr nsize<{RawWrapper.fsharpNameFull t}>"
+                    | _ ->
+                        printfn $"                let _{camelCase f.Name} = NativePtr.read (NativePtr.ofNativeInt<{RawWrapper.fsharpNameFull t}> ptr)"
+                        printfn $"                step &ptr nsize<{RawWrapper.fsharpNameFull t}>"
+                        
+            let backendNames = meth.Args |> List.map (fun a -> a.Name, $"_{camelCase a.Name}") |> Map.ofList
+                    
+            for m in m do
+                printfn $"                let {camelCase m.FrontendField.Name} = {m.Read backendNames}"
+                    
+            let args = m |> List.map (fun m -> $"{camelCase m.FrontendField.Name} :> obj") |> String.concat "; "
+            printfn $"                res.Add (cmd, [| {args} |])"
+            printfn $"                ()"
+            
+            
+            ()
+        printfn "            | _ -> ()"
+            
+        printfn "            ptr <- start + nativeint size"
+        printfn "        res.ToArray()"
+        
+            
+        printfn "    member x.Run(cmd : CommandEncoder) ="
+        printfn "        raw.Run(cmd.Handle)"
+        printfn "    member x.Reset() = raw.Reset()"
+        printfn "    member private x.Dispose(disposing : bool) ="
+        printfn "        if disposing then System.GC.SuppressFinalize(x)"
+        printfn "        raw.Dispose()"
+        
+        printfn "    member x.Dispose() = x.Dispose true"
+        printfn "    override x.Finalize() = x.Dispose false"
+        printfn "    interface IDisposable with"
+        printfn "        member x.Dispose() = x.Dispose true"
+        
+              
+
+        printfn "type RenderPassStream internal(cmd : CommandStreamInternal) ="
+        for name, idx, meth in commands do
+            let self = List.head meth.Args
+            let meth = { meth with Args = List.tail meth.Args }
+            if self.Type.TypeName = "render pass encoder" then      
+                let argDef = meth.Args |> Frontend.marshal |> List.map (fun f -> $"{camelCase f.FrontendField.Name} : {Frontend.frontendName (Option.isSome f.FrontendField.Length) f.FrontendField.Type}") |> String.concat ", "
+                let argUse = meth.Args |> Frontend.marshal |> List.map (fun f -> camelCase f.FrontendField.Name) |> String.concat ", "
+                printfn $"    member _.{pascalCase meth.Name}({argDef}) = cmd.{name}({argUse})"
+                
+        printfn "type ComputePassStream internal(cmd : CommandStreamInternal) ="
+        for name, idx, meth in commands do
+            let self = List.head meth.Args
+            let meth = { meth with Args = List.tail meth.Args }
+            if self.Type.TypeName = "compute pass encoder" then      
+                let argDef = meth.Args |> Frontend.marshal |> List.map (fun f -> $"{camelCase f.FrontendField.Name} : {Frontend.frontendName (Option.isSome f.FrontendField.Length) f.FrontendField.Type}") |> String.concat ", "
+                let argUse = meth.Args |> Frontend.marshal |> List.map (fun f -> camelCase f.FrontendField.Name) |> String.concat ", "
+                printfn $"    member _.{pascalCase meth.Name}({argDef}) = cmd.{name}({argUse})"
+                
+
+        printfn "type CommandStream internal(cmd : CommandStreamInternal, ownsHandle : bool) ="
+            
+        for name, idx, meth in commands do
+            
+            let self = List.head meth.Args
+            let meth = { meth with Args = List.tail meth.Args }
+            
+            
+            if self.Type.TypeName = "command encoder" && meth.Name <> "finish" then
+                
+                
+                let startRender = meth.Name = "begin render pass"
+                let startCompute = meth.Name = "begin compute pass"
+                    
+                let argDef = meth.Args |> Frontend.marshal |> List.map (fun f -> $"{camelCase f.FrontendField.Name} : {Frontend.frontendName (Option.isSome f.FrontendField.Length) f.FrontendField.Type}") |> String.concat ", "
+                let argUse = meth.Args |> Frontend.marshal |> List.map (fun f -> camelCase f.FrontendField.Name) |> String.concat ", "
+                printfn $"    member _.{pascalCase meth.Name}({argDef}) ="
+                printfn $"        cmd.{name}({argUse})"
+                if startRender then printfn $"        RenderPassStream(cmd)"
+                elif startCompute then printfn $"        ComputePassStream(cmd)"
+            
+            
+            ()
+        printfn "    member private x.Dispose(disposing : bool) ="
+        printfn "        if ownsHandle then cmd.Dispose()"
+        printfn "        if disposing then System.GC.SuppressFinalize(x)"
+        
+        printfn "    member x.Dispose() = x.Dispose(true)"
+        printfn "    override x.Finalize() = x.Dispose(false)"
+        printfn "    interface IDisposable with"
+        printfn "        member x.Dispose() = x.Dispose(true)"
+        printfn "    member x.Commands = cmd.Commands"
+        
+        printfn "    member x.Finish(desc : CommandBufferDescriptor) : CommandBuffer ="
+        printfn "        use enc = cmd.Device.CreateCommandEncoder { Label = null; Next = null }"
+        printfn "        cmd.Run(enc)"
+        printfn "        enc.Finish desc"
+        
+        printfn "    new(device : Device) = new CommandStream(new CommandStreamInternal(device), true)"
+        // printfn "type CommandStream(device : Device) ="
+        // printfn "    let memory = Marshal.AllocHGlobal(32 <<< 20)"
+        // printfn "    let mutable ptr = memory"
+        //
+        //
+        // for name, idx, meth in commands do
+        //     let self = List.head meth.Args
+        //     let meth = { meth with Args = List.tail meth.Args }
+        //     let m = Frontend.marshal meth.Args
+        //     let args = m |> List.map (fun m -> m.FrontendField)
+        //     
+        //     let argDef = args |> List.map (fun a -> $"{camelCase a.Name} : {Frontend.frontendName false a.Type}") |> String.concat ", "
+        //     
+        //     printfn $"    member this.{name}({argDef}) : unit ="
+        //     printfn $"        let start = ptr"
+        //     printfn $"        ptr <- ptr + 4n"
+        //     printfn $"        NativePtr.write (NativePtr.ofNativeInt ptr) CommandStreamCommand.{name}"
+        //     printfn $"        ptr <- ptr + nativeint sizeof<CommandStreamCommand>"
+        //     
+        //     
+        //     let argSizes = 
+        //         meth.Args |> List.map (fun a ->
+        //             match a.Type.Annotation with
+        //             | Some _ -> "align8 nsize<nativeint>"
+        //             | None ->
+        //                 match tryResolveType a.Type with
+        //                 | Some (Struct s | CallbackInfo s) -> $"align8 {pascalCase s.Name}.SizeInBytes"
+        //                 | Some (Object _) -> "align8 nsize<nativeint>"
+        //                 | _ -> $"align8 nsize<{RawWrapper.fsharpName a.Type}>"
+        //         )
+        //         |> List.groupBy id
+        //         |> List.map (fun (g, l) ->
+        //             match l with
+        //             | [_] -> g
+        //             | _ -> $"{g} * {List.length l}n"
+        //         )
+        //     let totalArgSize = String.concat " + " argSizes
+        //     
+        //     let code = 
+        //         Frontend.pinArgs m (fun map ->
+        //             [
+        //                 match argSizes with
+        //                 | [] -> yield $"let totalSize = 0n"
+        //                 | _ -> yield $"let totalSize = {totalArgSize}"
+        //                 
+        //                 yield "let mutable aux = ptr + totalSize"
+        //                 
+        //                 for a in meth.Args do
+        //                     match Map.tryFind a.Name map with
+        //                     | Some arg ->
+        //                         match a.Type.Annotation with
+        //                         | Some _ ->
+        //                             yield $"NativePtr.write (NativePtr.ofNativeInt ptr) (NativePtr.toNativeInt ({arg}))"
+        //                             yield $"step &ptr nsize<nativeint>"
+        //                         | None ->
+        //                             match tryResolveType a.Type with
+        //                             | Some (Struct s | CallbackInfo s) ->
+        //                                 yield $"({arg}).CopyTo(ptr, &aux)"
+        //                                 yield $"step &ptr {pascalCase s.Name}.SizeInBytes"
+        //                             | Some (Object _) -> 
+        //                                 yield $"NativePtr.write (NativePtr.ofNativeInt ptr) ({arg})"
+        //                                 yield $"step &ptr nsize<nativeint>"
+        //                             | _ ->
+        //                                 let t = RawWrapper.fsharpName a.Type
+        //                                 yield $"NativePtr.write (NativePtr.ofNativeInt ptr) ({arg})"
+        //                                 yield $"step &ptr nsize<{t}>"
+        //                             
+        //                     | None ->
+        //                         yield $"// {a.Name}: MISSING"
+        //                         
+        //                         
+        //                 yield "ptr <- aux"
+        //                 yield "NativePtr.write (NativePtr.ofNativeInt start) (int (ptr - start))"
+        //             ]    
+        //         )
+        //     
+        //     for c in code do
+        //         printfn $"        {c}"
+            
+            
+            
+            
+            
+            
+            //
+            //
+            // match argSizes with
+            // | [] ->
+            //     printfn $"        let mutable aux = ptr"
+            // | _ -> 
+            //     printfn $"        let mutable aux = ptr + {argSizeSum}"
+            //     printfn $"        step &aux 0n"
+            //
+            // for f in args do
+            //     if f.Type.TypeName = "string" then
+            //         printfn $"        let utf8 = System.Text.Encoding.UTF8.GetBytes({camelCase f.Name})"
+            //         printfn $"        let dstSpan = System.Span<byte>(NativePtr.toVoidPtr (NativePtr.ofNativeInt aux), utf8.Length)"
+            //         printfn $"        utf8.AsSpan().CopyTo(dstSpan)"
+            //         printfn $"        step &aux (nativeint utf8.Length)"
+            //         printfn $"        let value = WebGPU.Raw.StringView(NativePtr.ofNativeInt (aux - ptr), unativeint utf8.Length)"
+            //         printfn $"        NativePtr.write (NativePtr.ofNativeInt ptr) value"
+            //         printfn $"        step &ptr (nativeint sizeof<WebGPU.Raw.StringView>)"
+            //         
+            //     else 
+            //         let isPointer = Option.isSome f.Type.Annotation
+            //         if isPointer then
+            //             let t = { f.Type with Annotation = None }
+            //             match tryResolveType t with
+            //             | Some (Struct s) ->
+            //                 match f.Length with
+            //                 | Some l ->
+            //                     failwith "array args not implemented"
+            //                 | None ->
+            //                     printfn $"        {camelCase f.Name}.CopyTo(ptr, &aux)"
+            //                     printfn $"        step &ptr {pascalCase f.Type.TypeName}.SizeInBytes"
+            //             | Some (Object _) ->
+            //                 printfn $"        NativePtr.write (NativePtr.ofNativeInt ptr) {camelCase f.Name}.Handle"
+            //                 printfn $"        step &ptr (nativeint sizeof<nativeint>)"
+            //             | _ ->
+            //                 printfn $"        NativePtr.write (NativePtr.ofNativeInt ptr) {camelCase f.Name}"
+            //                 printfn $"        step &ptr (nativeint sizeof<{f.Type.TypeName}>)"
+            //                 //     ()
+            //         else
+            //             match tryResolveType f.Type with
+            //             | Some (Struct _ | CallbackInfo _) ->
+            //                 printfn $"        {camelCase f.Name}.CopyTo(ptr, &aux)"
+            //                 printfn $"        step &ptr {pascalCase f.Type.TypeName}.SizeInBytes"
+            //             | Some (Object _) ->
+            //                 printfn $"        NativePtr.write (NativePtr.ofNativeInt ptr) {camelCase f.Name}.Handle"
+            //                 printfn $"        step &ptr (nativeint sizeof<nativeint>)"
+            //                 
+            //             | _ ->
+            //                 printfn $"        NativePtr.write (NativePtr.ofNativeInt ptr) {camelCase f.Name}"
+            //                 printfn $"        step &ptr (nativeint sizeof<{f.Type.TypeName}>)"
+            //                     
+            //
+            //
+            // printfn $"        ptr <- aux"
+            // printfn $"        NativePtr.write (NativePtr.ofNativeInt start) (int (ptr - start))"
+            
+        
+        File.WriteAllText(Path.Combine(__SOURCE_DIRECTORY__, "src", "WebGPU", "CommandStream.fs"), b.ToString())
+
+    let printInterpreter() =
+        let b = System.Text.StringBuilder()
+        let printf fmt = fmt |> Printf.kprintf (fun str -> b.Append str |> ignore)
+        let printfn fmt = fmt |> Printf.kprintf (fun str -> b.AppendLine str |> ignore)
+        
+            
+        printfn "#include \"dllexport.h\""
+        printfn "#include <string.h>"
+        printfn "#include <stdlib.h>"
+        printfn "#include <stdio.h>"
+        printfn "#include <stdint.h>"
+        printfn "#include \"dawn/webgpu_cpp.h\""
+        printfn "#include \"dawn/webgpu.h\""
+        printfn "#include \"dawn/native/DawnNative.h\""
+            
+        printfn "typedef enum {"
+        let rec run (l : list<string * int * FunctionDef>) =
+            match l with
+            | [] -> ()
+            | [(name, value, _)] -> printfn "    %s = %d" name value
+            | (name, value, _) :: rest ->
+                printfn "    %s = %d," name value
+                run rest
+        run (Array.toList commands)
+        printfn "} CommandStreamCommand;"
+            
+            
+        printfn "size_t align8(size_t n) {"
+        printfn "    if(n %% 8 == 0) return n;"
+        printfn "    else return ((n / 8) + 1) * 8;"
+        printfn "}"
+            
+        printfn $"size_t chainedSize(WGPUSType type) {{"
+        printfn $"    switch(type) {{"
+        
+        for a in all do
+            match a with
+            | Struct s when Option.isSome s.Chained  ->
+                printfn $"        case WGPUSType_{pascalCase s.Name}: return sizeof(WGPU{pascalCase s.Name});"
+            | _ ->
+                ()
+        
+        printfn $"        default: return 0;"
+        printfn $"    }}"
+        printfn $"}}"
+            
+        printfn "const char* cmdName(CommandStreamCommand cmd) {"
+        printfn "    switch(cmd) {"
+        for name, i, _ in commands do
+            printfn $"        case {name}: return \"{name}\";"
+        printfn "        default: return \"<unknown>\";"
+        printfn "    }"
+        printfn "}"
+            
+        printfn "DllExport(void) gpuRunInterpreter(WGPUCommandEncoder enc, uint8_t* ptr, uint8_t* e) {"
+        printfn "    uint8_t* start;"
+        printfn "    WGPUCommandEncoder commandEncoder = enc;"
+        printfn "    WGPURenderPassEncoder renderPassEncoder = NULL;"
+        printfn "    WGPUComputePassEncoder computePassEncoder = NULL;"
+        printfn "    while(ptr != e) {"
+        printfn "        start = ptr;"
+        printfn "        int32_t size = *((int32_t*)ptr);"
+        printfn "        ptr += 4;"
+        printfn "        CommandStreamCommand cmd = *((CommandStreamCommand*)ptr);"
+        printfn "        ptr += sizeof(CommandStreamCommand);"
+        //printfn "        printf(\"%%s/%%d\\n\", cmdName(cmd), size);"
+        printfn "        switch(cmd) {"
+        
+        
+        
+        let rec fixupPointers (indentation : string) (basePtr : string) (accessField : string -> string) (t : TypeRef) =
+            if t.TypeName = "string view" then
+                let data = accessField "data"
+                printfn $"{indentation}if ({data} != NULL) {data} = (const char*)((size_t){data} + {basePtr});"
+            else
+                match tryResolveType t with
+                | Some (Struct s | CallbackInfo s) ->
+                    
+                    let extensible = Option.isSome s.Extensible || Option.isSome s.Chained
+                    
+                    if extensible then
+                        let next = accessField "nextInChain"
+                        printfn $"{indentation}if ({next} != NULL) {{"
+                        printfn $"{indentation}    uint8_t* basePtr = {basePtr};"
+                        printfn $"{indentation}    WGPUChainedStruct** nextLocation = (WGPUChainedStruct**)&{next};"
+                        printfn $"{indentation}    while(*nextLocation != NULL) {{"
+                        printfn $"{indentation}        WGPUChainedStruct* realNextPtr = (WGPUChainedStruct*)((size_t)*nextLocation + basePtr);"
+                        printfn $"{indentation}        size_t extSize = chainedSize(realNextPtr->sType);"
+                        printfn $"{indentation}        WGPUChainedStruct* lMem = (WGPUChainedStruct*)alloca(extSize);"
+                        printfn $"{indentation}        memcpy((void*)lMem, (void*)realNextPtr, extSize);"
+                        printfn $"{indentation}        *nextLocation = (WGPUChainedStruct*)lMem;"
+                        printfn $"{indentation}        basePtr = (uint8_t*)&realNextPtr->next;"
+                        printfn $"{indentation}        nextLocation = &lMem->next;"
+                        printfn $"{indentation}    }}"
+                        
+                        printfn $"{indentation}    // EXT!!!!"
+                        printfn $"{indentation}}}"
+                    let nestedFields =
+                        s.Fields |> List.choose (fun f ->
+                            match f.Type.Annotation with
+                            | Some _ when f.Type.TypeName <> "void" -> Some (f, true)
+                            | _ ->
+                                match tryResolveType f.Type with
+                                | Some (Struct _) ->
+                                    Some (f, false)
+                                | _ ->
+                                    None
+                        )
+                        
+                    for nested, isPointer in nestedFields do
+                        if isPointer then
+                            let t = { nested.Type with Annotation = None }
+                            printfn $"{indentation}if ({accessField nested.Name} != NULL) {{"
+                            printfn $"{indentation}    {accessField nested.Name} = ({Native.nativeTypeName t}*)((size_t){accessField nested.Name} + {basePtr});"
+                            
+                            match tryResolveType t with
+                            | Some (Struct _ | CallbackInfo _) ->
+                                match nested.Length with
+                                | Some l ->
+                                    printfn $"{indentation}    size_t {camelCase nested.Name}Size = sizeof({Native.nativeTypeName t}) * {accessField l};"
+                                    printfn $"{indentation}    {Native.nativeTypeName t}* {camelCase nested.Name} = ({Native.nativeTypeName t}*)alloca({camelCase nested.Name}Size);"
+                                    printfn $"{indentation}    memcpy({camelCase nested.Name}, {accessField nested.Name}, {camelCase nested.Name}Size);"
+                                    printfn $"{indentation}    {accessField nested.Name} = {camelCase nested.Name};"
+                                    printfn $"{indentation}    for(int i = 0; i < {accessField l}; i++) {{"
+                                    let nestedBasePtr = $"(uint8_t*)&{accessField nested.Name}[i]"
+                                    let nestedAccess (name : string) = $"{accessField nested.Name}[i].{camelCase name}"
+                                    fixupPointers (indentation + "        ") nestedBasePtr nestedAccess nested.Type
+                                    printfn $"{indentation}    }}"
+                                    
+                                    printfn $"{indentation}    // STRUCT {accessField nested.Name} has length {accessField l}"
+                                | None ->
+                                    // single element
+                                    printfn $"{indentation}    // {accessField nested.Name} is a nested struct pointer"
+                                    let nestedBasePtr = $"(uint8_t*){accessField nested.Name}"
+                                    let nestedAccess (name : string) = $"{accessField nested.Name}->{camelCase name}"
+                                    fixupPointers (indentation + "    ") nestedBasePtr nestedAccess nested.Type
+                            | _ ->
+                                ()
+                            printfn $"{indentation}}}"
+                        else
+                            let nestedBasePtr = $"(uint8_t*)&{accessField nested.Name}"
+                            let nestedAccess (name : string) = $"{accessField nested.Name}.{camelCase name}"
+                            fixupPointers indentation nestedBasePtr nestedAccess nested.Type
+                        
+                | _ ->
+                    ()
+        
+        
+        let rec needsFixing (t : TypeRef) =
+            match tryResolveType t with
+            | Some (Struct s) ->
+                s.Fields |> List.exists (fun f ->
+                    match f.Type.Annotation with
+                    | Some _ -> true
+                    | _ ->
+                        match tryResolveType f.Type with
+                        | Some (Struct _) -> needsFixing f.Type
+                        | _ -> false
+                )
+            | _ ->
+                false
+        
+        for (name, _, meth) in commands do
+            let self = (List.head meth.Args).Type
+            printfn "            case %s: {" name
+            
+            let res = ResizeArray()
+            for a in List.tail meth.Args do
+                let t = { a.Type with Annotation = None }
+                printfn $"                // {camelCase a.Name}"
+                let isPointer = Option.isSome a.Type.Annotation
+                let hasLength = Option.isSome a.Length
+                if isPointer then
+                    if hasLength then
+                        match tryResolveType t with
+                        | Some (Struct _ | CallbackInfo _) ->
+                            failwith ""
+                        | _ ->
+                            // should be OK
+                            printfn $"                {Native.nativeTypeName t}* {camelCase a.Name} = ({Native.nativeTypeName t}*)(ptr + *((size_t*)ptr));"
+                            printfn $"                ptr += sizeof(void*);"
+                            res.Add (camelCase a.Name)
+                            
+                    else
+                        // assume single element
+                        match tryResolveType t with
+                        | Some (Struct s | CallbackInfo s) ->
+                            printfn $"                {Native.nativeTypeName t}* {camelCase a.Name}Src = (({Native.nativeTypeName t}*)(ptr + *((size_t*)ptr)));"
+                            printfn $"                ptr += sizeof(void*);"
+                            printfn $"                {Native.nativeTypeName t} {camelCase a.Name} = *{camelCase a.Name}Src;"
+                            if needsFixing t then
+                                fixupPointers "                " $"(uint8_t*){camelCase a.Name}Src" (fun name -> $"{camelCase a.Name}.{camelCase name}") t
+                            res.Add ($"&{camelCase a.Name}")
+                            () // nested
+                        | _ ->
+                            () // primitive
+                            printfn $"                {Native.nativeTypeName t}* {camelCase a.Name} = (({Native.nativeTypeName t}*)(ptr + *((size_t*)ptr)));"
+                            printfn $"                ptr += sizeof(void*);"
+                            res.Add (camelCase a.Name)
+                else
+                    match tryResolveType t with
+                    | Some (Struct s | CallbackInfo s) ->
+                        
+                        printfn $"                {Native.nativeTypeName t}* {camelCase a.Name}Src = ({Native.nativeTypeName t}*)ptr;"
+                        printfn $"                {Native.nativeTypeName t} {camelCase a.Name} = *{camelCase a.Name}Src ;"
+                        if needsFixing t then
+                            fixupPointers "                " $"(uint8_t*){camelCase a.Name}Src" (fun name -> $"{camelCase a.Name}.{camelCase name}") t
+                        printfn $"                ptr += align8(sizeof({Native.nativeTypeName t}));"
+                        // printfn $"                {Native.nativeTypeName t}* {camelCase a.Name}Src = (({Native.nativeTypeName t}*)(ptr + *((size_t*)ptr)));"
+                        // printfn $"                ptr += sizeof(void*);"
+                        // printfn $"                {Native.nativeTypeName t} {camelCase a.Name} = *{camelCase a.Name}Src;"
+                        res.Add ($"{camelCase a.Name}")
+                        
+                    | _ ->
+                        printfn $"                {Native.nativeTypeName t} {camelCase a.Name} = *(({Native.nativeTypeName t}*)ptr);"
+                        printfn $"                ptr += align8(sizeof({Native.nativeTypeName t}));"
+                        res.Add ($"{camelCase a.Name}")
+                     
+                     
+            let args =
+                (camelCase self.TypeName) :: (res |> Seq.toList)
+                |> String.concat ", "
+                
+            let selfType = pascalCase self.TypeName
+            let methName = pascalCase meth.Name
+            
+            // let argFormat =
+            //     (camelCase self.TypeName) :: (res |> Seq.toList)
+            //     |> List.map (fun a -> "0x%X")
+            //     |> String.concat ","
+            // printfn $"                printf(\"wgpu{selfType}{methName}({argFormat})\\n\", {args});"
+            if selfType = "CommandEncoder" then
+                if methName = "BeginRenderPass" then
+                    printfn $"                renderPassEncoder = wgpu{selfType}{methName}({args});"
+                elif methName = "BeginComputePass" then
+                    printfn $"                computePassEncoder = wgpu{selfType}{methName}({args});"
+                else
+                    printfn $"                wgpu{selfType}{methName}({args});"
+            else
+                printfn $"                wgpu{selfType}{methName}({args});"
+                
+                        
+            
+            printfn "            }"
+            printfn "            break; "
+        
+        
+        printfn "            default: break;"
+        printfn "        }"
+        printfn "        ptr = start + (size_t)size;"
+        printfn "    }"
+        
+        printfn ""
+        
+        
+        printfn "}"
+            
+        
+        File.WriteAllText(Path.Combine(__SOURCE_DIRECTORY__, "src", "WebGPUNative", "Interpreter.cpp"), b.ToString())
+
 
         
 open Frontend
@@ -2496,3 +3577,5 @@ Native.print (Path.Combine(__SOURCE_DIRECTORY__, "src", "WebGPU", "WebGPU.cpp"))
 Native.print (Path.Combine(__SOURCE_DIRECTORY__, "src", "WebGPUNative", "WebGPU.cpp")) false
 RawWrapper.print()
 Frontend.print()
+CommandStream.print()
+CommandStream.printInterpreter()

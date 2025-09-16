@@ -292,7 +292,7 @@ type WebGPUExtensions private() =
          let status = WebGPU.Raw.WebGPU.AdapterGetFormatCapabilities(this.Handle, format, ptr)
          if status <> Status.Success then
              failwith $"could not get format capabilities: {status}"
-         DawnFormatCapabilities.Read(Unchecked.defaultof<_>, &rr)
+         DawnFormatCapabilities.Read(Unchecked.defaultof<_>, ptr, false)
          
     [<Extension>]
     static member GetCapabilities(this : Surface, adapter : Adapter) =
@@ -301,7 +301,7 @@ type WebGPUExtensions private() =
         let status = WebGPU.Raw.WebGPU.SurfaceGetCapabilities(this.Handle, adapter.Handle, ptr)
         if status <> Status.Success then
             failwith $"could not get surface capabilities: {status}"
-        SurfaceCapabilities.Read(Unchecked.defaultof<_>, &res)
+        SurfaceCapabilities.Read(Unchecked.defaultof<_>, ptr, false)
     
    
     [<Extension>]

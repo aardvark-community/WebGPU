@@ -111,7 +111,7 @@ module Test =
 //[<InvocationCount(10)>]
 type RasterizerBenchmark() =
 
-    static let app = WebGPUApplication.Create(true).Result
+    static let app = WebGPUApplication.Create(false).Result
 
     static let mutable old = []
 

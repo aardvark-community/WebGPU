@@ -28,23 +28,23 @@ echo "$OS $ARCH $ARCH_NAME"
 
 cd src/WebGPUNative || exit 1
 
-# rm -dfr tmp
-# mkdir -p tmp
+rm -dfr tmp
+mkdir -p tmp
 cd tmp || exit 1
 
-# git clone https://github.com/google/dawn.git
-# mkdir dawn
+git clone https://github.com/google/dawn.git
+mkdir dawn
 cd dawn || exit 1
-#git init
-#git remote add origin https://github.com/google/dawn.git
-#git fetch --depth 1 origin $DAWNCOMMIT
-#git reset --hard FETCH_HEAD
+git init
+git remote add origin https://github.com/google/dawn.git
+git fetch --depth 1 origin $DAWNCOMMIT
+git reset --hard FETCH_HEAD
 
-# git checkout $DAWNCOMMIT
+git checkout $DAWNCOMMIT
 
-# python tools/fetch_dawn_dependencies.py --use-test-deps
+python tools/fetch_dawn_dependencies.py --use-test-deps
 
-# mkdir -p out/Release
+mkdir -p out/Release
 cd out/Release || exit 1
 
 # github action runners run out of memory when using -j, so we limit the threads to 2
@@ -78,11 +78,12 @@ rsync -ar --include='*/' --include='*.h' --exclude='*' gen/include/dawn/ ../../.
 rsync -ar --include='*/' --include='*.h' --exclude='*' ../../include/  ../../../../../../include
 rsync -a --include='*/' --include='*.h' --exclude='*' ../../src/tint/  ../../../../../../include/src/tint/
 rsync -ar --include='*/' --include='*.h' --exclude='*' ../../src/utils/  ../../../../../../include/src/utils/
+
 cp ./gen/include/dawn/webgpu.h ../../../../../../include/dawn/webgpu/webgpu.h
 cp ./gen/include/dawn/webgpu_cpp.h ../../../../../../include/dawn/webgpu_cpp.h
-cp ./gen/include/webgpu/webgpu_cpp_chained_struct.h ../../../../../../include/dawn/webgpu/webgpu_cpp_chained_struct.h
+cp ./gen/src/emdawnwebgpu/include/webgpu/webgpu_cpp_chained_struct.h ../../../../../../include/dawn/webgpu/webgpu_cpp_chained_struct.h
 cp ../../include/webgpu/webgpu_enum_class_bitmasks.h ../../../../../../include/dawn/webgpu/webgpu_enum_class_bitmasks.h
-# cp ./gen/webgpu-headers/webgpu.h ../../../../../../include/dawn/webgpu.h
+cp ./gen/webgpu-headers/webgpu.h ../../../../../../include/dawn/webgpu.h
 
 
 cd ../../../../../../

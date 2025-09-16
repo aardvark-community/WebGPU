@@ -117,7 +117,7 @@ module internal ShaderCacheKey =
         serialize bw src
         ms.Position <- 0L
         let hash = System.Security.Cryptography.SHA1.HashData ms
-        "wgsl_" + System.Convert.ToBase64String(hash).Replace("=", ".").Replace("/", "_").Replace("+", "-")
+        "wgsl2_" + System.Convert.ToBase64String(hash).Replace("=", ".").Replace("/", "_").Replace("+", "-")
 
 type ShaderProgram(shaderModules : Map<FShade.ShaderStage, ShaderModule>, code : WGSLShader, groupLayouts : MapExt<int, BindGroupLayout>, pipelineLayout : PipelineLayout, samplers : Map<int, Map<int, Sampler>>) =
     

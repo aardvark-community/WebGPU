@@ -11,6 +11,7 @@
     <Compile Include="Wrapper.fs" />
     <Compile Include="FutureWaitPool.fs" />
     <Compile Include="Frontend.fs" />
+    <Compile Include="CommandStream.fs" />
     <Compile Include="BufferExtensions.fs" />
     <Compile Include="TextureExtensions.fs" />
     <Compile Include="FrontendExtensions.fs" />
