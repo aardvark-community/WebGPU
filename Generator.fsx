@@ -2701,10 +2701,10 @@ module Frontend =
                     
                             
                             if m.Name = "submit" && o.Name = "queue" then
-                                printfn "        let tcs = System.Threading.Tasks.TaskCompletionSource<unit>()"
-                                printfn "        this.OnSubmittedWorkDone { Mode = CallbackMode.WaitAnyOnly; Callback = QueueWorkDoneCallback(fun d _ _ -> d.Dispose(); tcs.SetResult()) } |> device.EnqueueWait"
+                                //printfn "        let tcs = System.Threading.Tasks.TaskCompletionSource<unit>()"
+                                //printfn "        this.OnSubmittedWorkDone { Mode = CallbackMode.WaitAnyOnly; Callback = QueueWorkDoneCallback(fun d _ _ -> d.Dispose(); tcs.SetResult()) } |> device.EnqueueWait"
                                 printfn "        task {"
-                                printfn "            do! tcs.Task"
+                                //printfn "            do! tcs.Task"
                                 printfn "            for c in commands do do! c.RunCompleted()"
                                 printfn "        } :> System.Threading.Tasks.Task"
                             
@@ -2980,7 +2980,7 @@ module CommandStream =
         printfn "        Marshal.FreeHGlobal(memory)"
         
         printfn "    member x.Dispose() = x.Dispose true"
-        printfn "    override x.Finalize() = x.Dispose false"
+        //printfn "    override x.Finalize() = x.Dispose false"
         printfn "    interface IDisposable with"
         printfn "        member x.Dispose() = x.Dispose true"
         
@@ -3101,7 +3101,7 @@ module CommandStream =
         printfn "        raw.Dispose()"
         
         printfn "    member x.Dispose() = x.Dispose true"
-        printfn "    override x.Finalize() = x.Dispose false"
+        //printfn "    override x.Finalize() = x.Dispose false"
         printfn "    interface IDisposable with"
         printfn "        member x.Dispose() = x.Dispose true"
         
@@ -3154,7 +3154,7 @@ module CommandStream =
         printfn "        if disposing then System.GC.SuppressFinalize(x)"
         
         printfn "    member x.Dispose() = x.Dispose(true)"
-        printfn "    override x.Finalize() = x.Dispose(false)"
+        //printfn "    override x.Finalize() = x.Dispose(false)"
         printfn "    interface IDisposable with"
         printfn "        member x.Dispose() = x.Dispose(true)"
         printfn "    member x.Commands = cmd.Commands"
