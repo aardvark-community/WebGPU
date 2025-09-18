@@ -20,6 +20,7 @@ type RasterizerInput =
         
         BinSize             : int
         MaxSplits           : int
+        SplitThreshold      : int
     }
 
 

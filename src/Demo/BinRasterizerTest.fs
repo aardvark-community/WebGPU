@@ -20,13 +20,13 @@ type Marker = Marker
 
 module Test = 
 
-    let init (app: WebGPUApplication) (rasterizerType : string) (triangleCountPerBin : int) (actBlock : string) (mv : Trafo3d) (binSize : int)(maxSplits :int)=
-        let shaders = BinRasterizer.BinRasterizer.compile app.Device
-
-        let mutable rasterizer: Device -> string -> Rasterizer = 
+    let init (app: WebGPUApplication) (binRasterInstance: BinRasterizer.BinRasterizer.Raster) (rasterizerType : string) (triangleCountPerBin : int) (mv : Trafo3d) (binSize : int)(maxSplits :int)=
+        let shaders = binRasterInstance.compile(app.Device)
+        
+        let mutable rasterizer: Device -> Rasterizer = 
             match rasterizerType with
-            | "bin" -> BinRasterizer.BinRasterizer.run shaders
-            | "default" -> fun d _ -> DefaultRasterizer.compile d
+            | "bin" -> fun dev -> binRasterInstance.run(shaders, dev)
+            | "default" -> DefaultRasterizer.compile
             | _ -> failwith $"Benchmark parameter \"rasterizerType\" has an invalid value {rasterizerType}"
         
         //let size = V2i(1920, 1280)
@@ -87,6 +87,7 @@ module Test =
                 ProjTrafo          = proj
                 BinSize            = binSize
                 MaxSplits          = maxSplits
+                SplitThreshold     = 200
             }
 
         let img = app.Device.DownloadPixImage(color).Result :?> PixImage<uint32>
@@ -100,7 +101,7 @@ module Test =
         Aardvark.Data.PixImageSharp.SaveImageSharp(rgbaImg, $"testResults/{rasterizerType}Rasterizer_ViewXXX.jpg")
     
 
-        rasterize actBlock, input
+        rasterize, input
         
         
     let run (rasterize : RasterizerInput -> Tasks.Task<unit>) (args : RasterizerInput)=
@@ -115,6 +116,9 @@ type RasterizerBenchmark() =
 
     static let mutable old = []
 
+    [<DefaultValue>]
+    val mutable binRasterInstance : BinRasterizer.BinRasterizer.Raster
+    
     [<DefaultValue>]
     val mutable rasterize : RasterizerInput -> Tasks.Task<unit>
     
@@ -144,27 +148,26 @@ type RasterizerBenchmark() =
     //[<DefaultValue; Params(1, 10, 100, 1000)>]
     val mutable triangleCountPerBin : int
 
-    [<DefaultValue; Params("all")>]
-    val mutable actBlock : string
-
     [<GlobalSetup>]
     member x.Init() =
+        x.binRasterInstance <- BinRasterizer.BinRasterizer.Raster(app.Device)
+        
         if (x.sceneView = 0) then
             // Some bins
-            x.mv <- Trafo3d.RotationX(-Constant.PiHalf) * (CameraView.lookAt (V3d(3,2,-1)) V3d.Zero V3d.OOI |> CameraView.viewTrafo)
+            x.mv <- Trafo3d.RotationX(Constant.PiHalf) * (CameraView.lookAt (V3d(3,2,-1)) V3d.Zero V3d.OOI |> CameraView.viewTrafo)
         else if (x.sceneView = 1) then
             // All bins
-            x.mv <- Trafo3d.RotationX(-Constant.PiHalf) * (CameraView.lookAt (V3d(-0.4, 0.1, -0.1)) (V3d(0, -0.5, 0.75)) V3d.OOI |> CameraView.viewTrafo)
+            x.mv <- Trafo3d.RotationX(Constant.PiHalf) * (CameraView.lookAt (V3d(-0.4, 0.1, -0.1)) (V3d(0, -0.5, 0.75)) V3d.OOI |> CameraView.viewTrafo)
         else if (x.sceneView = 2) then
             // Just one bin
-            x.mv <- Trafo3d.RotationX(-Constant.PiHalf) * Trafo3d.Translation(0, 1.5, 1) * (CameraView.lookAt (V3d(70,0,0)) V3d.Zero V3d.OOI |> CameraView.viewTrafo)
+            x.mv <- Trafo3d.RotationX(Constant.PiHalf) * Trafo3d.Translation(0, 1.5, 1) * (CameraView.lookAt (V3d(70,0,0)) V3d.Zero V3d.OOI |> CameraView.viewTrafo)
         else if (x.sceneView = 3) then
             // For triangle test
             x.mv <- Trafo3d.RotationX(Constant.Pi) * (CameraView.lookAt (V3d(-1.0f, 0.0f, 0.0f)) (V3d(0.5, 0, 0)) V3d.OOI |> CameraView.viewTrafo)
         else
-            raise (System.Exception "Unhandeled value for the sceneView benchmark parameter")
+            raise (System.Exception "Unhandled value for the sceneView benchmark parameter")
 
-        let (rasterize, args) = Test.init app x.rasterizerType x.triangleCountPerBin x.actBlock x.mv x.binSize x.maxSplits
+        let (rasterize, args) = Test.init app x.binRasterInstance x.rasterizerType x.triangleCountPerBin x.mv x.binSize x.maxSplits
 
         old <- (x.rasterize, x.args) :: old
 
@@ -177,17 +180,18 @@ type RasterizerBenchmark() =
         Test.run x.rasterize { x.args with ModelViewTrafo = x.mv }
 
     [<GlobalCleanup>]
-    member x.Cleanup() = 
-        if x.actBlock = "all" then
-            let img = app.Device.DownloadPixImage(x.args.ColorTexture).Result :?> PixImage<uint32>
-            let rgbaImg = PixImage<byte>(Col.Format.RGBA, img.Size)
-    
-            rgbaImg.GetMatrix<C4b>().SetMap(img.GetChannel 0L, fun v ->
-                C4b(byte v, byte (v >>> 8), byte (v >>> 16), byte (v >>> 24))
-            ) |> ignore
-    
-            Directory.CreateDirectory("testResults") |> ignore
-            Aardvark.Data.PixImageSharp.SaveImageSharp(rgbaImg, $"testResults/{x.rasterizerType}Rasterizer_View{x.sceneView}.jpg")
+    member x.Cleanup() =
+        x.binRasterInstance.Dispose()
+        let img = app.Device.DownloadPixImage(x.args.ColorTexture).Result :?> PixImage<uint32>
+        let rgbaImg = PixImage<byte>(Col.Format.RGBA, img.Size)
+
+        rgbaImg.GetMatrix<C4b>().SetMap(img.GetChannel 0L, fun v ->
+            C4b(byte v, byte (v >>> 8), byte (v >>> 16), byte (v >>> 24))
+        ) |> ignore
+
+        Directory.CreateDirectory("testResults") |> ignore
+        Aardvark.Data.PixImageSharp.SaveImageSharp(rgbaImg, $"testResults/{x.rasterizerType}Rasterizer_View{x.sceneView}.jpg")
+        
 
 module Benchmarks = 
     open BenchmarkDotNet.Running;

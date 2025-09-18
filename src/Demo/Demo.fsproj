@@ -12,10 +12,14 @@
     <EmbeddedResource Include="resources\miramar_rt.png" />
     <EmbeddedResource Include="resources\miramar_up.png" />
     <EmbeddedResource Include="resources\stanford-bunny.obj" />
-    <Compile Include="Rasterizer.fs" />
+    <!--<EmbeddedResource Include="resources\buddha.obj" />
+    <EmbeddedResource Include="resources\powerplant.obj" />-->
+    <EmbeddedResource Include="resources\amazon_lumberyard_bistro.obj" />
+	<Compile Include="Rasterizer.fs" />
     <Compile Include="DefaultRasterizer.fs" />
     <Compile Include="BasicRasterizer.fs" />
     <Compile Include="BinRasterizer.fs" />
+    <Compile Include="BinRasterizerMegakernel.fs" />
     <Compile Include="ComputeRasterizerDemo.fs" />
     <Compile Include="RenderDemo.fs" />
 	<Compile Include="BinRasterizerTest.fs" />

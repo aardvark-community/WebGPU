@@ -240,7 +240,7 @@ module Obj =
         pos, ns, cs
         
 
-let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d>) (proj : aval<Trafo3d>) (binSize : aval<int>) (maxSplits : aval<int>) (device : Device) (compile : Device -> Rasterizer) (windowSize : V2i) =
+let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d>) (proj : aval<Trafo3d>) (binSize : aval<int>) (maxSplits : aval<int>)  (splitThreshold : aval<int>) (device : Device) (compile : Device -> Rasterizer) (windowSize : V2i) =
     
     let vertices, normals, colors = Obj.beetle()
     //let vertices, normals, colors = Obj.triangles windowSize 1
@@ -292,6 +292,7 @@ let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d
         let proj = proj.GetValue t
         let binSize = binSize.GetValue t
         let maxSplits = maxSplits.GetValue t
+        let splitThreshold = splitThreshold.GetValue t
         if size <> texSize then
             if not (isNull (color :> obj)) then
                 color.Dispose()
@@ -324,6 +325,7 @@ let computeRasterizerTask (signature : IFramebufferSignature) (mv : aval<Trafo3d
                 DepthBuffer = depth
                 BinSize = binSize
                 MaxSplits = maxSplits
+                SplitThreshold = splitThreshold
             }
         task.Wait()
         
@@ -643,11 +645,12 @@ let run() =
     WebGPUConfig.shaderCaching <- false
     WebGPUConfig.captureStackTraces <- false
 
-    let rasterizer = BinRasterizer.BinRasterizer.compileAndRun "all"
     //let rasterizer = DefaultRasterizer.compile
      
     let app = WebGPUApplication.Create(false).Result
     let win = app.CreateGameWindow(vsync = true)
+    
+    let rasterizer = BinRasterizer.BinRasterizer.Raster(app.Device).compileAndRun
 
     let cam =
         //CameraView.lookAt (V3d(3,2,1)) V3d.Zero V3d.OOI
@@ -663,6 +666,7 @@ let run() =
         
     let binSize = cval 64
     let maxSplits = cval 0
+    let splitThreshold = cval 200
     win.Keyboard.DownWithRepeats.Values.Add (fun k ->
         match k with
         | Keys.O -> transact (fun () -> binSize.Value <- max 16 (binSize.Value / 2)); printfn "%d" binSize.Value 
@@ -670,13 +674,19 @@ let run() =
         
         
         | Keys.U -> transact (fun () -> maxSplits.Value <- max 0 (maxSplits.Value - 1)); printfn "%d" maxSplits.Value 
-        | Keys.I -> transact (fun () -> maxSplits.Value <- min 8 (maxSplits.Value + 1)); printfn "%d" maxSplits.Value 
+        | Keys.I -> transact (fun () -> maxSplits.Value <- min 8 (maxSplits.Value + 1)); printfn "%d" maxSplits.Value
+        
+        | Keys.J -> transact (fun () -> splitThreshold.Value <- max 25 (splitThreshold.Value - 25)); printfn "%d" splitThreshold.Value 
+        | Keys.K -> transact (fun () -> splitThreshold.Value <- min 5000 (splitThreshold.Value + 25)); printfn "%d" splitThreshold.Value
+        
+        | Keys.N -> transact (fun () -> splitThreshold.Value <- max 25 (splitThreshold.Value - 250)); printfn "%d" splitThreshold.Value 
+        | Keys.M -> transact (fun () -> splitThreshold.Value <- min 5000 (splitThreshold.Value + 250)); printfn "%d" splitThreshold.Value 
         
         | _ -> ()
     )
         
     
-    let task = computeRasterizerTask win.FramebufferSignature cam frustum binSize maxSplits app.Device rasterizer win.WindowSize
+    let task = computeRasterizerTask win.FramebufferSignature cam frustum binSize maxSplits splitThreshold app.Device rasterizer win.WindowSize
 
     win.RenderTask <- task
     win.RenderAsFastAsPossible <- true
