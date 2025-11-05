@@ -685,7 +685,7 @@ module CHeaderGen =
         printfn "// Enum definitions"
         for a in all do
             match a with
-            | Enum e when isEmscripten e.Tags ->
+            | Enum e ->
                 printfn "typedef enum WGPU%s {" (pascalCase e.Name)
                 for (name, value) in e.Values do
                     printfn "    WGPU%s_%s = %d," (pascalCase e.Name) (pascalCase name) value
