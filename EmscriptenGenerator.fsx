@@ -169,7 +169,7 @@ module StructMarshalerGen =
         printfn ""
 
         // Generate field readers
-        for field in s.Members do
+        for field in s.Fields do
             let jsFieldName = camelCase field.Name
             let fieldReader = generateFieldReader field.Name field.Type "offset"
 
@@ -311,7 +311,7 @@ module JsLibraryGen =
 
         | CallbackInfo c ->
             // CallbackInfo has a callback field - need to find it
-            let callbackField = c.Members |> List.tryFind (fun f ->
+            let callbackField = c.Fields |> List.tryFind (fun f ->
                 match table.[f.Type.TypeName] with
                 | Delegate _ -> true
                 | _ -> false
@@ -699,7 +699,7 @@ module CHeaderGen =
             match a with
             | Struct s when isEmscripten s.Tags ->
                 printfn "struct WGPU%s {" (pascalCase s.Name)
-                for field in s.Members do
+                for field in s.Fields do
                     printfn "    %s %s;" (cTypeName field.Type) (camelCase field.Name)
                 printfn "};"
                 printfn ""
