@@ -176,14 +176,25 @@ module StructMarshalerGen =
             let jsFieldName = camelCase field.Name
             let fieldReader = generateFieldReader field.Name field.Type "offset"
 
+            // Check if this field is a callback or CallbackInfo - skip it in descriptors
+            // These are handled separately in async operations, not passed to WebGPU
+            let isCallbackField =
+                match table.[field.Type.TypeName] with
+                | Delegate _ -> true
+                | CallbackInfo _ -> true
+                | _ -> field.Name.Contains("callback") || field.Name.Contains("userdata")
+
             // Check if optional
-            if field.Optional then
-                printfn "      var %sPtr = {{{ makeGetValue('ptr', 'offset', '*') }}};" jsFieldName
-                printfn "      if (%sPtr) {" jsFieldName
-                printfn "        obj.%s = %s;" jsFieldName fieldReader
-                printfn "      }"
+            if not isCallbackField then
+                if field.Optional then
+                    printfn "      var %sPtr = {{{ makeGetValue('ptr', 'offset', '*') }}};" jsFieldName
+                    printfn "      if (%sPtr) {" jsFieldName
+                    printfn "        obj.%s = %s;" jsFieldName fieldReader
+                    printfn "      }"
+                else
+                    printfn "      obj.%s = %s;" jsFieldName fieldReader
             else
-                printfn "      obj.%s = %s;" jsFieldName fieldReader
+                printfn "      // Skip callback field: %s (handled separately)" field.Name
 
             // Advance offset (simplified - assumes all pointers are 4 bytes for WASM32)
             let fieldSize, needsAlign =
