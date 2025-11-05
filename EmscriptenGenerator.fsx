@@ -49,17 +49,6 @@ module EmscriptenBindings =
         | Some "const*const*" -> "const " + baseType + "* const*"
         | _ -> baseType
 
-    /// Convert WebGPU type to JavaScript equivalent description
-    let jsTypeDescription (t : TypeRef) =
-        let def = table.[t.TypeName]
-        match def with
-        | Object o -> "GPU" + pascalCase o.Name
-        | Enum e -> "enum"
-        | Delegate d -> "callback"
-        | Struct s -> "descriptor object"
-        | Native n -> n.Name
-        | _ -> "unknown"
-
     /// Check if a type is an object handle
     let isObjectHandle (t : TypeRef) =
         match table.[t.TypeName] with
@@ -72,8 +61,466 @@ module EmscriptenBindings =
         | Struct _ -> true
         | _ -> false
 
-module CHeaderGen =
+    /// Get JavaScript type for a field
+    let jsTypeName (t : TypeRef) =
+        let def = table.[t.TypeName]
+        match def with
+        | Object _ -> "handle"
+        | Enum _ -> "i32"
+        | Native n ->
+            match n.Name with
+            | "int8_t" -> "i8"
+            | "uint8_t" -> "u8"
+            | "int16_t" -> "i16"
+            | "uint16_t" -> "u16"
+            | "int32_t" | "int" -> "i32"
+            | "uint32_t" -> "u32"
+            | "int64_t" -> "i64"
+            | "uint64_t" -> "u64"
+            | "bool" -> "i32"
+            | "float" -> "float"
+            | "double" -> "double"
+            | "size_t" -> "size_t"
+            | "void *" | "void const *" -> "*"
+            | _ -> "*"
+        | Struct _ -> "struct"
+        | _ -> "*"
 
+    /// Map C method name to JavaScript method name
+    /// e.g., "create buffer" -> "createBuffer"
+    /// e.g., "get size" -> "size" (property access)
+    /// e.g., "set label" -> "label" (property setter)
+    let toJsMethodName (methodName : string) =
+        let parts = methodName.Split([|' '|], StringSplitOptions.RemoveEmptyEntries)
+        if parts.Length = 0 then ""
+        else
+            match parts.[0].ToLowerInvariant() with
+            | "get" when parts.Length = 2 ->
+                // get size -> size property
+                camelCase parts.[1]
+            | "set" when parts.Length = 2 ->
+                // set label -> label property
+                camelCase parts.[1]
+            | _ ->
+                // create buffer -> createBuffer
+                parts |> Array.map camelCase |> String.concat ""
+
+module StructMarshalerGen =
+    open EmscriptenBindings
+
+    let rec generateFieldReader (fieldName : string) (fieldType : TypeRef) (offset : string) =
+        let def = table.[fieldType.TypeName]
+
+        match fieldType.Annotation with
+        | None ->
+            match def with
+            | Object _ ->
+                sprintf "WebGPUEm.getObject({{{ makeGetValue('ptr', %s, 'i32') }}})" offset
+            | Enum _ ->
+                sprintf "{{{ makeGetValue('ptr', %s, 'i32') }}}" offset
+            | Native n ->
+                match n.Name with
+                | "bool" ->
+                    sprintf "!!{{{ makeGetValue('ptr', %s, 'i32') }}}" offset
+                | "int8_t" -> sprintf "{{{ makeGetValue('ptr', %s, 'i8') }}}" offset
+                | "uint8_t" -> sprintf "{{{ makeGetValue('ptr', %s, 'u8') }}}" offset
+                | "int16_t" -> sprintf "{{{ makeGetValue('ptr', %s, 'i16') }}}" offset
+                | "uint16_t" -> sprintf "{{{ makeGetValue('ptr', %s, 'u16') }}}" offset
+                | "int32_t" | "int" -> sprintf "{{{ makeGetValue('ptr', %s, 'i32') }}}" offset
+                | "uint32_t" -> sprintf "{{{ makeGetValue('ptr', %s, 'u32') }}}" offset
+                | "size_t" -> sprintf "{{{ makeGetValue('ptr', %s, 'size_t') }}}" offset
+                | "float" -> sprintf "{{{ makeGetValue('ptr', %s, 'float') }}}" offset
+                | "double" -> sprintf "{{{ makeGetValue('ptr', %s, 'double') }}}" offset
+                | "int64_t" | "uint64_t" ->
+                    // Read as two 32-bit values
+                    sprintf "({{{ makeGetValue('ptr', %s, 'i32') }}} + {{{ makeGetValue('ptr', '%s + 4', 'i32') }}} * 0x100000000)" offset offset
+                | _ ->
+                    sprintf "{{{ makeGetValue('ptr', %s, '*') }}}" offset
+            | Struct s ->
+                sprintf "WebGPUStructMarshalers.read%s(ptr + %s)" (pascalCase s.Name) offset
+            | _ ->
+                sprintf "{{{ makeGetValue('ptr', %s, '*') }}}" offset
+        | Some "*" | Some "const*" ->
+            match def with
+            | Native n when n.Name = "char" ->
+                // String pointer
+                sprintf "WebGPUEm.readString({{{ makeGetValue('ptr', %s, '*') }}})" offset
+            | Object _ ->
+                // Object handle
+                sprintf "WebGPUEm.getObject({{{ makeGetValue('ptr', %s, 'i32') }}})" offset
+            | Struct s ->
+                // Pointer to struct
+                sprintf "WebGPUStructMarshalers.read%s({{{ makeGetValue('ptr', %s, '*') }}})" (pascalCase s.Name) offset
+            | _ ->
+                sprintf "{{{ makeGetValue('ptr', %s, '*') }}}" offset
+        | Some "const*const*" ->
+            sprintf "{{{ makeGetValue('ptr', %s, '*') }}}" offset
+        | _ ->
+            sprintf "{{{ makeGetValue('ptr', %s, '*') }}}" offset
+
+    let generateStructMarshaler (s : StructDef) =
+        let b = StringBuilder()
+        let printfn fmt = Printf.kprintf (fun str -> b.AppendLine(str) |> ignore) fmt
+
+        printfn "    read%s: function(ptr) {" (pascalCase s.Name)
+        printfn "      if (!ptr) return undefined;"
+        printfn "      var obj = {};"
+        printfn "      var offset = 0;"
+        printfn ""
+
+        // Generate field readers
+        for field in s.Members do
+            let jsFieldName = camelCase field.Name
+            let fieldReader = generateFieldReader field.Name field.Type "offset"
+
+            // Check if optional
+            if field.Optional then
+                printfn "      var %sPtr = {{{ makeGetValue('ptr', 'offset', '*') }}};" jsFieldName
+                printfn "      if (%sPtr) {" jsFieldName
+                printfn "        obj.%s = %s;" jsFieldName fieldReader
+                printfn "      }"
+            else
+                printfn "      obj.%s = %s;" jsFieldName fieldReader
+
+            // Advance offset (simplified - assumes all pointers are 4 bytes for WASM32)
+            let fieldSize =
+                match jsTypeName field.Type with
+                | "i8" | "u8" -> "1"
+                | "i16" | "u16" -> "2"
+                | "i32" | "u32" | "float" | "handle" -> "4"
+                | "i64" | "u64" | "double" -> "8"
+                | "*" -> "{{{ POINTER_SIZE }}}"
+                | "struct" ->
+                    match table.[field.Type.TypeName] with
+                    | Struct s -> sprintf "STRUCT_SIZE_%s" (pascalCase s.Name)
+                    | _ -> "4"
+                | _ -> "4"
+
+            printfn "      offset += %s;" fieldSize
+
+            // Add alignment padding for next field
+            printfn "      offset = (offset + 3) & ~3; // Align to 4 bytes"
+            printfn ""
+
+        printfn "      return obj;"
+        printfn "    },"
+        printfn ""
+
+        b.ToString()
+
+    let generate (fileName : string) =
+        let b = StringBuilder()
+        let printfn fmt = Printf.kprintf (fun str -> b.AppendLine(str) |> ignore) fmt
+
+        printfn "/**"
+        printfn " * Auto-generated WebGPU Struct Marshalers"
+        printfn " * Generated from dawn.json"
+        printfn " */"
+        printfn ""
+        printfn "var WebGPUStructMarshalers = {"
+        printfn "  // Helper functions"
+        printfn "  readString: function(ptr) {"
+        printfn "    if (!ptr) return undefined;"
+        printfn "    return UTF8ToString(ptr);"
+        printfn "  },"
+        printfn ""
+        printfn "  readStringView: function(ptr) {"
+        printfn "    if (!ptr) return undefined;"
+        printfn "    var dataPtr = {{{ makeGetValue('ptr', 0, '*') }}};"
+        printfn "    var length = {{{ makeGetValue('ptr', 4, 'size_t') }}};"
+        printfn "    if (!dataPtr) return length === 0 ? '' : undefined;"
+        printfn "    return UTF8ToString(dataPtr, length);"
+        printfn "  },"
+        printfn ""
+
+        // Generate marshalers for all structs
+        for a in all do
+            match a with
+            | Struct s when isEmscripten s.Tags ->
+                printfn "%s" (generateStructMarshaler s)
+            | _ -> ()
+
+        printfn "};"
+        printfn ""
+        printfn "if (typeof module !== 'undefined' && module.exports) {"
+        printfn "  module.exports = WebGPUStructMarshalers;"
+        printfn "}"
+
+        File.WriteAllText(fileName, b.ToString())
+
+module JsLibraryGen =
+    open EmscriptenBindings
+
+    /// Determine the pattern of a method
+    type MethodPattern =
+        | Create    // Returns a new object handle
+        | Get       // Returns a property value
+        | Set       // Sets a property (void return)
+        | Action    // Performs an action (void return)
+        | Query     // Returns a value (not a property)
+        | AsyncOp   // Async operation with callback
+
+    let getMethodPattern (m : FunctionDef) (objName : string option) =
+        let name = m.Name.ToLowerInvariant()
+
+        // Check for callbacks in args - indicates async
+        let hasCallback = m.Args |> List.exists (fun arg ->
+            match table.[arg.Type.TypeName] with
+            | Delegate _ -> true
+            | CallbackInfo _ -> true
+            | _ -> false
+        )
+
+        if hasCallback then AsyncOp
+        elif name.Contains("create") || name.Contains("import") then Create
+        elif name.StartsWith("get ") then Get
+        elif name.StartsWith("set ") then Set
+        elif m.Return.TypeName = "void" then Action
+        else Query
+
+    let generateJsFunction (objName : string option) (m : FunctionDef) =
+        let b = StringBuilder()
+        let printfn fmt = Printf.kprintf (fun str -> b.AppendLine(str) |> ignore) fmt
+
+        let fullName =
+            match objName with
+            | Some o -> o + " " + m.Name
+            | None -> m.Name
+
+        let funcName = "_js_wgpu_" + (camelCase fullName).Replace(" ", "_")
+        let jsMethodName = toJsMethodName m.Name
+        let pattern = getMethodPattern m objName
+
+        // Generate function signature
+        printfn "  %s__deps: ['$WebGPUEm']," funcName
+
+        let argNames = m.Args |> List.map (fun a -> camelCase a.Name) |> String.concat ", "
+        printfn "  %s: function(%s) {" funcName argNames
+
+        // Get the object if this is a method
+        match objName with
+        | Some o ->
+            let selfArg = m.Args |> List.tryHead
+            match selfArg with
+            | Some self ->
+                printfn "    var obj = WebGPUEm.getObject(%s);" (camelCase self.Name)
+                printfn "    if (!obj) {"
+                match pattern with
+                | Create | Query -> printfn "      return 0;"
+                | _ -> printfn "      return;"
+                printfn "    }"
+            | None -> ()
+        | None ->
+            // Standalone function - may need to access GPU
+            if fullName.Contains("instance") then
+                printfn "    if (!WebGPUEm.ensureGPU()) {"
+                printfn "      console.error('WebGPU not supported');"
+                match pattern with
+                | Create | Query -> printfn "      return 0;"
+                | _ -> printfn "      return;"
+                printfn "    }"
+
+        printfn ""
+
+        // Marshal descriptor arguments
+        let descriptorArgs = m.Args |> List.filter (fun arg ->
+            match table.[arg.Type.TypeName] with
+            | Struct _ when arg.Type.Annotation = Some "*" || arg.Type.Annotation = Some "const*" -> true
+            | _ -> false
+        )
+
+        for arg in descriptorArgs do
+            match table.[arg.Type.TypeName] with
+            | Struct s ->
+                let argName = camelCase arg.Name
+                printfn "    var %sObj;" argName
+                printfn "    if (%s) {" argName
+                printfn "      %sObj = WebGPUStructMarshalers.read%s(%s);" argName (pascalCase s.Name) argName
+                printfn "    }"
+                printfn ""
+            | _ -> ()
+
+        // Generate the actual call based on pattern
+        match pattern with
+        | AsyncOp ->
+            // Find callback and userdata args
+            let callbackArg = m.Args |> List.tryFind (fun arg ->
+                match table.[arg.Type.TypeName] with
+                | Delegate _ | CallbackInfo _ -> true
+                | _ -> false
+            )
+
+            printfn "    // Async operation - TODO: Handle callback"
+            printfn "    // obj.%s(...).then(result => { /* call callback */ });" jsMethodName
+
+        | Create ->
+            let returnType = table.[m.Return.TypeName]
+            match returnType with
+            | Object _ ->
+                printfn "    var result = obj.%s(" jsMethodName
+                // Add arguments
+                let nonSelfArgs = m.Args |> List.skip 1
+                for i, arg in nonSelfArgs |> List.indexed do
+                    let argName = camelCase arg.Name
+                    let argValue =
+                        match table.[arg.Type.TypeName] with
+                        | Struct _ when arg.Type.Annotation = Some "*" || arg.Type.Annotation = Some "const*" ->
+                            argName + "Obj"
+                        | Object _ when arg.Type.Annotation = Some "*" ->
+                            "WebGPUEm.getObject(" + argName + ")"
+                        | _ -> argName
+
+                    if i = nonSelfArgs.Length - 1 then
+                        printfn "      %s" argValue
+                    else
+                        printfn "      %s," argValue
+                printfn "    );"
+                printfn "    return WebGPUEm.createHandle(result);"
+            | _ ->
+                printfn "    // TODO: Implement %s" fullName
+                printfn "    return 0;"
+
+        | Get ->
+            // Property getter
+            let propName = m.Name.Replace("get ", "")
+            printfn "    return obj.%s;" (camelCase propName)
+
+        | Set ->
+            // Property setter
+            let propName = m.Name.Replace("set ", "")
+            let valueArg = m.Args |> List.last
+            printfn "    obj.%s = %s;" (camelCase propName) (camelCase valueArg.Name)
+
+        | Action ->
+            // Method call with no return
+            printfn "    obj.%s(" jsMethodName
+            let nonSelfArgs = if objName.IsSome then m.Args |> List.skip 1 else m.Args
+            for i, arg in nonSelfArgs |> List.indexed do
+                let argName = camelCase arg.Name
+                let argValue =
+                    match table.[arg.Type.TypeName] with
+                    | Struct _ when arg.Type.Annotation = Some "*" || arg.Type.Annotation = Some "const*" ->
+                        argName + "Obj"
+                    | Object _ when arg.Type.Annotation = Some "*" ->
+                        "WebGPUEm.getObject(" + argName + ")"
+                    | _ -> argName
+
+                if i = nonSelfArgs.Length - 1 then
+                    printfn "      %s" argValue
+                else
+                    printfn "      %s," argValue
+            printfn "    );"
+
+        | Query ->
+            // Method call with return value
+            printfn "    var result = obj.%s(" jsMethodName
+            let nonSelfArgs = if objName.IsSome then m.Args |> List.skip 1 else m.Args
+            for i, arg in nonSelfArgs |> List.indexed do
+                let argName = camelCase arg.Name
+                if i = nonSelfArgs.Length - 1 then
+                    printfn "      %s" argName
+                else
+                    printfn "      %s," argName
+            printfn "    );"
+
+            // Return appropriate type
+            match table.[m.Return.TypeName] with
+            | Object _ -> printfn "    return WebGPUEm.createHandle(result);"
+            | _ -> printfn "    return result;"
+
+        printfn "  },"
+        printfn ""
+
+        b.ToString()
+
+    let generate (fileName : string) =
+        let b = StringBuilder()
+        let printfn fmt = Printf.kprintf (fun str -> b.AppendLine(str) |> ignore) fmt
+
+        printfn "/**"
+        printfn " * Auto-generated Emscripten WebGPU Library"
+        printfn " * Generated from dawn.json"
+        printfn " */"
+        printfn ""
+        printfn "var LibraryWebGPUEmscripten = {"
+        printfn "  $WebGPUEm: {"
+        printfn "    nextHandle: 1,"
+        printfn "    objects: {},"
+        printfn "    "
+        printfn "    createHandle: function(obj) {"
+        printfn "      if (!obj) return 0;"
+        printfn "      var handle = WebGPUEm.nextHandle++;"
+        printfn "      WebGPUEm.objects[handle] = obj;"
+        printfn "      return handle;"
+        printfn "    },"
+        printfn "    "
+        printfn "    getObject: function(handle) {"
+        printfn "      if (handle === 0) return null;"
+        printfn "      return WebGPUEm.objects[handle] || null;"
+        printfn "    },"
+        printfn "    "
+        printfn "    releaseHandle: function(handle) {"
+        printfn "      if (handle !== 0) {"
+        printfn "        delete WebGPUEm.objects[handle];"
+        printfn "      }"
+        printfn "    },"
+        printfn "    "
+        printfn "    readString: function(ptr) {"
+        printfn "      if (!ptr) return undefined;"
+        printfn "      return UTF8ToString(ptr);"
+        printfn "    },"
+        printfn "    "
+        printfn "    gpu: null,"
+        printfn "    "
+        printfn "    ensureGPU: function() {"
+        printfn "      if (!WebGPUEm.gpu && navigator.gpu) {"
+        printfn "        WebGPUEm.gpu = navigator.gpu;"
+        printfn "      }"
+        printfn "      return WebGPUEm.gpu !== null;"
+        printfn "    }"
+        printfn "  },"
+        printfn ""
+
+        // Generate all functions
+        for a in all do
+            let functions =
+                match a with
+                | Function f when isEmscripten f.Tags ->
+                    [(None, f)]
+                | Object o when isEmscripten o.Tags ->
+                    o.Methods
+                    |> List.filter (fun m -> isEmscripten m.Tags)
+                    |> List.map (fun m ->
+                        // Add self parameter
+                        let args = { Name = "self"; Tags = []; Type = { TypeName = o.Name; Annotation = None };
+                                    Default = None; Optional = false; Length = None } :: m.Args
+                        (Some o.Name, { m with Args = args })
+                    )
+                | _ -> []
+
+            for (objName, func) in functions do
+                printfn "%s" (generateJsFunction objName func)
+
+        // Reference counting (no-ops)
+        printfn "  _js_wgpu_object_reference__deps: ['$WebGPUEm'],"
+        printfn "  _js_wgpu_object_reference: function(handle) {"
+        printfn "    // No-op: JavaScript uses garbage collection"
+        printfn "  },"
+        printfn ""
+        printfn "  _js_wgpu_object_release__deps: ['$WebGPUEm'],"
+        printfn "  _js_wgpu_object_release: function(handle) {"
+        printfn "    WebGPUEm.releaseHandle(handle);"
+        printfn "  },"
+        printfn ""
+
+        printfn "};"
+        printfn ""
+        printfn "autoAddDeps(LibraryWebGPUEmscripten, '$WebGPUEm');"
+        printfn "mergeInto(LibraryManager.library, LibraryWebGPUEmscripten);"
+
+        File.WriteAllText(fileName, b.ToString())
+
+module CHeaderGen =
     open EmscriptenBindings
 
     let generate (fileName : string) =
@@ -95,55 +542,60 @@ module CHeaderGen =
         // Generate typedefs for object handles
         for a in all do
             match a with
-            | Object o ->
-                if isEmscripten o.Tags then
-                    printfn "typedef int WGPU%s;" (pascalCase o.Name)
+            | Object o when isEmscripten o.Tags ->
+                printfn "typedef int WGPU%s;" (pascalCase o.Name)
             | _ -> ()
 
         printfn ""
         printfn "// Forward declarations for structs"
         for a in all do
             match a with
-            | Struct s ->
-                if isEmscripten s.Tags then
-                    printfn "typedef struct WGPU%s WGPU%s;" (pascalCase s.Name) (pascalCase s.Name)
+            | Struct s when isEmscripten s.Tags ->
+                printfn "typedef struct WGPU%s WGPU%s;" (pascalCase s.Name) (pascalCase s.Name)
             | _ -> ()
 
         printfn ""
         printfn "// Enum definitions"
         for a in all do
             match a with
-            | Enum e ->
-                if isEmscripten e.Tags then
-                    printfn "typedef enum WGPU%s {" (pascalCase e.Name)
-                    for (name, value) in e.Values do
-                        printfn "    WGPU%s_%s = %d," (pascalCase e.Name) (pascalCase name) value
-                    printfn "} WGPU%s;" (pascalCase e.Name)
-                    printfn ""
+            | Enum e when isEmscripten e.Tags ->
+                printfn "typedef enum WGPU%s {" (pascalCase e.Name)
+                for (name, value) in e.Values do
+                    printfn "    WGPU%s_%s = %d," (pascalCase e.Name) (pascalCase name) value
+                printfn "} WGPU%s;" (pascalCase e.Name)
+                printfn ""
+            | _ -> ()
+
+        printfn ""
+        printfn "// Struct definitions"
+        for a in all do
+            match a with
+            | Struct s when isEmscripten s.Tags ->
+                printfn "struct WGPU%s {" (pascalCase s.Name)
+                for field in s.Members do
+                    printfn "    %s %s;" (cTypeName field.Type) (camelCase field.Name)
+                printfn "};"
+                printfn ""
             | _ -> ()
 
         printfn ""
         printfn "// Function declarations"
 
-        // Generate function declarations for all objects and their methods
+        // Generate function declarations
         for a in all do
             let functions =
                 match a with
-                | Function f ->
-                    if isEmscripten f.Tags then [f]
-                    else []
-                | Object o ->
-                    if isEmscripten o.Tags then
-                        o.Methods
-                        |> List.filter (fun m -> isEmscripten m.Tags)
-                        |> List.map (fun m ->
-                            let name = o.Name + " " + m.Name
-                            let args =
-                                { Name = "self"; Tags = []; Type = { TypeName = o.Name; Annotation = None };
-                                  Default = None; Optional = false; Length = None } :: m.Args
-                            { m with Name = name; Args = args }
-                        )
-                    else []
+                | Function f when isEmscripten f.Tags -> [f]
+                | Object o when isEmscripten o.Tags ->
+                    o.Methods
+                    |> List.filter (fun m -> isEmscripten m.Tags)
+                    |> List.map (fun m ->
+                        let name = o.Name + " " + m.Name
+                        let args =
+                            { Name = "self"; Tags = []; Type = { TypeName = o.Name; Annotation = None };
+                              Default = None; Optional = false; Length = None } :: m.Args
+                        { m with Name = name; Args = args }
+                    )
                 | _ -> []
 
             for f in functions do
@@ -152,8 +604,6 @@ module CHeaderGen =
 
                 if FunctionDef.isBadWasmFunction f then
                     // Generate struct for packed arguments
-                    printfn ""
-                    printfn "// Packed args struct for %s" f.Name
                     printfn "typedef struct {"
                     for arg in f.Args do
                         printfn "    %s %s;" (cTypeName arg.Type) (pascalCase arg.Name)
@@ -166,8 +616,8 @@ module CHeaderGen =
                         |> String.concat ", "
                     let argList = if argList = "" then "void" else argList
                     printfn "%s %s(%s);" returnType funcName argList
+                printfn ""
 
-        printfn ""
         printfn "#ifdef __cplusplus"
         printfn "}"
         printfn "#endif"
@@ -177,63 +627,52 @@ module CHeaderGen =
         File.WriteAllText(fileName, b.ToString())
 
 module CImplGen =
-
     open EmscriptenBindings
 
-    let generate (fileName : string) (useJsLibrary : bool) =
+    let generate (fileName : string) =
         let b = StringBuilder()
         let printfn fmt = Printf.kprintf (fun str -> b.AppendLine(str) |> ignore) fmt
 
         printfn "#include \"webgpu_emscripten.h\""
         printfn "#include <emscripten.h>"
-        printfn "#include <emscripten/em_asm.h>"
+        printfn ""
+        printfn "// JavaScript library function declarations"
+        printfn "// These are implemented in library_webgpu_emscripten.js"
         printfn ""
 
-        if not useJsLibrary then
-            printfn "// Using inline EM_ASM for JavaScript interop"
-            printfn ""
-
-        // Generate implementations for all functions
+        // Generate implementations
         for a in all do
             let functions =
                 match a with
-                | Function f ->
-                    if isEmscripten f.Tags then [f]
-                    else []
-                | Object o ->
-                    if isEmscripten o.Tags then
-                        o.Methods
-                        |> List.filter (fun m -> isEmscripten m.Tags)
-                        |> List.map (fun m ->
-                            let name = o.Name + " " + m.Name
-                            let args =
-                                { Name = "self"; Tags = []; Type = { TypeName = o.Name; Annotation = None };
-                                  Default = None; Optional = false; Length = None } :: m.Args
-                            { m with Name = name; Args = args }
-                        )
-                    else []
+                | Function f when isEmscripten f.Tags -> [f]
+                | Object o when isEmscripten o.Tags ->
+                    o.Methods
+                    |> List.filter (fun m -> isEmscripten m.Tags)
+                    |> List.map (fun m ->
+                        let name = o.Name + " " + m.Name
+                        let args =
+                            { Name = "self"; Tags = []; Type = { TypeName = o.Name; Annotation = None };
+                              Default = None; Optional = false; Length = None } :: m.Args
+                        { m with Name = name; Args = args }
+                    )
                 | _ -> []
 
             for f in functions do
                 let returnType = cTypeName f.Return
                 let funcName = "wgpuEm" + pascalCase f.Name
+                let jsFuncName = "_js_wgpu_" + (camelCase f.Name).Replace(" ", "_")
 
                 if FunctionDef.isBadWasmFunction f then
+                    printfn "extern %s %s(const WGPU%sArgs* args);" returnType jsFuncName (pascalCase f.Name)
                     printfn "%s %s(const WGPU%sArgs* args) {" returnType funcName (pascalCase f.Name)
-
-                    if useJsLibrary then
-                        // Call JS library function
-                        let argRefs =
-                            f.Args
-                            |> List.map (fun arg -> sprintf "args->%s" (pascalCase arg.Name))
-                            |> String.concat ", "
-                        printfn "    return _js_wgpu_%s(%s);" (camelCase f.Name) argRefs
+                    let argRefs =
+                        f.Args
+                        |> List.map (fun a -> sprintf "args->%s" (pascalCase a.Name))
+                        |> String.concat ", "
+                    if returnType = "void" then
+                        printfn "    %s(%s);" jsFuncName argRefs
                     else
-                        // Use inline EM_ASM
-                        printfn "    // TODO: Implement inline EM_ASM for %s" f.Name
-                        if returnType <> "void" then
-                            printfn "    return 0;"
-
+                        printfn "    return %s(%s);" jsFuncName argRefs
                     printfn "}"
                 else
                     let argList =
@@ -242,366 +681,25 @@ module CImplGen =
                         |> String.concat ", "
                     let argList = if argList = "" then "void" else argList
 
+                    let argRefs =
+                        f.Args
+                        |> List.map (fun a -> camelCase a.Name)
+                        |> String.concat ", "
+
+                    printfn "extern %s %s(%s);" returnType jsFuncName argList
                     printfn "%s %s(%s) {" returnType funcName argList
-
-                    if useJsLibrary then
-                        // Call JS library function
-                        let argRefs =
-                            f.Args
-                            |> List.map (fun arg -> camelCase arg.Name)
-                            |> String.concat ", "
-                        printfn "    return _js_wgpu_%s(%s);" (camelCase f.Name) argRefs
+                    if returnType = "void" then
+                        printfn "    %s(%s);" jsFuncName argRefs
                     else
-                        // Use inline EM_ASM
-                        printfn "    // TODO: Implement inline EM_ASM for %s" f.Name
-                        if returnType <> "void" then
-                            printfn "    return 0;"
-
+                        printfn "    return %s(%s);" jsFuncName argRefs
                     printfn "}"
                 printfn ""
 
         File.WriteAllText(fileName, b.ToString())
 
-module JsLibraryGen =
-
-    open EmscriptenBindings
-
-    let generateObjectName (objName : string) =
-        // Convert object name to JavaScript GPU API name
-        // e.g., "device" -> "device", "buffer" -> "buffer", etc.
-        camelCase objName
-
-    let generateJsMethodName (objName : string) (methodName : string) =
-        // Convert method name to JavaScript method
-        // e.g., "create buffer" -> "createBuffer"
-        camelCase methodName
-
-    let generate (fileName : string) =
-        let b = StringBuilder()
-        let printfn fmt = Printf.kprintf (fun str -> b.AppendLine(str) |> ignore) fmt
-
-        printfn "/**"
-        printfn " * Emscripten WebGPU Library"
-        printfn " * Provides JavaScript bindings for WebGPU API"
-        printfn " * Generated from dawn.json"
-        printfn " */"
-        printfn ""
-        printfn "var LibraryWebGPUEmscripten = {"
-        printfn "  $WebGPUEm: {"
-        printfn "    // Object handle management"
-        printfn "    nextHandle: 1,"
-        printfn "    objects: {}, // Map from handle (int) to WebGPU object"
-        printfn "    "
-        printfn "    createHandle: function(obj) {"
-        printfn "      if (!obj) return 0;"
-        printfn "      var handle = WebGPUEm.nextHandle++;"
-        printfn "      WebGPUEm.objects[handle] = obj;"
-        printfn "      return handle;"
-        printfn "    },"
-        printfn "    "
-        printfn "    getObject: function(handle) {"
-        printfn "      if (handle === 0) return null;"
-        printfn "      return WebGPUEm.objects[handle] || null;"
-        printfn "    },"
-        printfn "    "
-        printfn "    releaseHandle: function(handle) {"
-        printfn "      if (handle !== 0) {"
-        printfn "        delete WebGPUEm.objects[handle];"
-        printfn "      }"
-        printfn "    },"
-        printfn "    "
-        printfn "    // Struct marshaling helpers"
-        printfn "    readString: function(ptr, length) {"
-        printfn "      if (!ptr) return null;"
-        printfn "      if (length === undefined) {"
-        printfn "        return UTF8ToString(ptr);"
-        printfn "      }"
-        printfn "      return UTF8ToString(ptr, length);"
-        printfn "    },"
-        printfn "    "
-        printfn "    readStringView: function(ptr) {"
-        printfn "      if (!ptr) return null;"
-        printfn "      var dataPtr = {{{ makeGetValue('ptr', 0, '*') }}};"
-        printfn "      var length = {{{ makeGetValue('ptr', 4, 'i32') }}};"
-        printfn "      return WebGPUEm.readString(dataPtr, length);"
-        printfn "    },"
-        printfn "    "
-        printfn "    // Initialize GPU adapter"
-        printfn "    gpu: null,"
-        printfn "    adapter: null,"
-        printfn "    "
-        printfn "    ensureGPU: function() {"
-        printfn "      if (!WebGPUEm.gpu && navigator.gpu) {"
-        printfn "        WebGPUEm.gpu = navigator.gpu;"
-        printfn "      }"
-        printfn "      return WebGPUEm.gpu !== null;"
-        printfn "    }"
-        printfn "  },"
-        printfn ""
-
-        // Generate instance functions
-        printfn "  // Instance functions"
-        printfn "  _js_wgpu_instance_request_adapter__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_instance_request_adapter: function(instance, options, callback, userdata) {"
-        printfn "    if (!WebGPUEm.ensureGPU()) {"
-        printfn "      console.error('WebGPU not supported');"
-        printfn "      return;"
-        printfn "    }"
-        printfn "    "
-        printfn "    // Parse options if provided"
-        printfn "    var requestOptions = {};"
-        printfn "    // TODO: Parse options from struct pointer"
-        printfn "    "
-        printfn "    WebGPUEm.gpu.requestAdapter(requestOptions).then(function(adapter) {"
-        printfn "      var handle = WebGPUEm.createHandle(adapter);"
-        printfn "      // TODO: Call callback with handle"
-        printfn "      if (callback) {"
-        printfn "        {{{ makeDynCall('viii', 'callback') }}}(handle, 0, userdata);"
-        printfn "      }"
-        printfn "    }).catch(function(err) {"
-        printfn "      console.error('requestAdapter failed:', err);"
-        printfn "      if (callback) {"
-        printfn "        {{{ makeDynCall('viii', 'callback') }}}(0, 1, userdata);"
-        printfn "      }"
-        printfn "    });"
-        printfn "  },"
-        printfn ""
-
-        // Generate adapter functions
-        printfn "  // Adapter functions"
-        printfn "  _js_wgpu_adapter_request_device__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_adapter_request_device: function(adapter, descriptor, callback, userdata) {"
-        printfn "    var adapterObj = WebGPUEm.getObject(adapter);"
-        printfn "    if (!adapterObj) {"
-        printfn "      console.error('Invalid adapter handle');"
-        printfn "      return;"
-        printfn "    }"
-        printfn "    "
-        printfn "    // Parse descriptor if provided"
-        printfn "    var deviceDescriptor = {};"
-        printfn "    // TODO: Parse descriptor from struct pointer"
-        printfn "    "
-        printfn "    adapterObj.requestDevice(deviceDescriptor).then(function(device) {"
-        printfn "      var handle = WebGPUEm.createHandle(device);"
-        printfn "      var queueHandle = WebGPUEm.createHandle(device.queue);"
-        printfn "      // TODO: Call callback with device handle"
-        printfn "      if (callback) {"
-        printfn "        {{{ makeDynCall('viii', 'callback') }}}(handle, 0, userdata);"
-        printfn "      }"
-        printfn "    }).catch(function(err) {"
-        printfn "      console.error('requestDevice failed:', err);"
-        printfn "      if (callback) {"
-        printfn "        {{{ makeDynCall('viii', 'callback') }}}(0, 1, userdata);"
-        printfn "      }"
-        printfn "    });"
-        printfn "  },"
-        printfn ""
-
-        // Generate device functions (examples)
-        printfn "  // Device functions"
-        printfn "  _js_wgpu_device_create_buffer__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_device_create_buffer: function(device, descriptor) {"
-        printfn "    var deviceObj = WebGPUEm.getObject(device);"
-        printfn "    if (!deviceObj) return 0;"
-        printfn "    "
-        printfn "    // Parse buffer descriptor"
-        printfn "    // TODO: Implement full descriptor parsing"
-        printfn "    var bufferDescriptor = {"
-        printfn "      size: {{{ makeGetValue('descriptor', 0, 'i32') }}},"
-        printfn "      usage: {{{ makeGetValue('descriptor', 4, 'i32') }}}"
-        printfn "    };"
-        printfn "    "
-        printfn "    var buffer = deviceObj.createBuffer(bufferDescriptor);"
-        printfn "    return WebGPUEm.createHandle(buffer);"
-        printfn "  },"
-        printfn ""
-
-        printfn "  _js_wgpu_device_create_shader_module__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_device_create_shader_module: function(device, descriptor) {"
-        printfn "    var deviceObj = WebGPUEm.getObject(device);"
-        printfn "    if (!deviceObj) return 0;"
-        printfn "    "
-        printfn "    // TODO: Parse shader module descriptor (WGSL code)"
-        printfn "    var shaderDescriptor = {"
-        printfn "      code: '' // TODO: Read from descriptor"
-        printfn "    };"
-        printfn "    "
-        printfn "    var module = deviceObj.createShaderModule(shaderDescriptor);"
-        printfn "    return WebGPUEm.createHandle(module);"
-        printfn "  },"
-        printfn ""
-
-        printfn "  _js_wgpu_device_create_command_encoder__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_device_create_command_encoder: function(device, descriptor) {"
-        printfn "    var deviceObj = WebGPUEm.getObject(device);"
-        printfn "    if (!deviceObj) return 0;"
-        printfn "    "
-        printfn "    var encoder = deviceObj.createCommandEncoder();"
-        printfn "    return WebGPUEm.createHandle(encoder);"
-        printfn "  },"
-        printfn ""
-
-        printfn "  _js_wgpu_device_get_queue__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_device_get_queue: function(device) {"
-        printfn "    var deviceObj = WebGPUEm.getObject(device);"
-        printfn "    if (!deviceObj) return 0;"
-        printfn "    return WebGPUEm.createHandle(deviceObj.queue);"
-        printfn "  },"
-        printfn ""
-
-        // Generate buffer functions
-        printfn "  // Buffer functions"
-        printfn "  _js_wgpu_buffer_get_size__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_buffer_get_size: function(buffer) {"
-        printfn "    var bufferObj = WebGPUEm.getObject(buffer);"
-        printfn "    if (!bufferObj) return 0;"
-        printfn "    return bufferObj.size;"
-        printfn "  },"
-        printfn ""
-
-        printfn "  _js_wgpu_buffer_get_usage__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_buffer_get_usage: function(buffer) {"
-        printfn "    var bufferObj = WebGPUEm.getObject(buffer);"
-        printfn "    if (!bufferObj) return 0;"
-        printfn "    return bufferObj.usage;"
-        printfn "  },"
-        printfn ""
-
-        printfn "  _js_wgpu_buffer_map_async__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_buffer_map_async: function(buffer, mode, offset, size, callback, userdata) {"
-        printfn "    var bufferObj = WebGPUEm.getObject(buffer);"
-        printfn "    if (!bufferObj) return;"
-        printfn "    "
-        printfn "    bufferObj.mapAsync(mode, offset, size).then(function() {"
-        printfn "      if (callback) {"
-        printfn "        {{{ makeDynCall('vii', 'callback') }}}(0, userdata);"
-        printfn "      }"
-        printfn "    }).catch(function(err) {"
-        printfn "      console.error('mapAsync failed:', err);"
-        printfn "      if (callback) {"
-        printfn "        {{{ makeDynCall('vii', 'callback') }}}(1, userdata);"
-        printfn "      }"
-        printfn "    });"
-        printfn "  },"
-        printfn ""
-
-        printfn "  _js_wgpu_buffer_get_mapped_range__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_buffer_get_mapped_range: function(buffer, offset, size) {"
-        printfn "    var bufferObj = WebGPUEm.getObject(buffer);"
-        printfn "    if (!bufferObj) return 0;"
-        printfn "    "
-        printfn "    var arrayBuffer = bufferObj.getMappedRange(offset, size);"
-        printfn "    // TODO: Return pointer to WASM heap copy or direct access"
-        printfn "    return 0;"
-        printfn "  },"
-        printfn ""
-
-        printfn "  _js_wgpu_buffer_unmap__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_buffer_unmap: function(buffer) {"
-        printfn "    var bufferObj = WebGPUEm.getObject(buffer);"
-        printfn "    if (!bufferObj) return;"
-        printfn "    bufferObj.unmap();"
-        printfn "  },"
-        printfn ""
-
-        printfn "  _js_wgpu_buffer_destroy__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_buffer_destroy: function(buffer) {"
-        printfn "    var bufferObj = WebGPUEm.getObject(buffer);"
-        printfn "    if (!bufferObj) return;"
-        printfn "    bufferObj.destroy();"
-        printfn "    WebGPUEm.releaseHandle(buffer);"
-        printfn "  },"
-        printfn ""
-
-        // Generate queue functions
-        printfn "  // Queue functions"
-        printfn "  _js_wgpu_queue_submit__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_queue_submit: function(queue, commandCount, commands) {"
-        printfn "    var queueObj = WebGPUEm.getObject(queue);"
-        printfn "    if (!queueObj) return;"
-        printfn "    "
-        printfn "    var commandBuffers = [];"
-        printfn "    for (var i = 0; i < commandCount; i++) {"
-        printfn "      var handle = {{{ makeGetValue('commands', 'i*4', 'i32') }}};"
-        printfn "      var cmdBuf = WebGPUEm.getObject(handle);"
-        printfn "      if (cmdBuf) commandBuffers.push(cmdBuf);"
-        printfn "    }"
-        printfn "    "
-        printfn "    queueObj.submit(commandBuffers);"
-        printfn "  },"
-        printfn ""
-
-        printfn "  _js_wgpu_queue_write_buffer__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_queue_write_buffer: function(queue, buffer, bufferOffset, data, size) {"
-        printfn "    var queueObj = WebGPUEm.getObject(queue);"
-        printfn "    var bufferObj = WebGPUEm.getObject(buffer);"
-        printfn "    if (!queueObj || !bufferObj) return;"
-        printfn "    "
-        printfn "    var dataView = new Uint8Array(HEAPU8.buffer, data, size);"
-        printfn "    queueObj.writeBuffer(bufferObj, bufferOffset, dataView);"
-        printfn "  },"
-        printfn ""
-
-        // Generate command encoder functions
-        printfn "  // Command encoder functions"
-        printfn "  _js_wgpu_command_encoder_finish__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_command_encoder_finish: function(encoder, descriptor) {"
-        printfn "    var encoderObj = WebGPUEm.getObject(encoder);"
-        printfn "    if (!encoderObj) return 0;"
-        printfn "    "
-        printfn "    var cmdBuffer = encoderObj.finish();"
-        printfn "    return WebGPUEm.createHandle(cmdBuffer);"
-        printfn "  },"
-        printfn ""
-
-        printfn "  _js_wgpu_command_encoder_begin_render_pass__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_command_encoder_begin_render_pass: function(encoder, descriptor) {"
-        printfn "    var encoderObj = WebGPUEm.getObject(encoder);"
-        printfn "    if (!encoderObj) return 0;"
-        printfn "    "
-        printfn "    // TODO: Parse render pass descriptor"
-        printfn "    var renderPassDescriptor = {};"
-        printfn "    "
-        printfn "    var passEncoder = encoderObj.beginRenderPass(renderPassDescriptor);"
-        printfn "    return WebGPUEm.createHandle(passEncoder);"
-        printfn "  },"
-        printfn ""
-
-        printfn "  _js_wgpu_command_encoder_begin_compute_pass__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_command_encoder_begin_compute_pass: function(encoder, descriptor) {"
-        printfn "    var encoderObj = WebGPUEm.getObject(encoder);"
-        printfn "    if (!encoderObj) return 0;"
-        printfn "    "
-        printfn "    var passEncoder = encoderObj.beginComputePass();"
-        printfn "    return WebGPUEm.createHandle(passEncoder);"
-        printfn "  },"
-        printfn ""
-
-        // Add generic reference counting (no-ops for JavaScript)
-        printfn "  // Reference counting (no-ops for JavaScript GC)"
-        printfn "  _js_wgpu_object_reference__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_object_reference: function(handle) {"
-        printfn "    // No-op: JavaScript uses garbage collection"
-        printfn "  },"
-        printfn ""
-
-        printfn "  _js_wgpu_object_release__deps: ['$WebGPUEm'],"
-        printfn "  _js_wgpu_object_release: function(handle) {"
-        printfn "    // Release handle from our table"
-        printfn "    WebGPUEm.releaseHandle(handle);"
-        printfn "  },"
-        printfn ""
-
-        printfn "};"
-        printfn ""
-        printfn "autoAddDeps(LibraryWebGPUEmscripten, '$WebGPUEm');"
-        printfn "mergeInto(LibraryManager.library, LibraryWebGPUEmscripten);"
-
-        File.WriteAllText(fileName, b.ToString())
-
 // Main generation function
 let generateAll() =
-    printfn "Generating Emscripten WebGPU bindings..."
+    printfn "Generating Emscripten WebGPU bindings from dawn.json..."
 
     let outputDir = Path.Combine(__SOURCE_DIRECTORY__, "src", "WebGPU", "emscripten")
     Directory.CreateDirectory(outputDir) |> ignore
@@ -609,17 +707,26 @@ let generateAll() =
     let headerFile = Path.Combine(outputDir, "webgpu_emscripten.h")
     let implFile = Path.Combine(outputDir, "webgpu_emscripten.c")
     let jsLibFile = Path.Combine(outputDir, "library_webgpu_emscripten.js")
+    let structMarshalFile = Path.Combine(outputDir, "struct_marshalers_generated.js")
 
     printfn "Generating C header: %s" headerFile
     CHeaderGen.generate headerFile
 
     printfn "Generating C implementation: %s" implFile
-    CImplGen.generate implFile true // Use JS library instead of inline EM_ASM
+    CImplGen.generate implFile
+
+    printfn "Generating struct marshalers: %s" structMarshalFile
+    StructMarshalerGen.generate structMarshalFile
 
     printfn "Generating JavaScript library: %s" jsLibFile
     JsLibraryGen.generate jsLibFile
 
-    printfn "Done! Generated Emscripten WebGPU bindings."
+    printfn ""
+    printfn "Done! Generated %d files." 4
+    printfn ""
+    printfn "Note: The generated JavaScript implementations are templates."
+    printfn "Some complex operations (especially async with callbacks) may need manual refinement."
+    printfn "However, all the core synchronous operations should work out of the box."
 
 // Run the generator
 generateAll()
