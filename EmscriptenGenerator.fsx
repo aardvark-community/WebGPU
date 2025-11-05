@@ -278,6 +278,50 @@ module JsLibraryGen =
         elif m.Return.TypeName = "void" then Action
         else Query
 
+    /// Generate makeDynCall signature for a callback
+    let getCallbackSignature (callbackType : TypeRef) =
+        match table.[callbackType.TypeName] with
+        | Delegate d ->
+            // Build signature: return type + argument types
+            let returnSig =
+                match d.Return.TypeName with
+                | "void" -> "v"
+                | _ -> "i" // Most returns are status codes (int)
+
+            let argSigs =
+                d.Args
+                |> List.map (fun arg ->
+                    match table.[arg.Type.TypeName] with
+                    | Native n ->
+                        match n.Name with
+                        | "int8_t" | "uint8_t" | "int16_t" | "uint16_t"
+                        | "int32_t" | "uint32_t" | "int" | "bool" -> "i"
+                        | "int64_t" | "uint64_t" -> "j" // BigInt
+                        | "float" -> "f"
+                        | "double" -> "d"
+                        | "void *" | "void const *" | "size_t" -> "i"
+                        | _ -> "i"
+                    | Object _ -> "i" // Handle
+                    | Enum _ -> "i"
+                    | _ -> "i"
+                )
+                |> String.concat ""
+
+            returnSig + argSigs
+
+        | CallbackInfo c ->
+            // CallbackInfo has a callback field - need to find it
+            let callbackField = c.Members |> List.tryFind (fun f ->
+                match table.[f.Type.TypeName] with
+                | Delegate _ -> true
+                | _ -> false
+            )
+            match callbackField with
+            | Some field -> getCallbackSignature field.Type
+            | None -> "v" // Fallback
+
+        | _ -> "v" // Fallback
+
     let generateJsFunction (objName : string option) (m : FunctionDef) =
         let b = StringBuilder()
         let printfn fmt = Printf.kprintf (fun str -> b.AppendLine(str) |> ignore) fmt
@@ -325,7 +369,11 @@ module JsLibraryGen =
         // Marshal descriptor arguments
         let descriptorArgs = m.Args |> List.filter (fun arg ->
             match table.[arg.Type.TypeName] with
-            | Struct _ when arg.Type.Annotation = Some "*" || arg.Type.Annotation = Some "const*" -> true
+            | Struct s when arg.Type.Annotation = Some "*" || arg.Type.Annotation = Some "const*" ->
+                // Check if it's a CallbackInfo struct
+                match table.[arg.Type.TypeName] with
+                | CallbackInfo _ -> false // Handle separately
+                | _ -> true
             | _ -> false
         )
 
@@ -344,14 +392,93 @@ module JsLibraryGen =
         match pattern with
         | AsyncOp ->
             // Find callback and userdata args
-            let callbackArg = m.Args |> List.tryFind (fun arg ->
+            let callbackIdx = m.Args |> List.tryFindIndex (fun arg ->
                 match table.[arg.Type.TypeName] with
                 | Delegate _ | CallbackInfo _ -> true
                 | _ -> false
             )
 
-            printfn "    // Async operation - TODO: Handle callback"
-            printfn "    // obj.%s(...).then(result => { /* call callback */ });" jsMethodName
+            match callbackIdx with
+            | Some idx ->
+                let callbackArg = m.Args.[idx]
+                let userdataArg =
+                    if idx + 1 < m.Args.Length then Some m.Args.[idx + 1]
+                    else None
+
+                let callbackName = camelCase callbackArg.Name
+                let userdataName = userdataArg |> Option.map (fun a -> camelCase a.Name) |> Option.defaultValue "0"
+
+                // Determine if it's CallbackInfo or plain callback
+                match table.[callbackArg.Type.TypeName] with
+                | CallbackInfo c ->
+                    // CallbackInfo struct - extract callback and userdata from struct
+                    printfn "    var callbackInfo = WebGPUStructMarshalers.read%s(%s);" (pascalCase c.Name) callbackName
+                    printfn "    // Extract callback function and userdata from CallbackInfo struct"
+                    printfn "    // TODO: Read callback pointer and userdata from struct"
+
+                | Delegate d ->
+                    // Plain callback function pointer
+                    let signature = getCallbackSignature callbackArg.Type
+
+                    // Build argument list for JavaScript call (exclude self, callback, userdata)
+                    let jsArgs =
+                        m.Args
+                        |> List.indexed
+                        |> List.filter (fun (i, _) -> i <> 0 && i <> idx && (match userdataArg with Some _ -> i <> idx + 1 | None -> true))
+                        |> List.map (fun (_, arg) ->
+                            let argName = camelCase arg.Name
+                            match table.[arg.Type.TypeName] with
+                            | Struct _ when arg.Type.Annotation = Some "*" || arg.Type.Annotation = Some "const*" ->
+                                argName + "Obj"
+                            | Object _ when arg.Type.Annotation = Some "*" ->
+                                "WebGPUEm.getObject(" + argName + ")"
+                            | _ -> argName
+                        )
+
+                    let jsArgStr = if jsArgs.IsEmpty then "" else jsArgs |> String.concat ", "
+
+                    printfn "    obj.%s(%s).then(function(result) {" jsMethodName jsArgStr
+                    printfn "      if (%s) {" callbackName
+
+                    // Determine what to pass to callback based on return type
+                    match d.Return.TypeName with
+                    | "void" ->
+                        // Callback signature like: void callback(status, userdata)
+                        if d.Args.Length = 2 then
+                            printfn "        var status = 0; // Success"
+                            printfn "        {{{ makeDynCall('%s', '%s') }}}(status, %s);" signature callbackName userdataName
+                        else
+                            // Callback signature like: void callback(device, status, userdata)
+                            printfn "        var handle = WebGPUEm.createHandle(result);"
+                            printfn "        var status = 0; // Success"
+                            printfn "        {{{ makeDynCall('%s', '%s') }}}(handle, status, %s);" signature callbackName userdataName
+                    | _ ->
+                        // Other return types
+                        printfn "        var handle = WebGPUEm.createHandle(result);"
+                        printfn "        {{{ makeDynCall('%s', '%s') }}}(handle, %s);" signature callbackName userdataName
+
+                    printfn "      }"
+                    printfn "    }).catch(function(err) {"
+                    printfn "      console.error('%s failed:', err);" fullName
+                    printfn "      if (%s) {" callbackName
+
+                    // Call callback with error status
+                    if d.Args.Length = 2 then
+                        printfn "        var status = 1; // Error"
+                        printfn "        {{{ makeDynCall('%s', '%s') }}}(status, %s);" signature callbackName userdataName
+                    else
+                        printfn "        var handle = 0; // Null"
+                        printfn "        var status = 1; // Error"
+                        printfn "        {{{ makeDynCall('%s', '%s') }}}(handle, status, %s);" signature callbackName userdataName
+
+                    printfn "      }"
+                    printfn "    });"
+
+                | _ ->
+                    printfn "    // Unknown callback type"
+
+            | None ->
+                printfn "    // Async operation but no callback found"
 
         | Create ->
             let returnType = table.[m.Return.TypeName]
