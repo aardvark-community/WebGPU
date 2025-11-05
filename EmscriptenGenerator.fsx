@@ -279,7 +279,7 @@ module JsLibraryGen =
         else Query
 
     /// Generate makeDynCall signature for a callback
-    let getCallbackSignature (callbackType : TypeRef) =
+    let rec getCallbackSignature (callbackType : TypeRef) =
         match table.[callbackType.TypeName] with
         | Delegate d ->
             // Build signature: return type + argument types
