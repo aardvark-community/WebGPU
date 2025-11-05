@@ -176,16 +176,46 @@ module StructMarshalerGen =
             let jsFieldName = camelCase field.Name
             let fieldReader = generateFieldReader field.Name field.Type "offset"
 
-            // Check if this field is a callback or CallbackInfo - skip it in descriptors
-            // These are handled separately in async operations, not passed to WebGPU
+            // Check if this field is userdata - always skip it
+            // Userdata is used internally, not passed to WebGPU
+            let isUserdataField = field.Name.Contains("userdata")
+
+            // Check if this is an event handler callback that needs wrapping
+            // (like deviceLost, uncapturedError) vs async operation callback
+            let isEventCallback =
+                field.Name.Contains("device lost") ||
+                field.Name.Contains("uncaptured error") ||
+                field.Name.Contains("logging")
+
             let isCallbackField =
                 match table.[field.Type.TypeName] with
-                | Delegate _ -> true
-                | CallbackInfo _ -> true
-                | _ -> field.Name.Contains("callback") || field.Name.Contains("userdata")
+                | Delegate _ -> not isEventCallback // Skip async callbacks, keep event callbacks
+                | CallbackInfo _ -> not isEventCallback
+                | _ -> false
 
-            // Check if optional
-            if not isCallbackField then
+            // Handle different field types
+            if isUserdataField then
+                // Skip userdata - it's for internal use only
+                printfn "      // Skip userdata field: %s" field.Name
+            elif isEventCallback then
+                // Event callback - wrap C function pointer as JavaScript function
+                match table.[field.Type.TypeName] with
+                | Delegate d ->
+                    let signature = getCallbackSignature field.Type
+                    printfn "      var %sPtr = {{{ makeGetValue('ptr', offset, '*') }}};" jsFieldName
+                    printfn "      if (%sPtr) {" jsFieldName
+                    // TODO: Need to determine userdata location
+                    printfn "        // Wrap C callback as JavaScript function"
+                    printfn "        obj.%s = function(...args) {" jsFieldName
+                    printfn "          {{{ makeDynCall('%s', %sPtr) }}}(...args, 0); // TODO: Pass correct userdata" signature jsFieldName
+                    printfn "        };"
+                    printfn "      }"
+                | _ -> ()
+            elif isCallbackField then
+                // Async callback - skip, handled in async operation code
+                printfn "      // Skip async callback field: %s (handled in promise)" field.Name
+            else
+                // Regular field
                 if field.Optional then
                     printfn "      var %sPtr = {{{ makeGetValue('ptr', 'offset', '*') }}};" jsFieldName
                     printfn "      if (%sPtr) {" jsFieldName
@@ -193,8 +223,6 @@ module StructMarshalerGen =
                     printfn "      }"
                 else
                     printfn "      obj.%s = %s;" jsFieldName fieldReader
-            else
-                printfn "      // Skip callback field: %s (handled separately)" field.Name
 
             // Advance offset (simplified - assumes all pointers are 4 bytes for WASM32)
             let fieldSize, needsAlign =
