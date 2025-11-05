@@ -416,8 +416,85 @@ module JsLibraryGen =
                 | CallbackInfo c ->
                     // CallbackInfo struct - extract callback and userdata from struct
                     printfn "    var callbackInfo = WebGPUStructMarshalers.read%s(%s);" (pascalCase c.Name) callbackName
-                    printfn "    // Extract callback function and userdata from CallbackInfo struct"
-                    printfn "    // TODO: Read callback pointer and userdata from struct"
+
+                    // Find the callback field in the CallbackInfo struct
+                    let actualCallbackField = c.Fields |> List.tryFind (fun f ->
+                        match table.[f.Type.TypeName] with
+                        | Delegate _ -> true
+                        | _ -> false
+                    )
+
+                    let userdataField = c.Fields |> List.tryFind (fun f ->
+                        f.Name.Contains("userdata")
+                    )
+
+                    match actualCallbackField with
+                    | Some cbField ->
+                        let cbFieldName = camelCase cbField.Name
+                        let udFieldName = userdataField |> Option.map (fun f -> camelCase f.Name) |> Option.defaultValue "userdata1"
+
+                        printfn "    var actualCallback = callbackInfo.%s;" cbFieldName
+                        printfn "    var actualUserdata = callbackInfo.%s || 0;" udFieldName
+
+                        // Now use actualCallback and actualUserdata like in the Delegate case
+                        let signature = getCallbackSignature cbField.Type
+
+                        // Build argument list for JavaScript call (exclude self and callback info)
+                        let jsArgs =
+                            m.Args
+                            |> List.indexed
+                            |> List.filter (fun (i, _) -> i <> 0 && i <> idx)
+                            |> List.map (fun (_, arg) ->
+                                let argName = camelCase arg.Name
+                                match table.[arg.Type.TypeName] with
+                                | Struct _ when arg.Type.Annotation = Some "*" || arg.Type.Annotation = Some "const*" ->
+                                    argName + "Obj"
+                                | Object _ when arg.Type.Annotation = Some "*" ->
+                                    "WebGPUEm.getObject(" + argName + ")"
+                                | _ -> argName
+                            )
+
+                        let jsArgStr = if jsArgs.IsEmpty then "" else jsArgs |> String.concat ", "
+
+                        printfn "    obj.%s(%s).then(function(result) {" jsMethodName jsArgStr
+                        printfn "      if (actualCallback) {"
+
+                        match table.[cbField.Type.TypeName] with
+                        | Delegate d ->
+                            match d.Return.TypeName with
+                            | "void" ->
+                                if d.Args.Length = 2 then
+                                    printfn "        var status = 0; // Success"
+                                    printfn "        {{{ makeDynCall('%s', actualCallback) }}}(status, actualUserdata);" signature
+                                else
+                                    printfn "        var handle = WebGPUEm.createHandle(result);"
+                                    printfn "        var status = 0; // Success"
+                                    printfn "        {{{ makeDynCall('%s', actualCallback) }}}(handle, status, actualUserdata);" signature
+                            | _ ->
+                                printfn "        var handle = WebGPUEm.createHandle(result);"
+                                printfn "        {{{ makeDynCall('%s', actualCallback) }}}(handle, actualUserdata);" signature
+                        | _ -> ()
+
+                        printfn "      }"
+                        printfn "    }).catch(function(err) {"
+                        printfn "      console.error('%s failed:', err);" fullName
+                        printfn "      if (actualCallback) {"
+
+                        match table.[cbField.Type.TypeName] with
+                        | Delegate d ->
+                            if d.Args.Length = 2 then
+                                printfn "        var status = 1; // Error"
+                                printfn "        {{{ makeDynCall('%s', actualCallback) }}}(status, actualUserdata);" signature
+                            else
+                                printfn "        var handle = 0; // Null"
+                                printfn "        var status = 1; // Error"
+                                printfn "        {{{ makeDynCall('%s', actualCallback) }}}(handle, status, actualUserdata);" signature
+                        | _ -> ()
+
+                        printfn "      }"
+                        printfn "    });"
+                    | None ->
+                        printfn "    // No callback field found in CallbackInfo"
 
                 | Delegate d ->
                     // Plain callback function pointer
