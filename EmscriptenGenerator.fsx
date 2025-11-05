@@ -449,16 +449,16 @@ module JsLibraryGen =
                         // Callback signature like: void callback(status, userdata)
                         if d.Args.Length = 2 then
                             printfn "        var status = 0; // Success"
-                            printfn "        {{{ makeDynCall('%s', '%s') }}}(status, %s);" signature callbackName userdataName
+                            printfn "        {{{ makeDynCall('%s', %s) }}}(status, %s);" signature callbackName userdataName
                         else
                             // Callback signature like: void callback(device, status, userdata)
                             printfn "        var handle = WebGPUEm.createHandle(result);"
                             printfn "        var status = 0; // Success"
-                            printfn "        {{{ makeDynCall('%s', '%s') }}}(handle, status, %s);" signature callbackName userdataName
+                            printfn "        {{{ makeDynCall('%s', %s) }}}(handle, status, %s);" signature callbackName userdataName
                     | _ ->
                         // Other return types
                         printfn "        var handle = WebGPUEm.createHandle(result);"
-                        printfn "        {{{ makeDynCall('%s', '%s') }}}(handle, %s);" signature callbackName userdataName
+                        printfn "        {{{ makeDynCall('%s', %s) }}}(handle, %s);" signature callbackName userdataName
 
                     printfn "      }"
                     printfn "    }).catch(function(err) {"
@@ -468,11 +468,11 @@ module JsLibraryGen =
                     // Call callback with error status
                     if d.Args.Length = 2 then
                         printfn "        var status = 1; // Error"
-                        printfn "        {{{ makeDynCall('%s', '%s') }}}(status, %s);" signature callbackName userdataName
+                        printfn "        {{{ makeDynCall('%s', %s) }}}(status, %s);" signature callbackName userdataName
                     else
                         printfn "        var handle = 0; // Null"
                         printfn "        var status = 1; // Error"
-                        printfn "        {{{ makeDynCall('%s', '%s') }}}(handle, status, %s);" signature callbackName userdataName
+                        printfn "        {{{ makeDynCall('%s', %s) }}}(handle, status, %s);" signature callbackName userdataName
 
                     printfn "      }"
                     printfn "    });"
