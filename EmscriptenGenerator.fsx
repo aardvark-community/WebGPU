@@ -503,18 +503,27 @@ module JsLibraryGen =
 
                         match table.[cbField.Type.TypeName] with
                         | Delegate d ->
-                            match d.Return.TypeName with
-                            | "void" ->
-                                if d.Args.Length = 2 then
-                                    printfn "        var status = 0; // Success"
-                                    printfn "        {{{ makeDynCall('%s', actualCallback) }}}(status, actualUserdata);" signature
-                                else
-                                    printfn "        var handle = WebGPUEm.createHandle(result);"
-                                    printfn "        var status = 0; // Success"
-                                    printfn "        {{{ makeDynCall('%s', actualCallback) }}}(handle, status, actualUserdata);" signature
-                            | _ ->
-                                printfn "        var handle = WebGPUEm.createHandle(result);"
-                                printfn "        {{{ makeDynCall('%s', actualCallback) }}}(handle, actualUserdata);" signature
+                            // Build proper arguments matching the delegate signature
+                            let callbackArgs =
+                                d.Args |> List.map (fun arg ->
+                                    let argName = arg.Name.ToLowerInvariant()
+                                    if argName.Contains("status") then
+                                        "0" // Success status
+                                    elif argName.Contains("device") || argName.Contains("buffer") || argName.Contains("texture") || argName.Contains("pipeline") then
+                                        "WebGPUEm.createHandle(result)" // Object handle from result
+                                    elif argName.Contains("message") then
+                                        "0" // Null message pointer (success)
+                                    elif argName.Contains("userdata1") then
+                                        "callbackInfo.userdata1 || 0"
+                                    elif argName.Contains("userdata2") then
+                                        "callbackInfo.userdata2 || 0"
+                                    elif argName.Contains("userdata") then
+                                        "actualUserdata"
+                                    else
+                                        "0" // Default
+                                ) |> String.concat ", "
+
+                            printfn "        {{{ makeDynCall('%s', actualCallback) }}}(%s);" signature callbackArgs
                         | _ -> ()
 
                         printfn "      }"
@@ -524,13 +533,27 @@ module JsLibraryGen =
 
                         match table.[cbField.Type.TypeName] with
                         | Delegate d ->
-                            if d.Args.Length = 2 then
-                                printfn "        var status = 1; // Error"
-                                printfn "        {{{ makeDynCall('%s', actualCallback) }}}(status, actualUserdata);" signature
-                            else
-                                printfn "        var handle = 0; // Null"
-                                printfn "        var status = 1; // Error"
-                                printfn "        {{{ makeDynCall('%s', actualCallback) }}}(handle, status, actualUserdata);" signature
+                            // Build error case arguments
+                            let errorArgs =
+                                d.Args |> List.map (fun arg ->
+                                    let argName = arg.Name.ToLowerInvariant()
+                                    if argName.Contains("status") then
+                                        "1" // Error status
+                                    elif argName.Contains("device") || argName.Contains("buffer") || argName.Contains("texture") || argName.Contains("pipeline") then
+                                        "0" // Null object handle
+                                    elif argName.Contains("message") then
+                                        "0" // TODO: Pass error message
+                                    elif argName.Contains("userdata1") then
+                                        "callbackInfo.userdata1 || 0"
+                                    elif argName.Contains("userdata2") then
+                                        "callbackInfo.userdata2 || 0"
+                                    elif argName.Contains("userdata") then
+                                        "actualUserdata"
+                                    else
+                                        "0"
+                                ) |> String.concat ", "
+
+                            printfn "        {{{ makeDynCall('%s', actualCallback) }}}(%s);" signature errorArgs
                         | _ -> ()
 
                         printfn "      }"
@@ -562,36 +585,46 @@ module JsLibraryGen =
                     printfn "    obj.%s(%s).then(function(result) {" jsMethodName jsArgStr
                     printfn "      if (%s) {" callbackName
 
-                    // Determine what to pass to callback based on return type
-                    match d.Return.TypeName with
-                    | "void" ->
-                        // Callback signature like: void callback(status, userdata)
-                        if d.Args.Length = 2 then
-                            printfn "        var status = 0; // Success"
-                            printfn "        {{{ makeDynCall('%s', %s) }}}(status, %s);" signature callbackName userdataName
-                        else
-                            // Callback signature like: void callback(device, status, userdata)
-                            printfn "        var handle = WebGPUEm.createHandle(result);"
-                            printfn "        var status = 0; // Success"
-                            printfn "        {{{ makeDynCall('%s', %s) }}}(handle, status, %s);" signature callbackName userdataName
-                    | _ ->
-                        // Other return types
-                        printfn "        var handle = WebGPUEm.createHandle(result);"
-                        printfn "        {{{ makeDynCall('%s', %s) }}}(handle, %s);" signature callbackName userdataName
+                    // Build proper arguments matching the delegate signature
+                    let callbackArgs =
+                        d.Args |> List.map (fun arg ->
+                            let argName = arg.Name.ToLowerInvariant()
+                            if argName.Contains("status") then
+                                "0" // Success status
+                            elif argName.Contains("device") || argName.Contains("buffer") || argName.Contains("texture") || argName.Contains("pipeline") then
+                                "WebGPUEm.createHandle(result)" // Object handle from result
+                            elif argName.Contains("message") then
+                                "0" // Null message pointer (success)
+                            elif argName.Contains("userdata") then
+                                userdataName
+                            else
+                                "0" // Default
+                        ) |> String.concat ", "
+
+                    printfn "        {{{ makeDynCall('%s', %s) }}}(%s);" signature callbackName callbackArgs
 
                     printfn "      }"
                     printfn "    }).catch(function(err) {"
                     printfn "      console.error('%s failed:', err);" fullName
                     printfn "      if (%s) {" callbackName
 
-                    // Call callback with error status
-                    if d.Args.Length = 2 then
-                        printfn "        var status = 1; // Error"
-                        printfn "        {{{ makeDynCall('%s', %s) }}}(status, %s);" signature callbackName userdataName
-                    else
-                        printfn "        var handle = 0; // Null"
-                        printfn "        var status = 1; // Error"
-                        printfn "        {{{ makeDynCall('%s', %s) }}}(handle, status, %s);" signature callbackName userdataName
+                    // Build error case arguments
+                    let errorArgs =
+                        d.Args |> List.map (fun arg ->
+                            let argName = arg.Name.ToLowerInvariant()
+                            if argName.Contains("status") then
+                                "1" // Error status
+                            elif argName.Contains("device") || argName.Contains("buffer") || argName.Contains("texture") || argName.Contains("pipeline") then
+                                "0" // Null object handle
+                            elif argName.Contains("message") then
+                                "0" // TODO: Pass error message
+                            elif argName.Contains("userdata") then
+                                userdataName
+                            else
+                                "0"
+                        ) |> String.concat ", "
+
+                    printfn "        {{{ makeDynCall('%s', %s) }}}(%s);" signature callbackName errorArgs
 
                     printfn "      }"
                     printfn "    });"
