@@ -118,6 +118,9 @@ module StructMarshalerGen =
                 sprintf "WebGPUEm.getObject({{{ makeGetValue('ptr', %s, 'i32') }}})" offset
             | Enum _ ->
                 sprintf "{{{ makeGetValue('ptr', %s, 'i32') }}}" offset
+            | Delegate _ ->
+                // Function pointer - keep as raw pointer value (number) for makeDynCall
+                sprintf "{{{ makeGetValue('ptr', %s, '*') }}}" offset
             | Native n ->
                 match n.Name with
                 | "bool" ->
