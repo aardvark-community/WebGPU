@@ -169,7 +169,7 @@ module StructMarshalerGen =
         printfn ""
 
         // Generate field readers
-        for field in s.Fields do
+        for i, field in s.Fields |> List.indexed do
             let jsFieldName = camelCase field.Name
             let fieldReader = generateFieldReader field.Name field.Type "offset"
 
@@ -183,24 +183,27 @@ module StructMarshalerGen =
                 printfn "      obj.%s = %s;" jsFieldName fieldReader
 
             // Advance offset (simplified - assumes all pointers are 4 bytes for WASM32)
-            let fieldSize =
+            let fieldSize, needsAlign =
                 match jsTypeName field.Type with
-                | "i8" | "u8" -> "1"
-                | "i16" | "u16" -> "2"
-                | "i32" | "u32" | "float" | "handle" -> "4"
-                | "i64" | "u64" | "double" -> "8"
-                | "*" -> "{{{ POINTER_SIZE }}}"
+                | "i8" | "u8" -> "1", true  // Next field needs alignment
+                | "i16" | "u16" -> "2", true  // Next field needs alignment
+                | "i32" | "u32" | "float" | "handle" -> "4", false  // Already aligned
+                | "i64" | "u64" | "double" -> "8", false  // Already aligned
+                | "*" -> "{{{ POINTER_SIZE }}}", false  // Pointer size (4 on WASM32), already aligned
                 | "struct" ->
                     match table.[field.Type.TypeName] with
-                    | Struct s -> sprintf "STRUCT_SIZE_%s" (pascalCase s.Name)
-                    | _ -> "4"
-                | _ -> "4"
+                    | Struct s -> sprintf "STRUCT_SIZE_%s" (pascalCase s.Name), true  // Unknown size, align to be safe
+                    | _ -> "4", false
+                | _ -> "4", false
 
             printfn "      offset += %s;" fieldSize
 
-            // Add alignment padding for next field
-            printfn "      offset = (offset + 3) & ~3; // Align to 4 bytes"
-            printfn ""
+            // Only align if this field is not naturally aligned (1 or 2 bytes) AND there's a next field
+            if needsAlign && i < s.Fields.Length - 1 then
+                printfn "      offset = (offset + 3) & ~3; // Align to 4 bytes"
+
+            if i < s.Fields.Length - 1 then
+                printfn ""
 
         printfn "      return obj;"
         printfn "    },"
